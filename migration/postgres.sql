@@ -1,0 +1,52 @@
+CREATE DATABASE flowdb;
+
+\c flowdb;
+
+CREATE TABLE namespaces (
+  id BIGSERIAL NOT NULL PRIMARY KEY,
+  name VARCHAR(128) NOT NULL CONSTRAINT uk_name UNIQUE,
+  description VARCHAR(255),
+  api_key VARCHAR(128) NOT NULL CONSTRAINT uk_api_key UNIQUE,
+  creator VARCHAR(255),
+  create_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  update_time TIMESTAMP DEFAULT LOCALTIMESTAMP
+);
+
+CREATE TABLE tasks (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  namespace VARCHAR(128) NOT NULL,
+  type VARCHAR(64) DEFAULT '',
+  state VARCHAR(16) DEFAULT '',
+  shard_no SMALLINT DEFAULT 0,
+  title VARCHAR(64),
+  input BYTEA,
+  result BYTEA,
+  checkpoint BYTEA,
+  create_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  update_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  expired_time TIMESTAMP,
+  max_retry SMALLINT DEFAULT 0,
+  cur_retry SMALLINT DEFAULT 0,
+  worker_id VARCHAR(48)
+);
+
+CREATE TABLE instances (
+  id BIGSERIAL NOT NULL PRIMARY KEY,
+  ip VARCHAR(39) NOT NULL DEFAULT '',
+  hostname VARCHAR(255),
+  create_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  heartbeat_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  shard_start SMALLINT DEFAULT 0,
+  shard_end SMALLINT DEFAULT 0,
+  extras BYTEA
+);
+
+CREATE TABLE worker_instances (
+  id BIGSERIAL NOT NULL PRIMARY KEY,
+  ip VARCHAR(39) NOT NULL DEFAULT '',
+  hostname VARCHAR(255),
+  create_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  heartbeat_time TIMESTAMP DEFAULT LOCALTIMESTAMP,
+  namespace VARCHAR(128) NOT NULL, 
+  task_type VARCHAR(64) DEFAULT ''
+);
