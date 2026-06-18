@@ -4,10 +4,10 @@ import (
 	"context"
 	stderr "errors"
 
-	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/internal/repository/impl/util"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/store"
+	"github.com/gonotelm-lab/flow/server/pkg/sql"
 
 	pkgerr "github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -53,6 +53,23 @@ func (s *InstanceStoreImpl) Get(
 	}
 
 	return &instance, nil
+}
+
+func (s *InstanceStoreImpl) ListActive(
+	ctx context.Context,
+	aliveAfterMs int64,
+) ([]*schema.Instance, error) {
+	db := util.GetDB(ctx, s.db)
+
+	var instances []*schema.Instance
+	if err := db.Where("expire_time > ?", aliveAfterMs).
+		Order("start_time ASC").
+		Order("id ASC").
+		Find(&instances).Error; err != nil {
+		return nil, pkgerr.Wrap(err, "db find active instances failed")
+	}
+
+	return instances, nil
 }
 
 func (s *InstanceStoreImpl) UpdateExpireTime(

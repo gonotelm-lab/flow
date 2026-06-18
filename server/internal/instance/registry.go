@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"runtime/debug"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,35 +16,56 @@ import (
 )
 
 const (
-	discovRevisionName = "flow/discovery/revision"
+	discovRevisionName       = "flow/discovery/revision"
+	defaultRegistryExpiry    = time.Second * 12
+	defaultKeepaliveInterval = time.Second * 10
 )
 
 func zeroRevision() *schema.GlobalRevision {
 	return &schema.GlobalRevision{
 		Name:            discovRevisionName,
 		CurrentRevision: 0,
-		UpdateTime:      time.Now().UnixMilli(),
+		UpdateTime:      nowUnixMilli(),
 	}
 }
 
 type Registry struct {
 	txMgr repository.TxManager
 	store repository.Store
+	cfg   RegistryConfig
 
-	closing   atomic.Bool
-	mu        sync.RWMutex
-	instances map[int64]*cancellableInstance
-	wg        sync.WaitGroup
+	closing atomic.Bool
+	mu      sync.RWMutex
+	locals  map[int64]*cancellableInstance
+	wg      sync.WaitGroup
+}
+
+type RegistryConfig struct {
+	Expiry            time.Duration
+	KeepaliveInterval time.Duration
+}
+
+func (cfg *RegistryConfig) Normalize() {
+	if cfg.Expiry <= 0 {
+		cfg.Expiry = defaultRegistryExpiry
+	}
+
+	if cfg.KeepaliveInterval <= 0 {
+		cfg.KeepaliveInterval = defaultKeepaliveInterval
+	}
 }
 
 func NewRegistry(
 	txMgr repository.TxManager,
 	store repository.Store,
+	cfg RegistryConfig,
 ) *Registry {
+	cfg.Normalize()
 	return &Registry{
-		txMgr:     txMgr,
-		store:     store,
-		instances: make(map[int64]*cancellableInstance),
+		txMgr:  txMgr,
+		store:  store,
+		cfg:    cfg,
+		locals: make(map[int64]*cancellableInstance),
 	}
 }
 
@@ -55,7 +77,7 @@ func (r *Registry) Register(
 		return Instance{}, pkgerr.New("registry is closing")
 	}
 
-	nowMs := time.Now().UnixMilli()
+	nowMs := nowUnixMilli()
 	zero := zeroRevision()
 
 	var instance *Instance
@@ -69,7 +91,7 @@ func (r *Registry) Register(
 
 		// 2. insert instance
 		revison := curRev.CurrentRevision + 1
-		instance = NewInstance(revison)
+		instance = NewInstance(revison, r.cfg.Expiry)
 		created, err := r.store.Instance.Create(ctx, instance.ToSchema())
 		if err != nil {
 			return pkgerr.WithMessage(err, "create instance failed")
@@ -108,10 +130,36 @@ func (r *Registry) Register(
 	}
 
 	r.mu.Lock()
-	r.instances[instance.Id] = cancellableInstance
+	r.locals[instance.Id] = cancellableInstance
 	r.mu.Unlock()
 
 	return *instance, nil
+}
+
+// GetAll 返回当前所有远端活跃实例（expire_time > now），
+// 并按 create_time(start_time) 从小到大稳定排序返回。
+func (r *Registry) GetAll(ctx context.Context) ([]*Instance, error) {
+	activeInstances, err := r.store.Instance.ListActive(ctx, nowUnixMilli())
+	if err != nil {
+		return nil, pkgerr.WithMessage(err, "list active instances failed")
+	}
+
+	result := make([]*Instance, 0, len(activeInstances))
+	for _, instance := range activeInstances {
+		if instance == nil {
+			continue
+		}
+		result = append(result, newInstanceFromSchema(instance))
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		if result[i].StartTime == result[j].StartTime {
+			return result[i].Id < result[j].Id
+		}
+		return result[i].StartTime < result[j].StartTime
+	})
+
+	return result, nil
 }
 
 func (r *Registry) Unregister(
@@ -119,7 +167,7 @@ func (r *Registry) Unregister(
 	instanceId int64,
 ) error {
 	r.mu.RLock()
-	instance, ok := r.instances[instanceId]
+	instance, ok := r.locals[instanceId]
 	if !ok {
 		r.mu.RUnlock()
 		return nil
@@ -127,6 +175,8 @@ func (r *Registry) Unregister(
 	r.mu.RUnlock()
 
 	err := r.txMgr.Transact(ctx, func(ctx context.Context) error {
+		nowMs := nowUnixMilli()
+
 		// 0. get global revision
 		curRev, err := r.store.GlobalRevision.GetOrInitForUpdate(ctx, zeroRevision())
 		if err != nil {
@@ -148,14 +198,14 @@ func (r *Registry) Unregister(
 			Key:        instance.Key,
 			Value:      instance.Value,
 			Type:       InstanceEventDelete.String(),
-			CreateTime: time.Now().UnixMilli(),
+			CreateTime: nowMs,
 		})
 		if err != nil {
 			return pkgerr.WithMessage(err, "append instance event failed")
 		}
 
 		// 3. update global revision
-		err = r.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, time.Now().UnixMilli())
+		err = r.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, nowMs)
 		if err != nil {
 			return pkgerr.WithMessage(err, "update global revision failed")
 		}
@@ -168,7 +218,7 @@ func (r *Registry) Unregister(
 
 	instance.cancel()
 	r.mu.Lock()
-	delete(r.instances, instanceId)
+	delete(r.locals, instanceId)
 	r.mu.Unlock()
 
 	return nil
@@ -184,7 +234,7 @@ func (r *Registry) Close() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 
-		for _, inst := range r.instances {
+		for _, inst := range r.locals {
 			inst.cancel()
 		}
 	}()
@@ -192,7 +242,7 @@ func (r *Registry) Close() {
 	r.wg.Wait()
 
 	r.mu.Lock()
-	r.instances = make(map[int64]*cancellableInstance)
+	r.locals = make(map[int64]*cancellableInstance)
 	r.mu.Unlock()
 }
 
@@ -200,42 +250,41 @@ func (r *Registry) keepalive(
 	ctx context.Context,
 	instance *Instance,
 ) (*cancellableInstance, error) {
-	ctx, cancel := context.WithCancel(ctx)
+	newCtx, cancel := context.WithCancel(ctx)
 	cInst := &cancellableInstance{
-		Instance: instance,
-		cancel:   cancel,
+		Instance:  instance,
+		cancel:    cancel,
+		parentCtx: ctx,
 	}
 
-	ticker := time.NewTicker(defaultKeepaliveInterval)
+	ticker := time.NewTicker(r.cfg.KeepaliveInterval)
 
 	r.wg.Add(1)
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
 				// panic
-				slog.ErrorContext(ctx, "keepalive loop panic",
+				slog.ErrorContext(newCtx, "keepalive loop panic",
 					slog.Any("err", err),
 					slog.String("stack", string(debug.Stack())),
 				)
 			}
 
 			ticker.Stop()
-			newCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-			defer cancel()
-			r.Unregister(newCtx, instance.Id)
+			r.Unregister(ctx, instance.Id)
 			r.wg.Done()
 		}()
 
 		for {
 			select {
-			case <-ctx.Done():
-				slog.InfoContext(ctx, "keepalive loop stopped",
+			case <-newCtx.Done():
+				slog.InfoContext(newCtx, "keepalive loop stopped",
 					slog.String("instance", instance.Key),
 					slog.Int64("instance_id", instance.Id),
 				)
 				return
 			case <-ticker.C:
-				r.heartbeat(ctx, instance)
+				r.heartbeat(newCtx, instance)
 			}
 		}
 	}()
@@ -250,7 +299,7 @@ func (r *Registry) heartbeat(
 	const retryCnt = 3
 	oldExpireTime := instance.ExpireTime
 	for range retryCnt {
-		instance.ExtendTTL(defaultExpiry)
+		instance.ExtendTTL(r.cfg.Expiry)
 		ok, err := r.store.Instance.UpdateExpireTime(
 			ctx, instance.Id,
 			instance.ExpireTime,
@@ -263,14 +312,54 @@ func (r *Registry) heartbeat(
 			continue
 		}
 
+		// 考虑这样一种场景：
+		// 前一时刻sweeper先删掉了instance，后一时刻更新心跳
+		// 这里进程并不是挂掉了，而是因为sweeper先删掉了，导致更新失败，尝试自动重新注册
 		if !ok {
-			// fencing_token mismatch
-			slog.ErrorContext(ctx, "fencing token mismatch",
+			slog.WarnContext(ctx, "heartbeat update missed, try auto re-register",
 				slog.Int64("instance_id", instance.Id),
 				slog.Int64("fencing_token", instance.FencingToken),
 			)
+			if err := r.tryAutoReRegister(ctx, instance); err != nil {
+				slog.ErrorContext(ctx, "auto re-register failed", slog.Any("err", err))
+			}
 		}
 
 		return
 	}
+}
+
+func (r *Registry) tryAutoReRegister(ctx context.Context, instance *Instance) error {
+	if instance == nil {
+		return nil
+	}
+	if r.closing.Load() {
+		return nil
+	}
+
+	r.mu.RLock()
+	old, ok := r.locals[instance.Id]
+	r.mu.RUnlock()
+	if !ok || old == nil {
+		return nil
+	}
+
+	newInst, err := r.Register(old.parentCtx)
+	if err != nil {
+		return pkgerr.WithMessage(err, "register replacement instance failed")
+	}
+
+	// 把老的删掉
+	r.mu.Lock()
+	if current, exists := r.locals[instance.Id]; exists && current == old {
+		delete(r.locals, instance.Id)
+	}
+	r.mu.Unlock()
+
+	old.cancel()
+	slog.InfoContext(ctx, "instance auto re-registered",
+		slog.Int64("old_instance_id", instance.Id),
+		slog.Int64("new_instance_id", newInst.Id),
+	)
+	return nil
 }

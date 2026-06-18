@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,7 +20,7 @@ func TestWatcher_CurrentRevision_NoRecord(t *testing.T) {
 				return nil, pkgsql.ErrNoRecord
 			},
 		},
-	})
+	}, WatcherConfig{})
 
 	rev, err := w.CurrentRevision(context.Background())
 	require.NoError(t, err)
@@ -34,14 +34,14 @@ func TestWatcher_CurrentRevision_Error(t *testing.T) {
 				return nil, stderr.New("db unavailable")
 			},
 		},
-	})
+	}, WatcherConfig{})
 
 	_, err := w.CurrentRevision(context.Background())
 	require.Error(t, err)
 }
 
 func TestWatcher_Watch_Validation(t *testing.T) {
-	w := NewWatcher(repository.Store{})
+	w := NewWatcher(repository.Store{}, WatcherConfig{})
 	cb := func(context.Context, *InstanceEvent) error { return nil }
 
 	err := w.WatchWithRevision(context.Background(), "", 0, cb)
@@ -88,8 +88,8 @@ func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
 				return nil, nil
 			},
 		},
-	})
-	w.interval = time.Millisecond
+	}, WatcherConfig{})
+	w.cfg.Interval = time.Millisecond
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -121,7 +121,7 @@ func TestWatcher_Watch_CallbackError(t *testing.T) {
 				}, nil
 			},
 		},
-	})
+	}, WatcherConfig{})
 
 	err := w.WatchWithRevision(context.Background(), InstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
 		callbackCalls++
@@ -155,9 +155,9 @@ func TestWatcher_Watch_RetryOnListError(t *testing.T) {
 				}, nil
 			},
 		},
-	})
-	w.interval = time.Millisecond
-	w.maxRetryBackoff = 5 * time.Millisecond
+	}, WatcherConfig{})
+	w.cfg.Interval = time.Millisecond
+	w.cfg.MaxRetryBackoff = 5 * time.Millisecond
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -181,7 +181,7 @@ func TestWatcher_WatchWithRevision_ContextCanceled(t *testing.T) {
 				return nil, nil
 			},
 		},
-	})
+	}, WatcherConfig{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

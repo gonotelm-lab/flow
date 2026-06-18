@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
-	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 	"gorm.io/gorm"
 )
 
@@ -26,9 +26,10 @@ func testTxContext() context.Context {
 }
 
 type fakeInstanceStore struct {
-	createFn func(ctx context.Context, instance *schema.Instance) (*schema.Instance, error)
-	deleteFn func(ctx context.Context, id int64) error
-	getFn    func(ctx context.Context, id int64) (*schema.Instance, error)
+	createFn     func(ctx context.Context, instance *schema.Instance) (*schema.Instance, error)
+	deleteFn     func(ctx context.Context, id int64) error
+	getFn        func(ctx context.Context, id int64) (*schema.Instance, error)
+	listActiveFn func(ctx context.Context, aliveAfterMs int64) ([]*schema.Instance, error)
 
 	updateExpireTimeFn func(ctx context.Context, id int64, expireTimeMs, expectToken int64) (bool, error)
 	listExpiredFn      func(ctx context.Context, expireBeforeMs int64, limit int) ([]*schema.Instance, error)
@@ -57,6 +58,16 @@ func (f *fakeInstanceStore) Get(ctx context.Context, id int64) (*schema.Instance
 		return f.getFn(ctx, id)
 	}
 	return nil, pkgsql.ErrNoRecord
+}
+
+func (f *fakeInstanceStore) ListActive(
+	ctx context.Context,
+	aliveAfterMs int64,
+) ([]*schema.Instance, error) {
+	if f.listActiveFn != nil {
+		return f.listActiveFn(ctx, aliveAfterMs)
+	}
+	return nil, nil
 }
 
 func (f *fakeInstanceStore) UpdateExpireTime(

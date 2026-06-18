@@ -24,9 +24,7 @@ const (
 type Sweeper struct {
 	txMgr repository.TxManager
 	store repository.Store
-
-	interval  time.Duration
-	batchSize int
+	cfg   SweeperConfig
 
 	closing atomic.Bool
 	mu      sync.Mutex
@@ -34,15 +32,38 @@ type Sweeper struct {
 	wg      sync.WaitGroup
 }
 
+type SweeperConfig struct {
+	Interval    time.Duration
+	BatchSize   int
+	JitterRatio float64
+}
+
+func (cfg *SweeperConfig) Normalize() {
+	if cfg.Interval <= 0 {
+		cfg.Interval = defaultSweepInterval
+	}
+	if cfg.BatchSize <= 0 {
+		cfg.BatchSize = defaultSweepBatch
+	}
+	if cfg.JitterRatio <= 0 {
+		cfg.JitterRatio = defaultSweepJitterRatio
+	}
+	if cfg.JitterRatio > 1 {
+		cfg.JitterRatio = 1
+	}
+}
+
 func NewSweeper(
 	txMgr repository.TxManager,
 	store repository.Store,
+	cfg SweeperConfig,
 ) *Sweeper {
+	cfg.Normalize()
+
 	return &Sweeper{
-		txMgr:     txMgr,
-		store:     store,
-		interval:  defaultSweepInterval,
-		batchSize: defaultSweepBatch,
+		txMgr: txMgr,
+		store: store,
+		cfg:   cfg,
 	}
 }
 
@@ -79,8 +100,8 @@ func (s *Sweeper) Close() {
 // SweepOnce 执行一批过期实例清理。
 // 返回值表示本次实际清理的实例数量。
 func (s *Sweeper) SweepOnce(ctx context.Context) (int, error) {
-	nowMs := time.Now().UnixMilli()
-	expired, err := s.store.Instance.ListExpired(ctx, nowMs, s.batchSize)
+	nowMs := nowUnixMilli()
+	expired, err := s.store.Instance.ListExpired(ctx, nowMs, s.cfg.BatchSize)
 	if err != nil {
 		return 0, pkgerr.WithMessage(err, "list expired instances failed")
 	}
@@ -172,12 +193,16 @@ func (s *Sweeper) loop(ctx context.Context) {
 }
 
 func (s *Sweeper) nextSweepInterval() time.Duration {
-	base := s.interval
+	base := s.cfg.Interval
 	if base <= 0 {
 		base = defaultSweepInterval
 	}
 
-	jitterRange := time.Duration(float64(base) * defaultSweepJitterRatio)
+	jitterRatio := s.cfg.JitterRatio
+	if jitterRatio <= 0 {
+		jitterRatio = defaultSweepJitterRatio
+	}
+	jitterRange := time.Duration(float64(base) * jitterRatio)
 	if jitterRange <= 0 {
 		return base
 	}

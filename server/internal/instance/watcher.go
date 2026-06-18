@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 
 	pkgerr "github.com/pkg/errors"
 )
@@ -25,18 +25,33 @@ type WatchCallback func(ctx context.Context, event *InstanceEvent) error
 
 type Watcher struct {
 	store repository.Store
-
-	interval        time.Duration
-	batchSize       int
-	maxRetryBackoff time.Duration
+	cfg   WatcherConfig
 }
 
-func NewWatcher(store repository.Store) *Watcher {
+type WatcherConfig struct {
+	Interval        time.Duration
+	BatchSize       int
+	MaxRetryBackoff time.Duration
+}
+
+func (cfg *WatcherConfig) Normalize() {
+	if cfg.Interval <= 0 {
+		cfg.Interval = defaultWatchInterval
+	}
+	if cfg.BatchSize <= 0 {
+		cfg.BatchSize = defaultWatchBatchSize
+	}
+	if cfg.MaxRetryBackoff <= 0 {
+		cfg.MaxRetryBackoff = defaultWatchMaxRetryBackoff
+	}
+}
+
+func NewWatcher(store repository.Store, cfg WatcherConfig) *Watcher {
+	cfg.Normalize()
+
 	return &Watcher{
-		store:           store,
-		interval:        defaultWatchInterval,
-		batchSize:       defaultWatchBatchSize,
-		maxRetryBackoff: defaultWatchMaxRetryBackoff,
+		store: store,
+		cfg:   cfg,
 	}
 }
 
@@ -87,7 +102,7 @@ func (w *Watcher) WatchWithRevision(
 		return pkgerr.New("lastRevision must be non-negative")
 	}
 
-	backoff := w.interval
+	backoff := w.cfg.Interval
 	for {
 		select {
 		case <-ctx.Done():
@@ -95,7 +110,7 @@ func (w *Watcher) WatchWithRevision(
 		default:
 		}
 
-		events, err := w.store.InstanceEvent.List(ctx, group, lastRevision, w.batchSize)
+		events, err := w.store.InstanceEvent.List(ctx, group, lastRevision, w.cfg.BatchSize)
 		if err != nil {
 			slog.WarnContext(ctx, "watch list events failed",
 				slog.String("group", group),
@@ -105,14 +120,14 @@ func (w *Watcher) WatchWithRevision(
 			if err := sleepContext(ctx, backoff); err != nil {
 				return nil
 			}
-			backoff = growBackoff(backoff, w.maxRetryBackoff)
+			backoff = growBackoff(backoff, w.cfg.MaxRetryBackoff)
 			continue
 		}
 
 		// 查询成功后，回退到基础轮询间隔。
-		backoff = w.interval
+		backoff = w.cfg.Interval
 		if len(events) == 0 {
-			if err := sleepContext(ctx, w.interval); err != nil {
+			if err := sleepContext(ctx, w.cfg.Interval); err != nil {
 				return nil
 			}
 			continue

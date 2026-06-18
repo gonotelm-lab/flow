@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -79,6 +79,36 @@ func TestInstanceStore_Get_NotFound(t *testing.T) {
 
 	_, err := gTestInstanceStore.Get(ctx, 999999)
 	assert.ErrorIs(t, err, sql.ErrNoRecord)
+}
+
+func TestInstanceStore_ListActive(t *testing.T) {
+	cleanInstances(t)
+	ctx := context.Background()
+
+	now := nowMs()
+
+	expired := newTestInstance("list-active-expired")
+	expired.ExpireTime = now - 1
+	_, err := gTestInstanceStore.Create(ctx, expired)
+	require.NoError(t, err)
+
+	activeEarly := newTestInstance("list-active-early")
+	activeEarly.StartTime = now - 1000
+	activeEarly.ExpireTime = now + 10_000
+	activeEarlyCreated, err := gTestInstanceStore.Create(ctx, activeEarly)
+	require.NoError(t, err)
+
+	activeLate := newTestInstance("list-active-late")
+	activeLate.StartTime = now + 1000
+	activeLate.ExpireTime = now + 20_000
+	activeLateCreated, err := gTestInstanceStore.Create(ctx, activeLate)
+	require.NoError(t, err)
+
+	got, err := gTestInstanceStore.ListActive(ctx, now)
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, activeEarlyCreated.Id, got[0].Id)
+	assert.Equal(t, activeLateCreated.Id, got[1].Id)
 }
 
 func TestInstanceStore_Delete(t *testing.T) {

@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/gonotelm-lab/flow/server/pkg/ip"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/pkg/ip"
 
 	"github.com/google/uuid"
 )
@@ -17,12 +17,6 @@ var (
 	hostname      string
 	localIP       string
 	instanceValue string
-)
-
-const (
-	// 默认10s过期时间
-	defaultExpiry            = time.Second * 12
-	defaultKeepaliveInterval = time.Second * 10
 )
 
 type InstanceEventType string
@@ -79,14 +73,31 @@ func (i *Instance) ToSchema() *schema.Instance {
 	}
 }
 
+func newInstanceFromSchema(ins *schema.Instance) *Instance {
+	if ins == nil {
+		return nil
+	}
+
+	return &Instance{
+		Id:             ins.Id,
+		Group:          ins.Group,
+		Key:            ins.Key,
+		Value:          ins.Value,
+		StartTime:      ins.StartTime,
+		ExpireTime:     ins.ExpireTime,
+		FencingToken:   ins.FencingToken,
+		CreateRevision: ins.CreateRevision,
+	}
+}
+
 func (i *Instance) Duplicate() *Instance {
 	di := *i
 	return &di
 }
 
-func NewInstance(createRevision int64) *Instance {
+func NewInstance(createRevision int64, expiry time.Duration) *Instance {
 	now := time.Now()
-	expireTime := now.Add(defaultExpiry)
+	expireTime := now.Add(expiry)
 	key := uuid.NewString()
 	key = fmt.Sprintf("%s/%s", InstanceGroup, key)
 	return &Instance{
@@ -119,5 +130,6 @@ type InstanceEvent struct {
 
 type cancellableInstance struct {
 	*Instance
-	cancel context.CancelFunc
+	cancel    context.CancelFunc
+	parentCtx context.Context
 }

@@ -15,9 +15,12 @@ func TestInstanceEventType_String(t *testing.T) {
 }
 
 func TestNewInstance(t *testing.T) {
-	const createRevision int64 = 42
+	const (
+		createRevision int64         = 42
+		expiry         time.Duration = 12 * time.Second
+	)
 
-	ins := NewInstance(createRevision)
+	ins := NewInstance(createRevision, expiry)
 	require.NotNil(t, ins)
 
 	assert.Equal(t, InstanceGroup, ins.Group)

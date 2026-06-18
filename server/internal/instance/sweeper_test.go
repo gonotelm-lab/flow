@@ -13,8 +13,8 @@ import (
 )
 
 func TestSweeper_NextSweepInterval(t *testing.T) {
-	s := NewSweeper(repository.TxManager{}, repository.Store{})
-	s.interval = 100 * time.Millisecond
+	s := NewSweeper(repository.TxManager{}, repository.Store{}, SweeperConfig{})
+	s.cfg.Interval = 100 * time.Millisecond
 
 	min := 80 * time.Millisecond
 	max := 120 * time.Millisecond
@@ -33,7 +33,7 @@ func TestSweeper_SweepOnce_NoExpired(t *testing.T) {
 	}
 	s := NewSweeper(repository.TxManager{}, repository.Store{
 		Instance: store,
-	})
+	}, SweeperConfig{})
 
 	deleted, err := s.SweepOnce(testTxContext())
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestSweeper_SweepOnce_ListExpiredError(t *testing.T) {
 				return nil, stderr.New("list failed")
 			},
 		},
-	})
+	}, SweeperConfig{})
 
 	deleted, err := s.SweepOnce(context.Background())
 	require.Error(t, err)
@@ -97,7 +97,7 @@ func TestSweeper_SweepOnce_Success(t *testing.T) {
 		Instance:       instanceStore,
 		InstanceEvent:  eventStore,
 		GlobalRevision: revStore,
-	})
+	}, SweeperConfig{})
 
 	deleted, err := s.SweepOnce(testTxContext())
 	require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestSweeper_SweepOnce_DeleteError(t *testing.T) {
 		Instance:       instanceStore,
 		InstanceEvent:  &fakeInstanceEventStore{},
 		GlobalRevision: revStore,
-	})
+	}, SweeperConfig{})
 
 	deleted, err := s.SweepOnce(testTxContext())
 	require.Error(t, err)
@@ -141,8 +141,8 @@ func TestSweeper_StartClose(t *testing.T) {
 				return nil, nil
 			},
 		},
-	})
-	s.interval = 2 * time.Millisecond
+	}, SweeperConfig{})
+	s.cfg.Interval = 2 * time.Millisecond
 
 	s.Start(testTxContext())
 	time.Sleep(8 * time.Millisecond)
