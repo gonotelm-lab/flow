@@ -2,21 +2,33 @@ syntax = "proto3";
 
 package api.admin.v1;
 
-import "api/common/v1/namespace.proto";
-import "google/api/field_behavior.proto";
+import "api/schema/v1/namespace.proto";
+import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 
 option go_package = "github.com/gonotelm-lab/flow/api/admin/v1";
 
 message CreateNamespaceRequest {
-  api.common.v1.Namespace namespace = 1 [(google.api.field_behavior) = REQUIRED];
+  api.schema.v1.Namespace namespace = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetNamespaceRequest {
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).required = true
+  ];
 }
 
 service AdminService {
-  rpc CreateNamespace(CreateNamespaceRequest) returns (api.common.v1.Namespace) {
+  rpc CreateNamespace(CreateNamespaceRequest) returns (api.schema.v1.Namespace) {
     option (google.api.http) = {
       post: "/api/admin/v1/namespaces"
       body: "namespace"
     };
+  }
+
+  rpc GetNamespace(GetNamespaceRequest) returns (api.schema.v1.Namespace) {
+    option (google.api.http) = {get: "/api/admin/v1/namespaces/{name}"};
   }
 }

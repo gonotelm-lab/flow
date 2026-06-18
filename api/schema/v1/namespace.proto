@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package api.common.v1;
+package api.schema.v1;
 
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/gonotelm-lab/flow/api/common/v1";
+option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
 
 message Namespace {
   string name = 1 [(google.api.field_behavior) = IDENTIFIER];
