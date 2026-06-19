@@ -14,7 +14,7 @@ import (
 )
 
 func TestWatcher_CurrentRevision_NoRecord(t *testing.T) {
-	w := NewWatcher(repository.Store{
+	w := NewWatcher(&repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
 			getFn: func(_ context.Context, _ string) (*schema.GlobalRevision, error) {
 				return nil, pkgsql.ErrNoRecord
@@ -28,7 +28,7 @@ func TestWatcher_CurrentRevision_NoRecord(t *testing.T) {
 }
 
 func TestWatcher_CurrentRevision_Error(t *testing.T) {
-	w := NewWatcher(repository.Store{
+	w := NewWatcher(&repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
 			getFn: func(_ context.Context, _ string) (*schema.GlobalRevision, error) {
 				return nil, stderr.New("db unavailable")
@@ -41,16 +41,16 @@ func TestWatcher_CurrentRevision_Error(t *testing.T) {
 }
 
 func TestWatcher_Watch_Validation(t *testing.T) {
-	w := NewWatcher(repository.Store{}, WatcherConfig{})
+	w := NewWatcher(&repository.Store{}, WatcherConfig{})
 	cb := func(context.Context, *InstanceEvent) error { return nil }
 
 	err := w.WatchWithRevision(context.Background(), "", 0, cb)
 	require.Error(t, err)
 
-	err = w.WatchWithRevision(context.Background(), InstanceGroup, -1, cb)
+	err = w.WatchWithRevision(context.Background(), testInstanceGroup, -1, cb)
 	require.Error(t, err)
 
-	err = w.WatchWithRevision(context.Background(), InstanceGroup, 0, nil)
+	err = w.WatchWithRevision(context.Background(), testInstanceGroup, 0, nil)
 	require.Error(t, err)
 }
 
@@ -60,7 +60,7 @@ func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
 		gotFirstLastRev  int64 = -1
 		gotEventRevision int64
 	)
-	w := NewWatcher(repository.Store{
+	w := NewWatcher(&repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
 			getFn: func(_ context.Context, _ string) (*schema.GlobalRevision, error) {
 				return &schema.GlobalRevision{
@@ -77,7 +77,7 @@ func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
 					return []*schema.InstanceEvent{
 						{
 							Revision:   6,
-							Group:      InstanceGroup,
+							Group:      testInstanceGroup,
 							Key:        "k1",
 							Value:      "v1",
 							Type:       InstanceEventPut.String(),
@@ -94,7 +94,7 @@ func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := w.Watch(ctx, InstanceGroup, func(_ context.Context, event *InstanceEvent) error {
+	err := w.Watch(ctx, testInstanceGroup, func(_ context.Context, event *InstanceEvent) error {
 		gotEventRevision = event.Revision
 		cancel()
 		return nil
@@ -106,13 +106,13 @@ func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
 
 func TestWatcher_Watch_CallbackError(t *testing.T) {
 	var callbackCalls int
-	w := NewWatcher(repository.Store{
+	w := NewWatcher(&repository.Store{
 		InstanceEvent: &fakeInstanceEventStore{
 			listFn: func(_ context.Context, _ string, _ int64, _ int) ([]*schema.InstanceEvent, error) {
 				return []*schema.InstanceEvent{
 					{
 						Revision:   1,
-						Group:      InstanceGroup,
+						Group:      testInstanceGroup,
 						Key:        "k1",
 						Value:      "v1",
 						Type:       InstanceEventPut.String(),
@@ -123,7 +123,7 @@ func TestWatcher_Watch_CallbackError(t *testing.T) {
 		},
 	}, WatcherConfig{})
 
-	err := w.WatchWithRevision(context.Background(), InstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
+	err := w.WatchWithRevision(context.Background(), testInstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
 		callbackCalls++
 		return stderr.New("callback failed")
 	})
@@ -136,7 +136,7 @@ func TestWatcher_Watch_RetryOnListError(t *testing.T) {
 		attempts  int
 		callbacks int
 	)
-	w := NewWatcher(repository.Store{
+	w := NewWatcher(&repository.Store{
 		InstanceEvent: &fakeInstanceEventStore{
 			listFn: func(_ context.Context, _ string, _ int64, _ int) ([]*schema.InstanceEvent, error) {
 				attempts++
@@ -146,7 +146,7 @@ func TestWatcher_Watch_RetryOnListError(t *testing.T) {
 				return []*schema.InstanceEvent{
 					{
 						Revision:   2,
-						Group:      InstanceGroup,
+						Group:      testInstanceGroup,
 						Key:        "k2",
 						Value:      "v2",
 						Type:       InstanceEventDelete.String(),
@@ -162,7 +162,7 @@ func TestWatcher_Watch_RetryOnListError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := w.WatchWithRevision(ctx, InstanceGroup, 1, func(_ context.Context, _ *InstanceEvent) error {
+	err := w.WatchWithRevision(ctx, testInstanceGroup, 1, func(_ context.Context, _ *InstanceEvent) error {
 		callbacks++
 		cancel()
 		return nil
@@ -174,7 +174,7 @@ func TestWatcher_Watch_RetryOnListError(t *testing.T) {
 
 func TestWatcher_WatchWithRevision_ContextCanceled(t *testing.T) {
 	var calls int
-	w := NewWatcher(repository.Store{
+	w := NewWatcher(&repository.Store{
 		InstanceEvent: &fakeInstanceEventStore{
 			listFn: func(_ context.Context, _ string, _ int64, _ int) ([]*schema.InstanceEvent, error) {
 				calls++
@@ -186,7 +186,7 @@ func TestWatcher_WatchWithRevision_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := w.WatchWithRevision(ctx, InstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
+	err := w.WatchWithRevision(ctx, testInstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
 		return nil
 	})
 	require.NoError(t, err)

@@ -12,7 +12,7 @@ var (
 	gTestInstanceStore       *InstanceStoreImpl
 	gTestNamespaceStore      *NamespaceStoreImpl
 	gTestGlobalRevisionStore *GlobalRevisionStoreImpl
-	gTestInstanceEventStore  *InstanceEventStore
+	gTestInstanceEventStore  *InstanceEventStoreImpl
 )
 
 func TestMain(m *testing.M) {
@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	gTestInstanceStore = &InstanceStoreImpl{db: gTestDB}
 	gTestNamespaceStore = &NamespaceStoreImpl{db: gTestDB}
 	gTestGlobalRevisionStore = &GlobalRevisionStoreImpl{db: gTestDB}
-	gTestInstanceEventStore = &InstanceEventStore{db: gTestDB}
+	gTestInstanceEventStore = &InstanceEventStoreImpl{db: gTestDB}
 
 	m.Run()
 

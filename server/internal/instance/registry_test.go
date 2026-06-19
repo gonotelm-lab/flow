@@ -28,15 +28,15 @@ func TestZeroRevision(t *testing.T) {
 }
 
 func TestRegistry_Register_WhenClosing(t *testing.T) {
-	r := NewRegistry(repository.TxManager{}, repository.Store{}, testRegistryConfig())
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{}, testRegistryConfig())
 	r.closing.Store(true)
 
-	_, err := r.Register(context.Background())
+	_, err := r.Register(context.Background(), testInstanceGroup)
 	require.Error(t, err)
 }
 
 func TestRegistry_Unregister_NotFound(t *testing.T) {
-	r := NewRegistry(repository.TxManager{}, repository.Store{}, testRegistryConfig())
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{}, testRegistryConfig())
 
 	err := r.Unregister(context.Background(), 999)
 	require.NoError(t, err)
@@ -44,7 +44,7 @@ func TestRegistry_Unregister_NotFound(t *testing.T) {
 
 func TestRegistry_GetAll(t *testing.T) {
 	var capturedAliveAfter int64
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance: &fakeInstanceStore{
 			listActiveFn: func(
 				_ context.Context,
@@ -54,7 +54,7 @@ func TestRegistry_GetAll(t *testing.T) {
 				return []*schema.Instance{
 					{
 						Id:             22,
-						Group:          InstanceGroup,
+						Group:          testInstanceGroup,
 						Key:            "flow/instances/b",
 						Value:          "v2",
 						StartTime:      4000,
@@ -65,7 +65,7 @@ func TestRegistry_GetAll(t *testing.T) {
 					nil,
 					{
 						Id:             11,
-						Group:          InstanceGroup,
+						Group:          testInstanceGroup,
 						Key:            "flow/instances/a",
 						Value:          "v1",
 						StartTime:      1000,
@@ -75,7 +75,7 @@ func TestRegistry_GetAll(t *testing.T) {
 					},
 					{
 						Id:             33,
-						Group:          InstanceGroup,
+						Group:          testInstanceGroup,
 						Key:            "flow/instances/c",
 						Value:          "v3",
 						StartTime:      4000,
@@ -115,7 +115,7 @@ func TestRegistry_GetAll(t *testing.T) {
 }
 
 func TestRegistry_GetAll_ListActiveFailed(t *testing.T) {
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance: &fakeInstanceStore{
 			listActiveFn: func(
 				_ context.Context,
@@ -132,7 +132,7 @@ func TestRegistry_GetAll_ListActiveFailed(t *testing.T) {
 
 func TestRegistry_Register_TransactionFailed(t *testing.T) {
 	var called bool
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
 			getOrInitForUpdateFn: func(
 				_ context.Context,
@@ -144,13 +144,13 @@ func TestRegistry_Register_TransactionFailed(t *testing.T) {
 		},
 	}, testRegistryConfig())
 
-	_, err := r.Register(testTxContext())
+	_, err := r.Register(testTxContext(), testInstanceGroup)
 	require.Error(t, err)
 	assert.True(t, called)
 }
 
 func TestRegistry_Unregister_TransactionFailed(t *testing.T) {
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
 			getOrInitForUpdateFn: func(
 				_ context.Context,
@@ -164,7 +164,7 @@ func TestRegistry_Unregister_TransactionFailed(t *testing.T) {
 	r.locals[100] = &cancellableInstance{
 		Instance: &Instance{
 			Id:    100,
-			Group: InstanceGroup,
+			Group: testInstanceGroup,
 			Key:   "flow/instances/x",
 			Value: "v",
 		},
@@ -202,7 +202,7 @@ func TestRegistry_Heartbeat_Success(t *testing.T) {
 		},
 	}
 	cfg := testRegistryConfig()
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance: store,
 	}, cfg)
 
@@ -211,15 +211,20 @@ func TestRegistry_Heartbeat_Success(t *testing.T) {
 		ExpireTime:   10_000,
 		FencingToken: 7_777,
 	}
-	expectedExpire := time.UnixMilli(10_000).Add(cfg.Expiry).UnixMilli()
+	begin := time.Now().UnixMilli()
 
 	r.heartbeat(context.Background(), ins)
+	end := time.Now().UnixMilli()
+	minExpire := begin + cfg.Expiry.Milliseconds()
+	maxExpire := end + cfg.Expiry.Milliseconds()
 
 	assert.Equal(t, 1, calls)
 	assert.Equal(t, int64(123), gotID)
-	assert.Equal(t, expectedExpire, gotExpireTime)
+	assert.GreaterOrEqual(t, gotExpireTime, minExpire)
+	assert.LessOrEqual(t, gotExpireTime, maxExpire)
 	assert.Equal(t, int64(7_777), gotExpectToken)
-	assert.Equal(t, expectedExpire, ins.ExpireTime)
+	assert.GreaterOrEqual(t, ins.ExpireTime, minExpire)
+	assert.LessOrEqual(t, ins.ExpireTime, maxExpire)
 }
 
 func TestRegistry_Heartbeat_ErrorRollback(t *testing.T) {
@@ -235,7 +240,7 @@ func TestRegistry_Heartbeat_ErrorRollback(t *testing.T) {
 			return false, stderr.New("db failed")
 		},
 	}
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance: store,
 	}, testRegistryConfig())
 
@@ -264,7 +269,7 @@ func TestRegistry_Heartbeat_FencingMismatch(t *testing.T) {
 		},
 	}
 	cfg := testRegistryConfig()
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance: store,
 	}, cfg)
 
@@ -273,12 +278,16 @@ func TestRegistry_Heartbeat_FencingMismatch(t *testing.T) {
 		ExpireTime:   30_000,
 		FencingToken: 2,
 	}
-	expectedExpire := time.UnixMilli(30_000).Add(cfg.Expiry).UnixMilli()
+	begin := time.Now().UnixMilli()
 
 	r.heartbeat(context.Background(), ins)
+	end := time.Now().UnixMilli()
+	minExpire := begin + cfg.Expiry.Milliseconds()
+	maxExpire := end + cfg.Expiry.Milliseconds()
 
 	assert.Equal(t, 1, calls)
-	assert.Equal(t, expectedExpire, ins.ExpireTime)
+	assert.GreaterOrEqual(t, ins.ExpireTime, minExpire)
+	assert.LessOrEqual(t, ins.ExpireTime, maxExpire)
 }
 
 func TestRegistry_Heartbeat_AutoReRegister(t *testing.T) {
@@ -335,7 +344,7 @@ func TestRegistry_Heartbeat_AutoReRegister(t *testing.T) {
 		},
 	}
 
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance:       store,
 		InstanceEvent:  events,
 		GlobalRevision: revs,
@@ -350,7 +359,7 @@ func TestRegistry_Heartbeat_AutoReRegister(t *testing.T) {
 	old := &cancellableInstance{
 		Instance: &Instance{
 			Id:           1,
-			Group:        InstanceGroup,
+			Group:        testInstanceGroup,
 			Key:          "flow/instances/old",
 			Value:        "v",
 			ExpireTime:   12345,
@@ -425,7 +434,7 @@ func TestRegistry_Heartbeat_AutoReRegister_UsesParentCtx(t *testing.T) {
 		},
 	}
 
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance:       instanceStore,
 		InstanceEvent:  events,
 		GlobalRevision: revs,
@@ -440,7 +449,7 @@ func TestRegistry_Heartbeat_AutoReRegister_UsesParentCtx(t *testing.T) {
 	old := &cancellableInstance{
 		Instance: &Instance{
 			Id:           1,
-			Group:        InstanceGroup,
+			Group:        testInstanceGroup,
 			Key:          "flow/instances/old-parent",
 			Value:        "v",
 			ExpireTime:   12345,
@@ -502,7 +511,7 @@ func TestRegistry_Heartbeat_AutoReRegister_RegisterFailed_KeepOld(t *testing.T) 
 		},
 	}
 
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance:       instanceStore,
 		InstanceEvent:  events,
 		GlobalRevision: revs,
@@ -517,7 +526,7 @@ func TestRegistry_Heartbeat_AutoReRegister_RegisterFailed_KeepOld(t *testing.T) 
 	old := &cancellableInstance{
 		Instance: &Instance{
 			Id:           2,
-			Group:        InstanceGroup,
+			Group:        testInstanceGroup,
 			Key:          "flow/instances/old-keep",
 			Value:        "v",
 			ExpireTime:   12345,
@@ -548,7 +557,7 @@ func TestRegistry_Heartbeat_AutoReRegister_RegisterFailed_KeepOld(t *testing.T) 
 func TestRegistry_TryAutoReRegister_Closing_NoOp(t *testing.T) {
 	var createCalls int
 
-	r := NewRegistry(repository.TxManager{}, repository.Store{
+	r := NewRegistry(&repository.TxManager{}, &repository.Store{
 		Instance: &fakeInstanceStore{
 			createFn: func(_ context.Context, ins *schema.Instance) (*schema.Instance, error) {
 				createCalls++
@@ -565,7 +574,7 @@ func TestRegistry_TryAutoReRegister_Closing_NoOp(t *testing.T) {
 	old := &cancellableInstance{
 		Instance: &Instance{
 			Id:           3,
-			Group:        InstanceGroup,
+			Group:        testInstanceGroup,
 			Key:          "flow/instances/old-closing",
 			Value:        "v",
 			ExpireTime:   12345,

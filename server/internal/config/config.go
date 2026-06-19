@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -11,9 +12,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/pkg/sql"
 )
 
-var (
-	Conf *Config
-)
+var Conf *Config
 
 type Config struct {
 	DB *DBConfig `toml:"db"`
@@ -22,7 +21,7 @@ type Config struct {
 }
 
 type DBConfig struct {
-	Driver string      `toml:"driver"`
+	Driver sql.Driver  `toml:"driver"`
 	Config *sql.Config `toml:"config"`
 }
 
@@ -51,6 +50,8 @@ func MustInit(path string) {
 	if err := Init(path); err != nil {
 		panic(err)
 	}
+
+	slog.Info("config initialized", "path", path)
 }
 
 func Load(path string) (*Config, error) {
@@ -106,8 +107,8 @@ func (cfg *DBConfig) Validate() error {
 	if cfg == nil {
 		return fmt.Errorf("db config is nil")
 	}
-	if strings.TrimSpace(cfg.Driver) == "" {
-		return fmt.Errorf("db driver is empty")
+	if strings.TrimSpace(string(cfg.Driver)) == "" {
+		return fmt.Errorf("db.driver is empty")
 	}
 	if cfg.Config == nil {
 		return fmt.Errorf("db.config is nil")

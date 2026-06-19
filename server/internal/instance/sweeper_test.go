@@ -13,7 +13,7 @@ import (
 )
 
 func TestSweeper_NextSweepInterval(t *testing.T) {
-	s := NewSweeper(repository.TxManager{}, repository.Store{}, SweeperConfig{})
+	s := NewSweeper(&repository.TxManager{}, &repository.Store{}, SweeperConfig{})
 	s.cfg.Interval = 100 * time.Millisecond
 
 	min := 80 * time.Millisecond
@@ -31,7 +31,7 @@ func TestSweeper_SweepOnce_NoExpired(t *testing.T) {
 			return nil, nil
 		},
 	}
-	s := NewSweeper(repository.TxManager{}, repository.Store{
+	s := NewSweeper(&repository.TxManager{}, &repository.Store{
 		Instance: store,
 	}, SweeperConfig{})
 
@@ -41,7 +41,7 @@ func TestSweeper_SweepOnce_NoExpired(t *testing.T) {
 }
 
 func TestSweeper_SweepOnce_ListExpiredError(t *testing.T) {
-	s := NewSweeper(repository.TxManager{}, repository.Store{
+	s := NewSweeper(&repository.TxManager{}, &repository.Store{
 		Instance: &fakeInstanceStore{
 			listExpiredFn: func(_ context.Context, _ int64, _ int) ([]*schema.Instance, error) {
 				return nil, stderr.New("list failed")
@@ -56,8 +56,8 @@ func TestSweeper_SweepOnce_ListExpiredError(t *testing.T) {
 
 func TestSweeper_SweepOnce_Success(t *testing.T) {
 	expired := []*schema.Instance{
-		{Id: 1, Group: InstanceGroup, Key: "k1", Value: "v1"},
-		{Id: 2, Group: InstanceGroup, Key: "k2", Value: "v2"},
+		{Id: 1, Group: testInstanceGroup, Key: "k1", Value: "v1"},
+		{Id: 2, Group: testInstanceGroup, Key: "k2", Value: "v2"},
 	}
 	var (
 		deleteCalls int
@@ -93,7 +93,7 @@ func TestSweeper_SweepOnce_Success(t *testing.T) {
 			return nil
 		},
 	}
-	s := NewSweeper(repository.TxManager{}, repository.Store{
+	s := NewSweeper(&repository.TxManager{}, &repository.Store{
 		Instance:       instanceStore,
 		InstanceEvent:  eventStore,
 		GlobalRevision: revStore,
@@ -111,7 +111,7 @@ func TestSweeper_SweepOnce_DeleteError(t *testing.T) {
 	instanceStore := &fakeInstanceStore{
 		listExpiredFn: func(_ context.Context, _ int64, _ int) ([]*schema.Instance, error) {
 			return []*schema.Instance{
-				{Id: 1, Group: InstanceGroup, Key: "k1", Value: "v1"},
+				{Id: 1, Group: testInstanceGroup, Key: "k1", Value: "v1"},
 			}, nil
 		},
 		deleteExpiredFn: func(_ context.Context, _ int64, _ int64) (bool, error) {
@@ -123,7 +123,7 @@ func TestSweeper_SweepOnce_DeleteError(t *testing.T) {
 			return &schema.GlobalRevision{Name: discovRevisionName, CurrentRevision: 1}, nil
 		},
 	}
-	s := NewSweeper(repository.TxManager{}, repository.Store{
+	s := NewSweeper(&repository.TxManager{}, &repository.Store{
 		Instance:       instanceStore,
 		InstanceEvent:  &fakeInstanceEventStore{},
 		GlobalRevision: revStore,
@@ -135,7 +135,7 @@ func TestSweeper_SweepOnce_DeleteError(t *testing.T) {
 }
 
 func TestSweeper_StartClose(t *testing.T) {
-	s := NewSweeper(repository.TxManager{}, repository.Store{
+	s := NewSweeper(&repository.TxManager{}, &repository.Store{
 		Instance: &fakeInstanceStore{
 			listExpiredFn: func(_ context.Context, _ int64, _ int) ([]*schema.Instance, error) {
 				return nil, nil

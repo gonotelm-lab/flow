@@ -25,13 +25,13 @@ func TestRegistryWatcher_RegisterAndUnregisterEvents(t *testing.T) {
 		watchReadyOnce.Do(func() { close(watchReady) })
 	})
 
-	registry := NewRegistry(repository.TxManager{}, store, RegistryConfig{
+	registry := NewRegistry(&repository.TxManager{}, &store, RegistryConfig{
 		Expiry:            time.Second,
 		KeepaliveInterval: 20 * time.Millisecond,
 	})
 	defer registry.Close()
 
-	watcher := NewWatcher(store, WatcherConfig{
+	watcher := NewWatcher(&store, WatcherConfig{
 		Interval:        time.Millisecond,
 		BatchSize:       16,
 		MaxRetryBackoff: 10 * time.Millisecond,
@@ -45,7 +45,7 @@ func TestRegistryWatcher_RegisterAndUnregisterEvents(t *testing.T) {
 	go func() {
 		watchErrCh <- watcher.Watch(
 			watchCtx,
-			InstanceGroup,
+			testInstanceGroup,
 			acc.callback(2, watchCancel),
 		)
 	}()
@@ -279,7 +279,7 @@ func (a *watchAccumulator) snapshot() watchSnapshot {
 
 func runRegisterUnregisterRounds(registry *Registry, rounds int) error {
 	for i := 0; i < rounds; i++ {
-		ins, err := registry.Register(testTxContext())
+		ins, err := registry.Register(testTxContext(), testInstanceGroup)
 		if err != nil {
 			return err
 		}
@@ -325,7 +325,7 @@ func runWatchWithRevisionAndProducer(
 	go func() {
 		watchErrCh <- watcher.WatchWithRevision(
 			watchCtx,
-			InstanceGroup,
+			testInstanceGroup,
 			startRevision,
 			acc.callback(rounds*2, watchCancel),
 		)
@@ -343,13 +343,13 @@ func TestRegistryWatcher_BurstEventsWithSmallBatch(t *testing.T) {
 
 	store, state := newDiscoveryInMemoryStore(0, nil)
 
-	registry := NewRegistry(repository.TxManager{}, store, RegistryConfig{
+	registry := NewRegistry(&repository.TxManager{}, &store, RegistryConfig{
 		Expiry:            time.Second,
 		KeepaliveInterval: time.Second,
 	})
 	defer registry.Close()
 
-	watcher := NewWatcher(store, WatcherConfig{
+	watcher := NewWatcher(&store, WatcherConfig{
 		Interval:        time.Millisecond,
 		BatchSize:       1, // 极端场景：最小批次，强制分页轮询。
 		MaxRetryBackoff: 10 * time.Millisecond,
@@ -375,13 +375,13 @@ func TestRegistryWatcher_BurstWithTransientListFailure(t *testing.T) {
 
 	store, state := newDiscoveryInMemoryStore(listFailures, nil)
 
-	registry := NewRegistry(repository.TxManager{}, store, RegistryConfig{
+	registry := NewRegistry(&repository.TxManager{}, &store, RegistryConfig{
 		Expiry:            time.Second,
 		KeepaliveInterval: time.Second,
 	})
 	defer registry.Close()
 
-	watcher := NewWatcher(store, WatcherConfig{
+	watcher := NewWatcher(&store, WatcherConfig{
 		Interval:        time.Millisecond,
 		BatchSize:       2,
 		MaxRetryBackoff: 20 * time.Millisecond,
@@ -409,7 +409,7 @@ func TestRegistryWatcher_ResumeFromNonZeroRevision(t *testing.T) {
 
 	store, state := newDiscoveryInMemoryStore(0, nil)
 
-	registry := NewRegistry(repository.TxManager{}, store, RegistryConfig{
+	registry := NewRegistry(&repository.TxManager{}, &store, RegistryConfig{
 		Expiry:            time.Second,
 		KeepaliveInterval: time.Second,
 	})
@@ -421,7 +421,7 @@ func TestRegistryWatcher_ResumeFromNonZeroRevision(t *testing.T) {
 	startRevision, _, _ := state.snapshot()
 	require.Equal(t, int64(preRounds*2), startRevision)
 
-	watcher := NewWatcher(store, WatcherConfig{
+	watcher := NewWatcher(&store, WatcherConfig{
 		Interval:        time.Millisecond,
 		BatchSize:       1,
 		MaxRetryBackoff: 10 * time.Millisecond,

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -30,8 +31,8 @@ func zeroRevision() *schema.GlobalRevision {
 }
 
 type Registry struct {
-	txMgr repository.TxManager
-	store repository.Store
+	txMgr *repository.TxManager
+	store *repository.Store
 	cfg   RegistryConfig
 
 	closing atomic.Bool
@@ -56,8 +57,8 @@ func (cfg *RegistryConfig) Normalize() {
 }
 
 func NewRegistry(
-	txMgr repository.TxManager,
-	store repository.Store,
+	txMgr *repository.TxManager,
+	store *repository.Store,
 	cfg RegistryConfig,
 ) *Registry {
 	cfg.Normalize()
@@ -72,9 +73,14 @@ func NewRegistry(
 // 注册当前服务
 func (r *Registry) Register(
 	ctx context.Context,
+	group string,
 ) (Instance, error) {
 	if r.closing.Load() {
 		return Instance{}, pkgerr.New("registry is closing")
+	}
+	group = strings.TrimSpace(group)
+	if group == "" {
+		return Instance{}, pkgerr.New("registry register group is empty")
 	}
 
 	nowMs := nowUnixMilli()
@@ -91,7 +97,7 @@ func (r *Registry) Register(
 
 		// 2. insert instance
 		revison := curRev.CurrentRevision + 1
-		instance = NewInstance(revison, r.cfg.Expiry)
+		instance = NewInstance(group, revison, r.cfg.Expiry)
 		created, err := r.store.Instance.Create(ctx, instance.ToSchema())
 		if err != nil {
 			return pkgerr.WithMessage(err, "create instance failed")
@@ -299,7 +305,7 @@ func (r *Registry) heartbeat(
 	const retryCnt = 3
 	oldExpireTime := instance.ExpireTime
 	for range retryCnt {
-		instance.ExtendTTL(r.cfg.Expiry)
+		instance.SetExpireTime(nowUnixMilli() + r.cfg.Expiry.Milliseconds())
 		ok, err := r.store.Instance.UpdateExpireTime(
 			ctx, instance.Id,
 			instance.ExpireTime,
@@ -344,7 +350,7 @@ func (r *Registry) tryAutoReRegister(ctx context.Context, instance *Instance) er
 		return nil
 	}
 
-	newInst, err := r.Register(old.parentCtx)
+	newInst, err := r.Register(old.parentCtx, old.Group)
 	if err != nil {
 		return pkgerr.WithMessage(err, "register replacement instance failed")
 	}

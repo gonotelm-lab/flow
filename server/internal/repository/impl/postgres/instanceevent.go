@@ -11,15 +11,15 @@ import (
 	pkgerr "github.com/pkg/errors"
 )
 
-type InstanceEventStore struct {
+type InstanceEventStoreImpl struct {
 	db *gorm.DB
 }
 
-func NewInstanceEventStore(db *gorm.DB) store.InstanceEvent {
-	return &InstanceEventStore{db: db}
+func NewInstanceEventStoreImpl(db *gorm.DB) store.InstanceEvent {
+	return &InstanceEventStoreImpl{db: db}
 }
 
-func (s *InstanceEventStore) Append(
+func (s *InstanceEventStoreImpl) Append(
 	ctx context.Context,
 	event *schema.InstanceEvent,
 ) error {
@@ -31,7 +31,7 @@ func (s *InstanceEventStore) Append(
 	return nil
 }
 
-func (s *InstanceEventStore) Last(
+func (s *InstanceEventStoreImpl) Last(
 	ctx context.Context,
 	group string,
 ) (*schema.InstanceEvent, error) {
@@ -45,7 +45,7 @@ func (s *InstanceEventStore) Last(
 	return &event, nil
 }
 
-func (s *InstanceEventStore) List(
+func (s *InstanceEventStoreImpl) List(
 	ctx context.Context,
 	group string,
 	lastRevision int64,

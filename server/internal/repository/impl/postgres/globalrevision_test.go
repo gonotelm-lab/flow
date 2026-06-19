@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gonotelm-lab/flow/server/internal/repository"
+	repotx "github.com/gonotelm-lab/flow/server/internal/repository/tx"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,7 +93,7 @@ func TestGetOrInitForUpdate_Concurrent(t *testing.T) {
 			<-gate
 
 			tx := gTestDB.Begin()
-			ctx := repository.WithTTx(context.Background(), tx)
+			ctx := repotx.WithTTx(context.Background(), tx)
 
 			rev, err := gTestGlobalRevisionStore.GetOrInitForUpdate(
 				ctx,
@@ -155,7 +155,7 @@ func TestGetOrInitForUpdate_ConcurrentWithIncr(t *testing.T) {
 			<-gate
 
 			tx := gTestDB.Begin()
-			txCtx := repository.WithTTx(context.Background(), tx)
+			txCtx := repotx.WithTTx(context.Background(), tx)
 
 			_, err := gTestGlobalRevisionStore.GetOrInitForUpdate(
 				txCtx,

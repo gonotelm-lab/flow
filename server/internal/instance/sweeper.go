@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	defaultSweepInterval = time.Second * 5
+	defaultSweepInterval = time.Second * 1
 	defaultSweepBatch    = 200
 	// 在基础间隔上做 ±20% 抖动，降低多实例同频扫描造成的尖峰压力。
 	defaultSweepJitterRatio = 0.2
 )
 
 type Sweeper struct {
-	txMgr repository.TxManager
-	store repository.Store
+	txMgr *repository.TxManager
+	store *repository.Store
 	cfg   SweeperConfig
 
 	closing atomic.Bool
@@ -54,8 +54,8 @@ func (cfg *SweeperConfig) Normalize() {
 }
 
 func NewSweeper(
-	txMgr repository.TxManager,
-	store repository.Store,
+	txMgr *repository.TxManager,
+	store *repository.Store,
 	cfg SweeperConfig,
 ) *Sweeper {
 	cfg.Normalize()

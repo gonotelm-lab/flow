@@ -24,7 +24,7 @@ const (
 type WatchCallback func(ctx context.Context, event *InstanceEvent) error
 
 type Watcher struct {
-	store repository.Store
+	store *repository.Store
 	cfg   WatcherConfig
 }
 
@@ -46,7 +46,7 @@ func (cfg *WatcherConfig) Normalize() {
 	}
 }
 
-func NewWatcher(store repository.Store, cfg WatcherConfig) *Watcher {
+func NewWatcher(store *repository.Store, cfg WatcherConfig) *Watcher {
 	cfg.Normalize()
 
 	return &Watcher{

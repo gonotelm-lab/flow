@@ -2,16 +2,20 @@ package main
 
 import (
 	"flag"
-	"log/slog"
 
+	"github.com/gonotelm-lab/flow/server/internal/app"
 	"github.com/gonotelm-lab/flow/server/internal/config"
+	"github.com/gonotelm-lab/flow/server/internal/repository"
 )
 
+var confPath = flag.String("conf", "./etc/conf.toml.tpl", "config file path")
+
 func main() {
-	confPath := flag.String("conf", "./etc/conf.toml.tpl", "config file path")
 	flag.Parse()
 
 	config.MustInit(*confPath)
+	repository.MustInit(config.Conf.DB.Driver, config.Conf.DB.Config)
 
-	slog.Info("config initialized", slog.String("path", *confPath))
+	app := app.New()
+	app.Run()
 }

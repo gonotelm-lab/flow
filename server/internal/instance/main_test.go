@@ -5,22 +5,24 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/internal/repository/tx"
 	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 	"gorm.io/gorm"
 )
 
 var gTestTxCtx context.Context
 
+const testInstanceGroup = "flow/instances"
+
 func TestMain(m *testing.M) {
-	gTestTxCtx = repository.WithTTx(context.Background(), &gorm.DB{})
+	gTestTxCtx = tx.WithTTx(context.Background(), &gorm.DB{})
 	os.Exit(m.Run())
 }
 
 func testTxContext() context.Context {
 	if gTestTxCtx == nil {
-		return repository.WithTTx(context.Background(), &gorm.DB{})
+		return tx.WithTTx(context.Background(), &gorm.DB{})
 	}
 	return gTestTxCtx
 }

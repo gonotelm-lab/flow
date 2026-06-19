@@ -20,21 +20,41 @@ func TestNewInstance(t *testing.T) {
 		expiry         time.Duration = 12 * time.Second
 	)
 
-	ins := NewInstance(createRevision, expiry)
+	ins := NewInstance(testInstanceGroup, createRevision, expiry)
 	require.NotNil(t, ins)
 
-	assert.Equal(t, InstanceGroup, ins.Group)
-	assert.True(t, strings.HasPrefix(ins.Key, InstanceGroup+"/"))
+	assert.Equal(t, testInstanceGroup, ins.Group)
+	assert.True(t, strings.HasPrefix(ins.Key, testInstanceGroup+"/"))
 	assert.NotEmpty(t, ins.Value)
 	assert.Equal(t, createRevision, ins.CreateRevision)
 	assert.NotZero(t, ins.FencingToken)
 	assert.Greater(t, ins.ExpireTime, ins.StartTime)
 }
 
+func TestNewInstance_CustomGroup(t *testing.T) {
+	const (
+		customGroup    = "custom/instances"
+		createRevision = int64(7)
+		expiry         = 2 * time.Second
+	)
+
+	ins := NewInstance(customGroup, createRevision, expiry)
+	require.NotNil(t, ins)
+	assert.Equal(t, customGroup, ins.Group)
+	assert.True(t, strings.HasPrefix(ins.Key, customGroup+"/"))
+}
+
+func TestNewInstance_TrimGroup(t *testing.T) {
+	ins := NewInstance("  custom/instances  ", 1, time.Second)
+	require.NotNil(t, ins)
+	assert.Equal(t, "custom/instances", ins.Group)
+	assert.True(t, strings.HasPrefix(ins.Key, "custom/instances/"))
+}
+
 func TestInstance_Duplicate(t *testing.T) {
 	original := &Instance{
 		Id:             7,
-		Group:          InstanceGroup,
+		Group:          testInstanceGroup,
 		Key:            "flow/instances/k-1",
 		Value:          "v-1",
 		StartTime:      100,
@@ -55,7 +75,7 @@ func TestInstance_Duplicate(t *testing.T) {
 func TestInstance_TTLAndSchema(t *testing.T) {
 	ins := &Instance{
 		Id:             1,
-		Group:          InstanceGroup,
+		Group:          testInstanceGroup,
 		Key:            "k",
 		Value:          "v",
 		StartTime:      1_000,
@@ -63,9 +83,6 @@ func TestInstance_TTLAndSchema(t *testing.T) {
 		FencingToken:   3_000,
 		CreateRevision: 4_000,
 	}
-
-	ins.ExtendTTL(3 * time.Second)
-	assert.Equal(t, int64(5_000), ins.ExpireTime)
 
 	ins.SetExpireTime(8_888)
 	assert.Equal(t, int64(8_888), ins.ExpireTime)

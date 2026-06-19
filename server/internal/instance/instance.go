@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
@@ -44,10 +45,6 @@ func init() {
 
 	instanceValue = fmt.Sprintf("%s@%s", hostname, localIP)
 }
-
-const (
-	InstanceGroup = "flow/instances"
-)
 
 type Instance struct {
 	Id             int64  `json:"id"`
@@ -95,13 +92,15 @@ func (i *Instance) Duplicate() *Instance {
 	return &di
 }
 
-func NewInstance(createRevision int64, expiry time.Duration) *Instance {
+func NewInstance(group string, createRevision int64, expiry time.Duration) *Instance {
+	group = strings.TrimSpace(group)
+
 	now := time.Now()
 	expireTime := now.Add(expiry)
 	key := uuid.NewString()
-	key = fmt.Sprintf("%s/%s", InstanceGroup, key)
+	key = fmt.Sprintf("%s/%s", group, key)
 	return &Instance{
-		Group:          InstanceGroup,
+		Group:          group,
 		Key:            key,
 		Value:          instanceValue,
 		StartTime:      now.UnixMilli(),
@@ -109,10 +108,6 @@ func NewInstance(createRevision int64, expiry time.Duration) *Instance {
 		FencingToken:   rand.Int63(),
 		CreateRevision: createRevision,
 	}
-}
-
-func (i *Instance) ExtendTTL(ttl time.Duration) {
-	i.ExpireTime = time.UnixMilli(i.ExpireTime).Add(ttl).UnixMilli()
 }
 
 func (i *Instance) SetExpireTime(expireTimeMs int64) {
