@@ -16,3 +16,12 @@ sweepBatch = ${FLOW_REGISTRY_SWEEP_BATCH:-200}
 watchInterval = "${FLOW_REGISTRY_WATCH_INTERVAL:-500ms}"
 watchBatchSize = ${FLOW_REGISTRY_WATCH_BATCH_SIZE:-200}
 watchMaxRetryBackoff = "${FLOW_REGISTRY_WATCH_MAX_RETRY_BACKOFF:-10s}"
+
+[apiServer]
+[apiServer.http]
+listen = "${FLOW_API_SERVER_HTTP_LISTEN:-0.0.0.0}"
+port = ${FLOW_API_SERVER_HTTP_PORT:-7090}
+
+[apiServer.grpc]
+listen = "${FLOW_API_SERVER_GRPC_LISTEN:-0.0.0.0}"
+port = ${FLOW_API_SERVER_GRPC_PORT:-7091}

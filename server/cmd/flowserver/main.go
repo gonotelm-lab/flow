@@ -16,6 +16,12 @@ func main() {
 	config.MustInit(*confPath)
 	repository.MustInit(config.Conf.DB.Driver, config.Conf.DB.Config)
 
-	app := app.New()
+	repo := repository.Repo()
+	defer repository.Close()
+	app, err  := app.New(repo)
+	if err != nil {
+		panic(err)
+	}
+
 	app.Run()
 }

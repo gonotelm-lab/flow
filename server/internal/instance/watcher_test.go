@@ -13,6 +13,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func mustReadWatchResponse(
+	t *testing.T,
+	watchCh WatchChan,
+	timeout time.Duration,
+) (WatchResponse, bool) {
+	t.Helper()
+
+	select {
+	case resp, ok := <-watchCh:
+		return resp, ok
+	case <-time.After(timeout):
+		t.Fatal("watch response timeout")
+		return WatchResponse{}, false
+	}
+}
+
+func requireWatchClosed(t *testing.T, watchCh WatchChan, timeout time.Duration) {
+	t.Helper()
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		t.Fatal("watch channel did not close in time")
+	default:
+	}
+
+	for {
+		select {
+		case resp, ok := <-watchCh:
+			if !ok {
+				return
+			}
+			require.NoError(t, resp.Err())
+		case <-timer.C:
+			t.Fatal("watch channel did not close in time")
+		}
+	}
+}
+
 func TestWatcher_CurrentRevision_NoRecord(t *testing.T) {
 	w := NewWatcher(&repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
@@ -40,18 +81,24 @@ func TestWatcher_CurrentRevision_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWatcher_Watch_Validation(t *testing.T) {
+func TestWatcher_WatchWithRevision_Validation(t *testing.T) {
 	w := NewWatcher(&repository.Store{}, WatcherConfig{})
-	cb := func(context.Context, *InstanceEvent) error { return nil }
 
-	err := w.WatchWithRevision(context.Background(), "", 0, cb)
-	require.Error(t, err)
+	watchCh := w.WatchWithRevision(context.Background(), "", 0)
+	resp, ok := mustReadWatchResponse(t, watchCh, time.Second)
+	require.True(t, ok)
+	require.Error(t, resp.Err())
+	assert.True(t, resp.Canceled)
+	assert.Contains(t, resp.Err().Error(), "group")
+	requireWatchClosed(t, watchCh, time.Second)
 
-	err = w.WatchWithRevision(context.Background(), testInstanceGroup, -1, cb)
-	require.Error(t, err)
-
-	err = w.WatchWithRevision(context.Background(), testInstanceGroup, 0, nil)
-	require.Error(t, err)
+	watchCh = w.WatchWithRevision(context.Background(), testInstanceGroup, -1)
+	resp, ok = mustReadWatchResponse(t, watchCh, time.Second)
+	require.True(t, ok)
+	require.Error(t, resp.Err())
+	assert.True(t, resp.Canceled)
+	assert.Contains(t, resp.Err().Error(), "lastRevision")
+	requireWatchClosed(t, watchCh, time.Second)
 }
 
 func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
@@ -94,41 +141,35 @@ func TestWatcher_Watch_FromCurrentRevision(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := w.Watch(ctx, testInstanceGroup, func(_ context.Context, event *InstanceEvent) error {
-		gotEventRevision = event.Revision
-		cancel()
-		return nil
-	})
-	require.NoError(t, err)
+	watchCh := w.Watch(ctx, testInstanceGroup)
+	resp, ok := mustReadWatchResponse(t, watchCh, time.Second)
+	require.True(t, ok)
+	require.NoError(t, resp.Err())
+	require.Len(t, resp.Events, 1)
+	gotEventRevision = resp.Events[0].Revision
+	cancel()
+	requireWatchClosed(t, watchCh, time.Second)
+
 	assert.Equal(t, int64(5), gotFirstLastRev)
 	assert.Equal(t, int64(6), gotEventRevision)
 }
 
-func TestWatcher_Watch_CallbackError(t *testing.T) {
-	var callbackCalls int
+func TestWatcher_Watch_CurrentRevisionError(t *testing.T) {
 	w := NewWatcher(&repository.Store{
-		InstanceEvent: &fakeInstanceEventStore{
-			listFn: func(_ context.Context, _ string, _ int64, _ int) ([]*schema.InstanceEvent, error) {
-				return []*schema.InstanceEvent{
-					{
-						Revision:   1,
-						Group:      testInstanceGroup,
-						Key:        "k1",
-						Value:      "v1",
-						Type:       InstanceEventPut.String(),
-						CreateTime: 123,
-					},
-				}, nil
+		GlobalRevision: &fakeGlobalRevisionStore{
+			getFn: func(_ context.Context, _ string) (*schema.GlobalRevision, error) {
+				return nil, stderr.New("db unavailable")
 			},
 		},
 	}, WatcherConfig{})
 
-	err := w.WatchWithRevision(context.Background(), testInstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
-		callbackCalls++
-		return stderr.New("callback failed")
-	})
-	require.Error(t, err)
-	assert.Equal(t, 1, callbackCalls)
+	watchCh := w.Watch(context.Background(), testInstanceGroup)
+	resp, ok := mustReadWatchResponse(t, watchCh, time.Second)
+	require.True(t, ok)
+	require.Error(t, resp.Err())
+	assert.True(t, resp.Canceled)
+	assert.Contains(t, resp.Err().Error(), "get current revision failed")
+	requireWatchClosed(t, watchCh, time.Second)
 }
 
 func TestWatcher_Watch_RetryOnListError(t *testing.T) {
@@ -162,12 +203,15 @@ func TestWatcher_Watch_RetryOnListError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := w.WatchWithRevision(ctx, testInstanceGroup, 1, func(_ context.Context, _ *InstanceEvent) error {
-		callbacks++
-		cancel()
-		return nil
-	})
-	require.NoError(t, err)
+	watchCh := w.WatchWithRevision(ctx, testInstanceGroup, 1)
+	resp, ok := mustReadWatchResponse(t, watchCh, time.Second)
+	require.True(t, ok)
+	require.NoError(t, resp.Err())
+	require.Len(t, resp.Events, 1)
+	callbacks += len(resp.Events)
+	cancel()
+	requireWatchClosed(t, watchCh, time.Second)
+
 	assert.GreaterOrEqual(t, attempts, 2)
 	assert.Equal(t, 1, callbacks)
 }
@@ -186,10 +230,9 @@ func TestWatcher_WatchWithRevision_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := w.WatchWithRevision(ctx, testInstanceGroup, 0, func(_ context.Context, _ *InstanceEvent) error {
-		return nil
-	})
-	require.NoError(t, err)
+	watchCh := w.WatchWithRevision(ctx, testInstanceGroup, 0)
+	requireWatchClosed(t, watchCh, time.Second)
+
 	assert.Equal(t, 0, calls)
 }
 

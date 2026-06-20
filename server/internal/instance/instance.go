@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
@@ -47,26 +48,56 @@ func init() {
 }
 
 type Instance struct {
-	Id             int64  `json:"id"`
-	Group          string `json:"group"`
-	Key            string `json:"key"`
-	Value          string `json:"value"`
-	StartTime      int64  `json:"start_time"`
-	ExpireTime     int64  `json:"expire_time"`
-	FencingToken   int64  `json:"fencing_token"`
-	CreateRevision int64  `json:"create_revision"`
+	mu sync.RWMutex
+
+	id             int64
+	group          string
+	key            string
+	value          string
+	startTime      int64
+	expireTime     int64
+	fencingToken   int64
+	createRevision int64
+}
+
+func (i *Instance) GetId() int64 {
+	if i != nil {
+		i.mu.RLock()
+		defer i.mu.RUnlock()
+		return i.id
+	}
+
+	return 0
+}
+
+func (i *Instance) Replace(other *Instance) {
+	if i == nil || other == nil {
+		return
+	}
+
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
+	i.id = other.id
+	i.group = other.group
+	i.key = other.key
+	i.value = other.value
+	i.startTime = other.startTime
+	i.expireTime = other.expireTime
+	i.fencingToken = other.fencingToken
+	i.createRevision = other.createRevision
 }
 
 func (i *Instance) ToSchema() *schema.Instance {
 	return &schema.Instance{
-		Id:             i.Id,
-		Group:          i.Group,
-		Key:            i.Key,
-		Value:          i.Value,
-		StartTime:      i.StartTime,
-		ExpireTime:     i.ExpireTime,
-		FencingToken:   i.FencingToken,
-		CreateRevision: i.CreateRevision,
+		Id:             i.id,
+		Group:          i.group,
+		Key:            i.key,
+		Value:          i.value,
+		StartTime:      i.startTime,
+		ExpireTime:     i.expireTime,
+		FencingToken:   i.fencingToken,
+		CreateRevision: i.createRevision,
 	}
 }
 
@@ -76,20 +107,15 @@ func newInstanceFromSchema(ins *schema.Instance) *Instance {
 	}
 
 	return &Instance{
-		Id:             ins.Id,
-		Group:          ins.Group,
-		Key:            ins.Key,
-		Value:          ins.Value,
-		StartTime:      ins.StartTime,
-		ExpireTime:     ins.ExpireTime,
-		FencingToken:   ins.FencingToken,
-		CreateRevision: ins.CreateRevision,
+		id:             ins.Id,
+		group:          ins.Group,
+		key:            ins.Key,
+		value:          ins.Value,
+		startTime:      ins.StartTime,
+		expireTime:     ins.ExpireTime,
+		fencingToken:   ins.FencingToken,
+		createRevision: ins.CreateRevision,
 	}
-}
-
-func (i *Instance) Duplicate() *Instance {
-	di := *i
-	return &di
 }
 
 func NewInstance(group string, createRevision int64, expiry time.Duration) *Instance {
@@ -100,18 +126,18 @@ func NewInstance(group string, createRevision int64, expiry time.Duration) *Inst
 	key := uuid.NewString()
 	key = fmt.Sprintf("%s/%s", group, key)
 	return &Instance{
-		Group:          group,
-		Key:            key,
-		Value:          instanceValue,
-		StartTime:      now.UnixMilli(),
-		ExpireTime:     expireTime.UnixMilli(),
-		FencingToken:   rand.Int63(),
-		CreateRevision: createRevision,
+		group:          group,
+		key:            key,
+		value:          instanceValue,
+		startTime:      now.UnixMilli(),
+		expireTime:     expireTime.UnixMilli(),
+		fencingToken:   rand.Int63(),
+		createRevision: createRevision,
 	}
 }
 
 func (i *Instance) SetExpireTime(expireTimeMs int64) {
-	i.ExpireTime = expireTimeMs
+	i.expireTime = expireTimeMs
 }
 
 type InstanceEvent struct {

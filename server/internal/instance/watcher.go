@@ -4,6 +4,7 @@ import (
 	"context"
 	stderr "errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository"
@@ -19,9 +20,21 @@ const (
 	defaultWatchMaxRetryBackoff = time.Second * 10
 )
 
-// WatchCallback 外部可注入的事件回调。
-// callback 按 revision 升序串行触发，返回 error 会终止 Watch。
-type WatchCallback func(ctx context.Context, event *InstanceEvent) error
+// WatchChan 对齐 etcd 风格：watch 返回只读 channel。
+type WatchChan <-chan WatchResponse
+
+// WatchResponse 对齐 etcd 风格：事件批次 + 终止状态。
+type WatchResponse struct {
+	Events   []*InstanceEvent
+	Revision int64
+	Canceled bool
+
+	err error
+}
+
+func (r WatchResponse) Err() error {
+	return r.err
+}
 
 type Watcher struct {
 	store *repository.Store
@@ -59,18 +72,34 @@ func NewWatcher(store *repository.Store, cfg WatcherConfig) *Watcher {
 func (w *Watcher) Watch(
 	ctx context.Context,
 	group string,
-	callback WatchCallback,
-) error {
-	lastRevision, err := w.CurrentRevision(ctx)
-	if err != nil {
-		return pkgerr.WithMessage(err, "get current revision failed")
-	}
+) WatchChan {
+	ch := make(chan WatchResponse, 1)
 
-	return w.WatchWithRevision(ctx, group, lastRevision, callback)
+	go func() {
+		defer close(ch)
+
+		lastRevision, err := w.CurrentRevision(ctx)
+		if err != nil {
+			w.sendWatchResponse(
+				ctx,
+				ch,
+				newWatchErrorResponse(pkgerr.WithMessage(err, "get current revision failed")),
+			)
+			return
+		}
+
+		w.watchLoop(ctx, group, lastRevision, ch)
+	}()
+
+	return ch
 }
 
 // CurrentRevision 返回当前 discovery 的 revision 水位。
 func (w *Watcher) CurrentRevision(ctx context.Context) (int64, error) {
+	if w.store == nil || w.store.GlobalRevision == nil {
+		return 0, pkgerr.New("global revision store is required")
+	}
+
 	rev, err := w.store.GlobalRevision.Get(ctx, discovRevisionName)
 	if err != nil {
 		if stderr.Is(err, pkgsql.ErrNoRecord) {
@@ -83,30 +112,44 @@ func (w *Watcher) CurrentRevision(ctx context.Context) (int64, error) {
 	return rev.CurrentRevision, nil
 }
 
-// WatchWithRevision 按 revision 增量轮询并触发回调。
+// WatchWithRevision 按 revision 增量轮询并产出事件批次。
 // - group: 事件分组（如 flow/instances）
 // - lastRevision: 已消费到的 revision；仅消费 > lastRevision 的新事件
 func (w *Watcher) WatchWithRevision(
 	ctx context.Context,
 	group string,
 	lastRevision int64,
-	callback WatchCallback,
-) error {
-	if callback == nil {
-		return pkgerr.New("watch callback is nil")
+) WatchChan {
+	ch := make(chan WatchResponse, 1)
+
+	go func() {
+		defer close(ch)
+		w.watchLoop(ctx, group, lastRevision, ch)
+	}()
+
+	return ch
+}
+
+func (w *Watcher) watchLoop(
+	ctx context.Context,
+	group string,
+	lastRevision int64,
+	ch chan<- WatchResponse,
+) {
+	if err := w.validateWatchArgs(group, lastRevision); err != nil {
+		w.sendWatchResponse(ctx, ch, newWatchErrorResponse(err))
+		return
 	}
-	if group == "" {
-		return pkgerr.New("watch group is empty")
-	}
-	if lastRevision < 0 {
-		return pkgerr.New("lastRevision must be non-negative")
+	if w.store == nil || w.store.InstanceEvent == nil {
+		w.sendWatchResponse(ctx, ch, newWatchErrorResponse(pkgerr.New("instance event store is required")))
+		return
 	}
 
 	backoff := w.cfg.Interval
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		default:
 		}
 
@@ -118,7 +161,7 @@ func (w *Watcher) WatchWithRevision(
 				slog.Any("err", err),
 			)
 			if err := sleepContext(ctx, backoff); err != nil {
-				return nil
+				return
 			}
 			backoff = growBackoff(backoff, w.cfg.MaxRetryBackoff)
 			continue
@@ -128,18 +171,63 @@ func (w *Watcher) WatchWithRevision(
 		backoff = w.cfg.Interval
 		if len(events) == 0 {
 			if err := sleepContext(ctx, w.cfg.Interval); err != nil {
-				return nil
+				return
 			}
 			continue
 		}
 
+		respEvents := make([]*InstanceEvent, 0, len(events))
+		currentRevision := lastRevision
+
 		for _, raw := range events {
-			event := fromSchemaInstanceEvent(raw)
-			if err := callback(ctx, event); err != nil {
-				return pkgerr.WithMessage(err, "watch callback failed")
+			if raw == nil {
+				continue
 			}
-			lastRevision = raw.Revision
+
+			respEvents = append(respEvents, fromSchemaInstanceEvent(raw))
+			currentRevision = raw.Revision
 		}
+		if len(respEvents) == 0 {
+			continue
+		}
+
+		if ok := w.sendWatchResponse(ctx, ch, WatchResponse{
+			Events:   respEvents,
+			Revision: currentRevision,
+		}); !ok {
+			return
+		}
+		lastRevision = currentRevision
+	}
+}
+
+func (w *Watcher) validateWatchArgs(group string, lastRevision int64) error {
+	if strings.TrimSpace(group) == "" {
+		return pkgerr.New("group must not be empty")
+	}
+	if lastRevision < 0 {
+		return pkgerr.New("lastRevision must be non-negative")
+	}
+	return nil
+}
+
+func (w *Watcher) sendWatchResponse(
+	ctx context.Context,
+	ch chan<- WatchResponse,
+	resp WatchResponse,
+) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case ch <- resp:
+		return true
+	}
+}
+
+func newWatchErrorResponse(err error) WatchResponse {
+	return WatchResponse{
+		Canceled: true,
+		err:      err,
 	}
 }
 

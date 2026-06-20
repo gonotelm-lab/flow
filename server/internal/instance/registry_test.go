@@ -89,7 +89,7 @@ func TestRegistry_GetAll(t *testing.T) {
 	}, testRegistryConfig())
 
 	begin := time.Now().UnixMilli()
-	got, err := r.GetAll(context.Background())
+	got, err := r.GetAllPeers(context.Background())
 	end := time.Now().UnixMilli()
 
 	require.NoError(t, err)
@@ -97,21 +97,21 @@ func TestRegistry_GetAll(t *testing.T) {
 	assert.GreaterOrEqual(t, capturedAliveAfter, begin)
 	assert.LessOrEqual(t, capturedAliveAfter, end)
 
-	assert.Equal(t, int64(11), got[0].Id)
-	assert.Equal(t, "flow/instances/a", got[0].Key)
-	assert.Equal(t, int64(1), got[0].CreateRevision)
+	assert.Equal(t, int64(11), got[0].id)
+	assert.Equal(t, "flow/instances/a", got[0].key)
+	assert.Equal(t, int64(1), got[0].createRevision)
 
-	assert.Equal(t, int64(22), got[1].Id)
-	assert.Equal(t, "flow/instances/b", got[1].Key)
-	assert.Equal(t, int64(2), got[1].CreateRevision)
+	assert.Equal(t, int64(22), got[1].id)
+	assert.Equal(t, "flow/instances/b", got[1].key)
+	assert.Equal(t, int64(2), got[1].createRevision)
 
-	assert.Equal(t, int64(33), got[2].Id)
-	assert.Equal(t, "flow/instances/c", got[2].Key)
-	assert.Equal(t, int64(3), got[2].CreateRevision)
+	assert.Equal(t, int64(33), got[2].id)
+	assert.Equal(t, "flow/instances/c", got[2].key)
+	assert.Equal(t, int64(3), got[2].createRevision)
 
-	assert.Equal(t, int64(1000), got[0].StartTime)
-	assert.Equal(t, int64(4000), got[1].StartTime)
-	assert.Equal(t, int64(4000), got[2].StartTime)
+	assert.Equal(t, int64(1000), got[0].startTime)
+	assert.Equal(t, int64(4000), got[1].startTime)
+	assert.Equal(t, int64(4000), got[2].startTime)
 }
 
 func TestRegistry_GetAll_ListActiveFailed(t *testing.T) {
@@ -126,7 +126,7 @@ func TestRegistry_GetAll_ListActiveFailed(t *testing.T) {
 		},
 	}, testRegistryConfig())
 
-	_, err := r.GetAll(context.Background())
+	_, err := r.GetAllPeers(context.Background())
 	require.Error(t, err)
 }
 
@@ -163,10 +163,10 @@ func TestRegistry_Unregister_TransactionFailed(t *testing.T) {
 
 	r.locals[100] = &cancellableInstance{
 		Instance: &Instance{
-			Id:    100,
-			Group: testInstanceGroup,
-			Key:   "flow/instances/x",
-			Value: "v",
+			id:    100,
+			group: testInstanceGroup,
+			key:   "flow/instances/x",
+			value: "v",
 		},
 		cancel: func() {},
 	}
@@ -207,9 +207,9 @@ func TestRegistry_Heartbeat_Success(t *testing.T) {
 	}, cfg)
 
 	ins := &Instance{
-		Id:           123,
-		ExpireTime:   10_000,
-		FencingToken: 7_777,
+		id:           123,
+		expireTime:   10_000,
+		fencingToken: 7_777,
 	}
 	begin := time.Now().UnixMilli()
 
@@ -223,8 +223,8 @@ func TestRegistry_Heartbeat_Success(t *testing.T) {
 	assert.GreaterOrEqual(t, gotExpireTime, minExpire)
 	assert.LessOrEqual(t, gotExpireTime, maxExpire)
 	assert.Equal(t, int64(7_777), gotExpectToken)
-	assert.GreaterOrEqual(t, ins.ExpireTime, minExpire)
-	assert.LessOrEqual(t, ins.ExpireTime, maxExpire)
+	assert.GreaterOrEqual(t, ins.expireTime, minExpire)
+	assert.LessOrEqual(t, ins.expireTime, maxExpire)
 }
 
 func TestRegistry_Heartbeat_ErrorRollback(t *testing.T) {
@@ -245,18 +245,27 @@ func TestRegistry_Heartbeat_ErrorRollback(t *testing.T) {
 	}, testRegistryConfig())
 
 	ins := &Instance{
-		Id:           1,
-		ExpireTime:   20_000,
-		FencingToken: 2,
+		id:           1,
+		expireTime:   20_000,
+		fencingToken: 2,
 	}
 	r.heartbeat(context.Background(), ins)
 
 	assert.Equal(t, 3, calls)
-	assert.Equal(t, int64(20_000), ins.ExpireTime)
+	assert.Equal(t, int64(20_000), ins.expireTime)
 }
 
 func TestRegistry_Heartbeat_FencingMismatch(t *testing.T) {
-	var calls int
+	var (
+		updateCalls int
+		createCalls int
+		appendCalls int
+		getRevCalls int
+		incrCalls   int
+		nextID      int64 = 880
+		curRev      int64 = 7
+	)
+
 	store := &fakeInstanceStore{
 		updateExpireTimeFn: func(
 			_ context.Context,
@@ -264,30 +273,63 @@ func TestRegistry_Heartbeat_FencingMismatch(t *testing.T) {
 			_ int64,
 			_ int64,
 		) (bool, error) {
-			calls++
+			updateCalls++
 			return false, nil
+		},
+		createFn: func(_ context.Context, ins *schema.Instance) (*schema.Instance, error) {
+			createCalls++
+			copied := *ins
+			copied.Id = nextID
+			nextID++
+			return &copied, nil
+		},
+	}
+	events := &fakeInstanceEventStore{
+		appendFn: func(_ context.Context, _ *schema.InstanceEvent) error {
+			appendCalls++
+			return nil
+		},
+	}
+	revs := &fakeGlobalRevisionStore{
+		getOrInitForUpdateFn: func(_ context.Context, zero *schema.GlobalRevision) (*schema.GlobalRevision, error) {
+			getRevCalls++
+			return &schema.GlobalRevision{
+				Name:            zero.Name,
+				CurrentRevision: curRev,
+				UpdateTime:      zero.UpdateTime,
+			}, nil
+		},
+		incrRevisionFn: func(_ context.Context, _ string, _ int64) error {
+			incrCalls++
+			curRev++
+			return nil
 		},
 	}
 	cfg := testRegistryConfig()
 	r := NewRegistry(&repository.TxManager{}, &repository.Store{
-		Instance: store,
+		Instance:       store,
+		InstanceEvent:  events,
+		GlobalRevision: revs,
 	}, cfg)
 
 	ins := &Instance{
-		Id:           1,
-		ExpireTime:   30_000,
-		FencingToken: 2,
+		id:           1,
+		group:        testInstanceGroup,
+		key:          "flow/instances/fencing-mismatch",
+		value:        "v",
+		expireTime:   30_000,
+		fencingToken: 2,
 	}
-	begin := time.Now().UnixMilli()
+	oldID := ins.id
 
-	r.heartbeat(context.Background(), ins)
-	end := time.Now().UnixMilli()
-	minExpire := begin + cfg.Expiry.Milliseconds()
-	maxExpire := end + cfg.Expiry.Milliseconds()
+	r.heartbeat(testTxContext(), ins)
 
-	assert.Equal(t, 1, calls)
-	assert.GreaterOrEqual(t, ins.ExpireTime, minExpire)
-	assert.LessOrEqual(t, ins.ExpireTime, maxExpire)
+	assert.NotEqual(t, oldID, ins.id)
+	assert.Equal(t, 1, updateCalls)
+	assert.Equal(t, 1, createCalls)
+	assert.Equal(t, 1, appendCalls)
+	assert.Equal(t, 1, getRevCalls)
+	assert.Equal(t, 1, incrCalls)
 }
 
 func TestRegistry_Heartbeat_AutoReRegister(t *testing.T) {
@@ -352,39 +394,19 @@ func TestRegistry_Heartbeat_AutoReRegister(t *testing.T) {
 		Expiry:            12 * time.Second,
 		KeepaliveInterval: time.Hour,
 	})
-	defer r.Close()
-
-	parentCtx := testTxContext()
-	oldCtx, oldCancel := context.WithCancel(parentCtx)
-	old := &cancellableInstance{
-		Instance: &Instance{
-			Id:           1,
-			Group:        testInstanceGroup,
-			Key:          "flow/instances/old",
-			Value:        "v",
-			ExpireTime:   12345,
-			FencingToken: 99,
-		},
-		cancel:    oldCancel,
-		parentCtx: parentCtx,
+	ins := &Instance{
+		id:           1,
+		group:        testInstanceGroup,
+		key:          "flow/instances/old",
+		value:        "v",
+		expireTime:   12345,
+		fencingToken: 99,
 	}
-	r.locals[old.Id] = old
+	oldID := ins.id
 
-	r.heartbeat(oldCtx, old.Instance)
+	r.heartbeat(testTxContext(), ins)
 
-	r.mu.RLock()
-	_, oldExists := r.locals[old.Id]
-	var replacement *cancellableInstance
-	for id, inst := range r.locals {
-		if id != old.Id {
-			replacement = inst
-		}
-	}
-	r.mu.RUnlock()
-
-	assert.False(t, oldExists)
-	require.NotNil(t, replacement)
-	assert.NotEqual(t, int64(1), replacement.Id)
+	assert.NotEqual(t, oldID, ins.id)
 	assert.Equal(t, 1, updateCalls)
 	assert.Equal(t, 1, createCalls)
 	assert.Equal(t, 1, appendCalls)
@@ -392,12 +414,15 @@ func TestRegistry_Heartbeat_AutoReRegister(t *testing.T) {
 	assert.Equal(t, 1, incrCalls)
 }
 
-func TestRegistry_Heartbeat_AutoReRegister_UsesParentCtx(t *testing.T) {
+func TestRegistry_Heartbeat_AutoReRegister_UsesHeartbeatCtx(t *testing.T) {
 	var (
 		createCalls int
 		nextID      int64 = 2000
 		curRev      int64 = 20
 	)
+	type ctxKey struct{}
+	markerKey := ctxKey{}
+	const markerValue = "heartbeat-ctx"
 
 	instanceStore := &fakeInstanceStore{
 		updateExpireTimeFn: func(_ context.Context, _ int64, _ int64, _ int64) (bool, error) {
@@ -407,6 +432,9 @@ func TestRegistry_Heartbeat_AutoReRegister_UsesParentCtx(t *testing.T) {
 			createCalls++
 			if ctx.Err() != nil {
 				return nil, stderr.New("register ctx should not be canceled")
+			}
+			if got := ctx.Value(markerKey); got != markerValue {
+				return nil, stderr.New("register ctx should come from heartbeat ctx")
 			}
 
 			copied := *ins
@@ -442,43 +470,27 @@ func TestRegistry_Heartbeat_AutoReRegister_UsesParentCtx(t *testing.T) {
 		Expiry:            12 * time.Second,
 		KeepaliveInterval: time.Hour,
 	})
-	defer r.Close()
-
-	parentCtx := testTxContext()
-	oldCtx, oldCancel := context.WithCancel(parentCtx)
-	old := &cancellableInstance{
-		Instance: &Instance{
-			Id:           1,
-			Group:        testInstanceGroup,
-			Key:          "flow/instances/old-parent",
-			Value:        "v",
-			ExpireTime:   12345,
-			FencingToken: 99,
-		},
-		cancel:    oldCancel,
-		parentCtx: parentCtx,
+	ins := &Instance{
+		id:           1,
+		group:        testInstanceGroup,
+		key:          "flow/instances/old-parent",
+		value:        "v",
+		expireTime:   12345,
+		fencingToken: 99,
 	}
-	r.locals[old.Id] = old
-
-	// 模拟 heartbeat 触发点拿到的是已取消 ctx；重注册应该仍使用 old.parentCtx。
-	oldCancel()
-	r.heartbeat(oldCtx, old.Instance)
-
-	r.mu.RLock()
-	_, oldExists := r.locals[old.Id]
-	r.mu.RUnlock()
+	heartbeatCtx := context.WithValue(testTxContext(), markerKey, markerValue)
+	r.heartbeat(heartbeatCtx, ins)
 
 	assert.Equal(t, 1, createCalls)
-	assert.False(t, oldExists)
 }
 
 func TestRegistry_Heartbeat_AutoReRegister_RegisterFailed_KeepOld(t *testing.T) {
 	var (
-		createCalls   int
-		appendCalls   int
-		incrCalls     int
-		oldCancelCall int
-		curRev        int64 = 30
+		createCalls int
+		appendCalls int
+		incrCalls   int
+		getRevCalls int
+		curRev      int64 = 30
 	)
 
 	instanceStore := &fakeInstanceStore{
@@ -492,6 +504,7 @@ func TestRegistry_Heartbeat_AutoReRegister_RegisterFailed_KeepOld(t *testing.T) 
 	}
 	revs := &fakeGlobalRevisionStore{
 		getOrInitForUpdateFn: func(_ context.Context, zero *schema.GlobalRevision) (*schema.GlobalRevision, error) {
+			getRevCalls++
 			return &schema.GlobalRevision{
 				Name:            zero.Name,
 				CurrentRevision: curRev,
@@ -519,37 +532,20 @@ func TestRegistry_Heartbeat_AutoReRegister_RegisterFailed_KeepOld(t *testing.T) 
 		Expiry:            12 * time.Second,
 		KeepaliveInterval: time.Hour,
 	})
-	defer r.Close()
-
-	parentCtx := testTxContext()
-	oldCtx, baseCancel := context.WithCancel(parentCtx)
-	old := &cancellableInstance{
-		Instance: &Instance{
-			Id:           2,
-			Group:        testInstanceGroup,
-			Key:          "flow/instances/old-keep",
-			Value:        "v",
-			ExpireTime:   12345,
-			FencingToken: 100,
-		},
-		cancel: func() {
-			oldCancelCall++
-			baseCancel()
-		},
-		parentCtx: parentCtx,
+	ins := &Instance{
+		id:           2,
+		group:        testInstanceGroup,
+		key:          "flow/instances/old-keep",
+		value:        "v",
+		expireTime:   12345,
+		fencingToken: 100,
 	}
-	r.locals[old.Id] = old
-
-	r.heartbeat(oldCtx, old.Instance)
-
-	r.mu.RLock()
-	got, exists := r.locals[old.Id]
-	r.mu.RUnlock()
+	oldID := ins.id
+	r.heartbeat(testTxContext(), ins)
 
 	assert.Equal(t, 1, createCalls)
-	assert.True(t, exists)
-	assert.Equal(t, old, got)
-	assert.Equal(t, 0, oldCancelCall)
+	assert.Equal(t, oldID, ins.id)
+	assert.Equal(t, 1, getRevCalls)
 	assert.Equal(t, 0, appendCalls)
 	assert.Equal(t, 0, incrCalls)
 }
@@ -568,30 +564,17 @@ func TestRegistry_TryAutoReRegister_Closing_NoOp(t *testing.T) {
 		Expiry:            12 * time.Second,
 		KeepaliveInterval: time.Hour,
 	})
-	defer r.Close()
-
-	parentCtx := testTxContext()
-	old := &cancellableInstance{
-		Instance: &Instance{
-			Id:           3,
-			Group:        testInstanceGroup,
-			Key:          "flow/instances/old-closing",
-			Value:        "v",
-			ExpireTime:   12345,
-			FencingToken: 101,
-		},
-		cancel:    func() {},
-		parentCtx: parentCtx,
+	ins := &Instance{
+		id:           3,
+		group:        testInstanceGroup,
+		key:          "flow/instances/old-closing",
+		value:        "v",
+		expireTime:   12345,
+		fencingToken: 101,
 	}
-	r.locals[old.Id] = old
 	r.closing.Store(true)
 
-	err := r.tryAutoReRegister(context.Background(), old.Instance)
+	err := r.tryAutoReRegister(context.Background(), ins)
 	require.NoError(t, err)
 	assert.Equal(t, 0, createCalls)
-
-	r.mu.RLock()
-	_, exists := r.locals[old.Id]
-	r.mu.RUnlock()
-	assert.True(t, exists)
 }

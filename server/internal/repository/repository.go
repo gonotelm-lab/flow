@@ -6,38 +6,38 @@ import (
 	"gorm.io/gorm"
 )
 
-type repository struct {
+type Impl struct {
 	db        *gorm.DB
 	txManager *TxManager
 	store     *Store
 }
 
-func newRepository(driver sql.Driver, db *gorm.DB) (*repository, error) {
+func newRepository(driver sql.Driver, db *gorm.DB) (*Impl, error) {
 	store, err := newStore(driver, db)
 	if err != nil {
 		return nil, err
 	}
 
-	return &repository{
+	return &Impl{
 		db:        db,
 		txManager: &TxManager{db: db},
 		store:     store,
 	}, nil
 }
 
-func (s *repository) DB() *gorm.DB {
+func (s *Impl) DB() *gorm.DB {
 	return s.db
 }
 
-func (s *repository) TxManager() *TxManager {
+func (s *Impl) TxManager() *TxManager {
 	return s.txManager
 }
 
-func (s *repository) Store() *Store {
+func (s *Impl) Store() *Store {
 	return s.store
 }
 
-func (s *repository) Close() error {
+func (s *Impl) Close() error {
 	sqlDb, err := s.db.DB()
 	if err != nil {
 		return err

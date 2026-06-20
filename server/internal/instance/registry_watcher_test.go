@@ -43,10 +43,12 @@ func TestRegistryWatcher_RegisterAndUnregisterEvents(t *testing.T) {
 	acc := newWatchAccumulator(0)
 	watchErrCh := make(chan error, 1)
 	go func() {
-		watchErrCh <- watcher.Watch(
+		watchErrCh <- consumeWatchResponses(
 			watchCtx,
-			testInstanceGroup,
-			acc.callback(2, watchCancel),
+			watcher.Watch(watchCtx, testInstanceGroup),
+			acc,
+			2,
+			watchCancel,
 		)
 	}()
 
@@ -240,28 +242,27 @@ func newWatchAccumulator(startRevision int64) *watchAccumulator {
 	}
 }
 
-func (a *watchAccumulator) callback(expectedTotal int, cancel context.CancelFunc) WatchCallback {
-	return func(_ context.Context, event *InstanceEvent) error {
-		a.mu.Lock()
-		if event.Revision != a.lastRev+1 {
-			a.orderBroken = true
-		}
-		a.lastRev = event.Revision
-		switch event.EventType {
-		case InstanceEventPut:
-			a.putSeen++
-		case InstanceEventDelete:
-			a.deleteSeen++
-		}
-		a.totalSeen++
-		done := a.totalSeen == expectedTotal
-		a.mu.Unlock()
-
-		if done {
-			cancel()
-		}
-		return nil
+func (a *watchAccumulator) consume(event *InstanceEvent, expectedTotal int) (done bool) {
+	if event == nil {
+		return false
 	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if event.Revision != a.lastRev+1 {
+		a.orderBroken = true
+	}
+	a.lastRev = event.Revision
+	switch event.EventType {
+	case InstanceEventPut:
+		a.putSeen++
+	case InstanceEventDelete:
+		a.deleteSeen++
+	}
+	a.totalSeen++
+
+	return a.totalSeen == expectedTotal
 }
 
 func (a *watchAccumulator) snapshot() watchSnapshot {
@@ -283,7 +284,7 @@ func runRegisterUnregisterRounds(registry *Registry, rounds int) error {
 		if err != nil {
 			return err
 		}
-		if err := registry.Unregister(testTxContext(), ins.Id); err != nil {
+		if err := registry.Unregister(testTxContext(), ins.id); err != nil {
 			return err
 		}
 	}
@@ -308,6 +309,33 @@ func requireNoErrorWithin(t *testing.T, errCh <-chan error, timeout time.Duratio
 	}
 }
 
+func consumeWatchResponses(
+	watchCtx context.Context,
+	watchCh WatchChan,
+	acc *watchAccumulator,
+	expectedTotal int,
+	cancel context.CancelFunc,
+) error {
+	for {
+		select {
+		case <-watchCtx.Done():
+			return nil
+		case resp, ok := <-watchCh:
+			if !ok {
+				return nil
+			}
+			if err := resp.Err(); err != nil {
+				return err
+			}
+			for _, event := range resp.Events {
+				if acc.consume(event, expectedTotal) {
+					cancel()
+				}
+			}
+		}
+	}
+}
+
 func runWatchWithRevisionAndProducer(
 	t *testing.T,
 	watcher *Watcher,
@@ -323,11 +351,12 @@ func runWatchWithRevisionAndProducer(
 	acc := newWatchAccumulator(startRevision)
 	watchErrCh := make(chan error, 1)
 	go func() {
-		watchErrCh <- watcher.WatchWithRevision(
+		watchErrCh <- consumeWatchResponses(
 			watchCtx,
-			testInstanceGroup,
-			startRevision,
-			acc.callback(rounds*2, watchCancel),
+			watcher.WatchWithRevision(watchCtx, testInstanceGroup, startRevision),
+			acc,
+			rounds*2,
+			watchCancel,
 		)
 	}()
 

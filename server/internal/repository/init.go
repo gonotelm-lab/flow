@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	gRepo *repository
+	gRepo *Impl
 	gDb   *gorm.DB
 )
 
@@ -28,6 +28,10 @@ func MustInit(driver sql.Driver, c *sql.Config) {
 	slog.Info("repository initialized", "driver", driver)
 }
 
-func Repository() *repository {
+func Repo() *Impl {
 	return gRepo
+}
+
+func Close() {
+	gRepo.Close()
 }

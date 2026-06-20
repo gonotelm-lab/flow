@@ -18,6 +18,8 @@ type Config struct {
 	DB *DBConfig `toml:"db"`
 
 	Registry *RegistryConfig `toml:"registry"`
+
+	ApiServer *ApiServer `toml:"apiServer"`
 }
 
 type DBConfig struct {
@@ -159,4 +161,19 @@ func (cfg *RegistryConfig) Validate() error {
 	}
 
 	return nil
+}
+
+type ApiServer struct {
+	Http *HttpServer `toml:"http"`
+	Grpc *GrpcServer `toml:"grpc"`
+}
+
+type HttpServer struct {
+	Listen string `toml:"listen"`
+	Port   int    `toml:"port"`
+}
+
+type GrpcServer struct {
+	Listen string `toml:"listen"`
+	Port   int    `toml:"port"`
 }
