@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 )
 
 func cleanInstanceEvents(t *testing.T) {
@@ -46,7 +46,7 @@ func TestInstanceEventStore_Append_DuplicateRevision(t *testing.T) {
 
 	ev2 := newTestEvent(1, "grp-a", "key-2", "PUT")
 	err = gTestInstanceEventStore.Append(ctx, ev2)
-	assert.Error(t, err, "duplicate revision should fail (primary key)")
+	assert.ErrorIs(t, err, sql.ErrDuplicatedKey)
 }
 
 func TestInstanceEventStore_Last(t *testing.T) {
@@ -73,7 +73,7 @@ func TestInstanceEventStore_Last_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := gTestInstanceEventStore.Last(ctx, "nonexistent")
-	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	assert.ErrorIs(t, err, sql.ErrNoRecord)
 }
 
 func TestInstanceEventStore_Last_MultiGroup(t *testing.T) {

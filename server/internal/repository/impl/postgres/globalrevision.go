@@ -2,14 +2,12 @@ package postgres
 
 import (
 	"context"
-	stderr "errors"
 
 	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/internal/repository/impl/util"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/store"
 
-	pkgerr "github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -36,7 +34,7 @@ func (s *GlobalRevisionStoreImpl) GetOrInitForUpdate(
 		RETURNING *`, zero.Name, zero.CurrentRevision, zero.UpdateTime,
 	).Scan(&rev).Error
 	if err != nil {
-		return nil, pkgerr.Wrap(err, "db raw exec failed")
+		return nil, sql.WrapError(err)
 	}
 
 	return &rev, nil
@@ -55,7 +53,7 @@ func (s *GlobalRevisionStoreImpl) IncrRevision(
 			"update_time":      updateTime,
 		}).Error
 	if err != nil {
-		return pkgerr.Wrap(err, "db update failed")
+		return sql.WrapError(err)
 	}
 
 	return nil
@@ -68,11 +66,7 @@ func (s *GlobalRevisionStoreImpl) Get(
 	db := util.GetDB(ctx, s.db)
 	var rev schema.GlobalRevision
 	if err := db.Where("name = ?", name).First(&rev).Error; err != nil {
-		if stderr.Is(err, gorm.ErrRecordNotFound) {
-			return nil, sql.ErrNoRecord
-		}
-
-		return nil, pkgerr.Wrap(err, "db first failed")
+		return nil, sql.WrapError(err)
 	}
 
 	return &rev, nil

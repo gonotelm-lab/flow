@@ -56,7 +56,7 @@ func TestInstanceStore_Create_DuplicateKey(t *testing.T) {
 	ins2 := newTestInstance("dup2")
 	ins2.Key = ins1.Key
 	_, err = gTestInstanceStore.Create(ctx, ins2)
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, sql.ErrDuplicatedKey)
 }
 
 func TestInstanceStore_Get(t *testing.T) {

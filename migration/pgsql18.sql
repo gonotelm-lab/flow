@@ -42,6 +42,7 @@ CREATE TABLE instances (
   create_revision BIGINT NOT NULL,
   extras BYTEA
 );
+CREATE INDEX idx_instances_expire_time_id ON instances (expire_time ASC, id ASC);
 
 -- 服务实例状态变化事件表
 CREATE TABLE instance_events (
@@ -52,6 +53,7 @@ CREATE TABLE instance_events (
   "type" VARCHAR(16),
   create_time BIGINT NOT NULL DEFAULT 0
 );
+CREATE INDEX idx_instance_events_group_revision ON instance_events ("group" ASC, revision ASC);
 
 -- 全局revision表
 CREATE TABLE global_revisions (

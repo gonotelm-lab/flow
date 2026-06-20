@@ -11,7 +11,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/sharding"
 
-	pkgerr "github.com/pkg/errors"
+	"github.com/pkg/errors"
 )
 
 const registerGroupName = "flow/instances"
@@ -87,12 +87,12 @@ func (a *App) bootstrap() error {
 
 	newInst, err := a.registry.Register(a.rootCtx, registerGroupName)
 	if err != nil {
-		return pkgerr.WithMessage(err, "register instance failed")
+		return errors.WithMessage(err, "register instance failed")
 	}
 
 	a.self = newInst
 	if err := a.updateShard(a.rootCtx); err != nil {
-		return pkgerr.WithMessage(err, "init shard failed")
+		return errors.WithMessage(err, "init shard failed")
 	}
 
 	a.ready.Store(true)
@@ -154,7 +154,7 @@ func (a *App) startApiServer() error {
 func (a *App) run() error {
 	err := a.bootstrap()
 	if err != nil {
-		return pkgerr.WithMessage(err, "bootstrap failed")
+		return errors.WithMessage(err, "bootstrap failed")
 	}
 
 	return a.startApiServer()
@@ -176,7 +176,7 @@ func (a *App) updateShard(ctx context.Context) error {
 	if err != nil {
 		// 取全量失败维持不变
 		slog.ErrorContext(ctx, "get all peers failed", slog.Any("err", err))
-		return pkgerr.WithMessage(err, "get all peers failed")
+		return errors.WithMessage(err, "get all peers failed")
 	}
 
 	selfId := a.self.GetId()
@@ -188,14 +188,14 @@ func (a *App) updateShard(ctx context.Context) error {
 	newShard := a.shardCalc.GetShard(selfId, peerIds)
 	if !newShard.Valid() {
 		slog.WarnContext(ctx, "new shard is not valid, skip instance event")
-		return pkgerr.New("new shard is not valid")
+		return errors.New("new shard is not valid")
 	}
 	if a.self.GetId() != newShard.Id {
 		slog.ErrorContext(ctx,
 			"new shard is not valid, skip instance event",
 			slog.Any("newShard", newShard),
 		)
-		return pkgerr.New("new shard is not valid")
+		return errors.New("new shard is not valid")
 	}
 
 	a.selfShard.Store(newShard)
@@ -212,7 +212,7 @@ func (a *App) onInstanceEvent(ctx context.Context, event *instance.InstanceEvent
 
 	if err := a.updateShard(ctx); err != nil {
 		slog.ErrorContext(ctx, "update shard failed", slog.Any("err", err))
-		return pkgerr.WithMessage(err, "update shard failed")
+		return errors.WithMessage(err, "update shard failed")
 	}
 
 	return nil

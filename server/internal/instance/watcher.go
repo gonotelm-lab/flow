@@ -11,7 +11,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
 
-	pkgerr "github.com/pkg/errors"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -83,7 +83,7 @@ func (w *Watcher) Watch(
 			w.sendWatchResponse(
 				ctx,
 				ch,
-				newWatchErrorResponse(pkgerr.WithMessage(err, "get current revision failed")),
+				newWatchErrorResponse(errors.WithMessage(err, "get current revision failed")),
 			)
 			return
 		}
@@ -97,7 +97,7 @@ func (w *Watcher) Watch(
 // CurrentRevision 返回当前 discovery 的 revision 水位。
 func (w *Watcher) CurrentRevision(ctx context.Context) (int64, error) {
 	if w.store == nil || w.store.GlobalRevision == nil {
-		return 0, pkgerr.New("global revision store is required")
+		return 0, errors.New("global revision store is required")
 	}
 
 	rev, err := w.store.GlobalRevision.Get(ctx, discovRevisionName)
@@ -106,7 +106,7 @@ func (w *Watcher) CurrentRevision(ctx context.Context) (int64, error) {
 			return 0, nil
 		}
 
-		return 0, pkgerr.WithMessage(err, "get global revision failed")
+		return 0, errors.WithMessage(err, "get global revision failed")
 	}
 
 	return rev.CurrentRevision, nil
@@ -141,7 +141,7 @@ func (w *Watcher) watchLoop(
 		return
 	}
 	if w.store == nil || w.store.InstanceEvent == nil {
-		w.sendWatchResponse(ctx, ch, newWatchErrorResponse(pkgerr.New("instance event store is required")))
+		w.sendWatchResponse(ctx, ch, newWatchErrorResponse(errors.New("instance event store is required")))
 		return
 	}
 
@@ -203,10 +203,10 @@ func (w *Watcher) watchLoop(
 
 func (w *Watcher) validateWatchArgs(group string, lastRevision int64) error {
 	if strings.TrimSpace(group) == "" {
-		return pkgerr.New("group must not be empty")
+		return errors.New("group must not be empty")
 	}
 	if lastRevision < 0 {
-		return pkgerr.New("lastRevision must be non-negative")
+		return errors.New("lastRevision must be non-negative")
 	}
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 
-	pkgerr "github.com/pkg/errors"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -93,7 +93,7 @@ func (r *Registry) registerOnce(
 		// 1. get global revision
 		curRev, err := r.store.GlobalRevision.GetOrInitForUpdate(ctx, zero)
 		if err != nil {
-			return pkgerr.WithMessage(err, "get global revision failed")
+			return errors.WithMessage(err, "get global revision failed")
 		}
 
 		// 2. insert instance
@@ -101,7 +101,7 @@ func (r *Registry) registerOnce(
 		instance = NewInstance(group, revision, r.cfg.Expiry)
 		created, err := r.store.Instance.Create(ctx, instance.ToSchema())
 		if err != nil {
-			return pkgerr.WithMessage(err, "create instance failed")
+			return errors.WithMessage(err, "create instance failed")
 		}
 
 		instance.id = created.Id
@@ -116,19 +116,19 @@ func (r *Registry) registerOnce(
 			CreateTime: nowMs,
 		})
 		if err != nil {
-			return pkgerr.WithMessage(err, "append instance event failed")
+			return errors.WithMessage(err, "append instance event failed")
 		}
 
 		// 4. update global revision
 		err = r.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, nowMs)
 		if err != nil {
-			return pkgerr.WithMessage(err, "update global revision failed")
+			return errors.WithMessage(err, "update global revision failed")
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, pkgerr.WithMessage(err, "transaction failed")
+		return nil, errors.WithMessage(err, "transaction failed")
 	}
 
 	return instance, nil
@@ -140,11 +140,11 @@ func (r *Registry) Register(
 	group string,
 ) (*Instance, error) {
 	if r.closing.Load() {
-		return nil, pkgerr.New("registry is closing")
+		return nil, errors.New("registry is closing")
 	}
 	group = strings.TrimSpace(group)
 	if group == "" {
-		return nil, pkgerr.New("registry register group is empty")
+		return nil, errors.New("registry register group is empty")
 	}
 
 	instance, err := r.registerOnce(ctx, group)
@@ -154,7 +154,7 @@ func (r *Registry) Register(
 
 	cancellableInstance, err := r.keepalive(ctx, instance)
 	if err != nil {
-		return nil, pkgerr.WithMessage(err, "keep alive instance failed")
+		return nil, errors.WithMessage(err, "keep alive instance failed")
 	}
 
 	r.mu.Lock()
@@ -169,7 +169,7 @@ func (r *Registry) Register(
 func (r *Registry) GetAllPeers(ctx context.Context) ([]*Instance, error) {
 	activeInstances, err := r.store.Instance.ListActive(ctx, nowUnixMilli())
 	if err != nil {
-		return nil, pkgerr.WithMessage(err, "list active instances failed")
+		return nil, errors.WithMessage(err, "list active instances failed")
 	}
 
 	result := make([]*Instance, 0, len(activeInstances))
@@ -217,7 +217,7 @@ func (r *Registry) Unregister(
 		// 0. get global revision
 		curRev, err := r.store.GlobalRevision.GetOrInitForUpdate(ctx, zeroRevision())
 		if err != nil {
-			return pkgerr.WithMessage(err, "get global revision failed")
+			return errors.WithMessage(err, "get global revision failed")
 		}
 
 		revision := curRev.CurrentRevision + 1
@@ -225,7 +225,7 @@ func (r *Registry) Unregister(
 		// 1. delete instance
 		err = r.store.Instance.Delete(ctx, instance.id)
 		if err != nil {
-			return pkgerr.WithMessage(err, "delete instance failed")
+			return errors.WithMessage(err, "delete instance failed")
 		}
 
 		// 2. put event
@@ -238,19 +238,19 @@ func (r *Registry) Unregister(
 			CreateTime: nowMs,
 		})
 		if err != nil {
-			return pkgerr.WithMessage(err, "append instance event failed")
+			return errors.WithMessage(err, "append instance event failed")
 		}
 
 		// 3. update global revision
 		err = r.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, nowMs)
 		if err != nil {
-			return pkgerr.WithMessage(err, "update global revision failed")
+			return errors.WithMessage(err, "update global revision failed")
 		}
 
 		return nil
 	})
 	if err != nil {
-		return pkgerr.WithMessage(err, "transaction failed")
+		return errors.WithMessage(err, "transaction failed")
 	}
 
 	instance.cancel()
@@ -381,7 +381,7 @@ func (r *Registry) tryAutoReRegister(ctx context.Context, instance *Instance) er
 
 	newInst, err := r.registerOnce(ctx, instance.group)
 	if err != nil {
-		return pkgerr.WithMessage(err, "register replacement instance failed")
+		return errors.WithMessage(err, "register replacement instance failed")
 	}
 
 	instance.Replace(newInst)

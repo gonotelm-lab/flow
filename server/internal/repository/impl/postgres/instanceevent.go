@@ -6,9 +6,8 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/repository/impl/util"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/store"
+	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"gorm.io/gorm"
-
-	pkgerr "github.com/pkg/errors"
 )
 
 type InstanceEventStoreImpl struct {
@@ -25,7 +24,7 @@ func (s *InstanceEventStoreImpl) Append(
 ) error {
 	db := util.GetDB(ctx, s.db)
 	if err := db.Create(event).Error; err != nil {
-		return pkgerr.Wrap(err, "db create failed")
+		return sql.WrapError(err)
 	}
 
 	return nil
@@ -40,7 +39,7 @@ func (s *InstanceEventStoreImpl) Last(
 	if err := db.Where(`"group" = ?`, group).
 		Order("revision DESC").
 		First(&event).Error; err != nil {
-		return nil, pkgerr.Wrap(err, "db first failed")
+		return nil, sql.WrapError(err)
 	}
 	return &event, nil
 }
@@ -57,7 +56,7 @@ func (s *InstanceEventStoreImpl) List(
 		Order("revision ASC").
 		Limit(limit).
 		Find(&events).Error; err != nil {
-		return nil, pkgerr.Wrap(err, "db find failed")
+		return nil, sql.WrapError(err)
 	}
 	return events, nil
 }

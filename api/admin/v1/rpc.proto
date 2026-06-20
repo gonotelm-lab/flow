@@ -24,7 +24,7 @@ service AdminService {
   rpc CreateNamespace(CreateNamespaceRequest) returns (api.schema.v1.Namespace) {
     option (google.api.http) = {
       post: "/api/admin/v1/namespaces"
-      body: "namespace"
+      body: "*"
     };
   }
 

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 )
 
 func cleanNamespaces(t *testing.T) {
@@ -50,6 +50,7 @@ func TestNamespaceStore_Create_DuplicateName(t *testing.T) {
 	}
 	_, err = gTestNamespaceStore.Create(ctx, ns2)
 	assert.Error(t, err)
+	assert.ErrorIs(t, err, sql.ErrDuplicatedKey)
 }
 
 func TestNamespaceStore_Get(t *testing.T) {
@@ -73,5 +74,5 @@ func TestNamespaceStore_Get_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := gTestNamespaceStore.Get(ctx, "nonexistent")
-	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	assert.ErrorIs(t, err, sql.ErrNoRecord)
 }

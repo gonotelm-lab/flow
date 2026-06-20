@@ -11,7 +11,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 
-	pkgerr "github.com/pkg/errors"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -103,7 +103,7 @@ func (s *Sweeper) SweepOnce(ctx context.Context) (int, error) {
 	nowMs := nowUnixMilli()
 	expired, err := s.store.Instance.ListExpired(ctx, nowMs, s.cfg.BatchSize)
 	if err != nil {
-		return 0, pkgerr.WithMessage(err, "list expired instances failed")
+		return 0, errors.WithMessage(err, "list expired instances failed")
 	}
 	if len(expired) == 0 {
 		return 0, nil
@@ -113,14 +113,14 @@ func (s *Sweeper) SweepOnce(ctx context.Context) (int, error) {
 	err = s.txMgr.Transact(ctx, func(ctx context.Context) error {
 		curRev, err := s.store.GlobalRevision.GetOrInitForUpdate(ctx, zeroRevision())
 		if err != nil {
-			return pkgerr.WithMessage(err, "get global revision failed")
+			return errors.WithMessage(err, "get global revision failed")
 		}
 		revision := curRev.CurrentRevision
 
 		for _, inst := range expired {
 			deleted, err := s.store.Instance.DeleteExpired(ctx, inst.Id, nowMs)
 			if err != nil {
-				return pkgerr.WithMessage(err, "delete expired instance failed")
+				return errors.WithMessage(err, "delete expired instance failed")
 			}
 			if !deleted {
 				continue
@@ -136,12 +136,12 @@ func (s *Sweeper) SweepOnce(ctx context.Context) (int, error) {
 				CreateTime: nowMs,
 			})
 			if err != nil {
-				return pkgerr.WithMessage(err, "append instance event failed")
+				return errors.WithMessage(err, "append instance event failed")
 			}
 
 			err = s.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, nowMs)
 			if err != nil {
-				return pkgerr.WithMessage(err, "update global revision failed")
+				return errors.WithMessage(err, "update global revision failed")
 			}
 			deletedCnt++
 		}
@@ -149,7 +149,7 @@ func (s *Sweeper) SweepOnce(ctx context.Context) (int, error) {
 		return nil
 	})
 	if err != nil {
-		return 0, pkgerr.WithMessage(err, "sweep transaction failed")
+		return 0, errors.WithMessage(err, "sweep transaction failed")
 	}
 
 	return deletedCnt, nil

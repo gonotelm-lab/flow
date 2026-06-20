@@ -120,9 +120,9 @@ const file_api_admin_v1_rpc_proto_rawDesc = "" +
 	"\x16CreateNamespaceRequest\x12;\n" +
 	"\tnamespace\x18\x01 \x01(\v2\x18.api.schema.v1.NamespaceB\x03\xe0A\x02R\tnamespace\"4\n" +
 	"\x13GetNamespaceRequest\x12\x1d\n" +
-	"\x04name\x18\x01 \x01(\tB\t\xe0A\x02\xbaH\x03\xc8\x01\x01R\x04name2\x84\x02\n" +
-	"\fAdminService\x12~\n" +
-	"\x0fCreateNamespace\x12$.api.admin.v1.CreateNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"+\x82\xd3\xe4\x93\x02%:\tnamespace\"\x18/api/admin/v1/namespaces\x12t\n" +
+	"\x04name\x18\x01 \x01(\tB\t\xe0A\x02\xbaH\x03\xc8\x01\x01R\x04name2\xfc\x01\n" +
+	"\fAdminService\x12v\n" +
+	"\x0fCreateNamespace\x12$.api.admin.v1.CreateNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/admin/v1/namespaces\x12t\n" +
 	"\fGetNamespace\x12!.api.admin.v1.GetNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/admin/v1/namespaces/{name}B\x99\x01\n" +
 	"\x10com.api.admin.v1B\bRpcProtoP\x01Z)github.com/gonotelm-lab/flow/api/admin/v1\xa2\x02\x03AAX\xaa\x02\fApi.Admin.V1\xca\x02\fApi\\Admin\\V1\xe2\x02\x18Api\\Admin\\V1\\GPBMetadata\xea\x02\x0eApi::Admin::V1b\x06proto3"
 

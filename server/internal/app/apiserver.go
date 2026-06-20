@@ -11,7 +11,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/app/interceptor"
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
-	"github.com/gonotelm-lab/flow/server/internal/service/adminservice"
+	"github.com/gonotelm-lab/flow/server/internal/service/admin"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/sync/errgroup"
@@ -96,7 +96,7 @@ func (s *ApiServer) Stop() {
 func (s *ApiServer) registerGrpcServices(
 	repoStore *repository.Store,
 ) {
-	adminService := adminservice.NewService(repoStore)
+	adminService := admin.NewService(repoStore)
 
 	adminv1.RegisterAdminServiceServer(s.grpcServer, adminService)
 }

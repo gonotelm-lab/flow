@@ -30,6 +30,8 @@ type Namespace struct {
 	Creator       string                 `protobuf:"bytes,3,opt,name=creator,proto3" json:"creator,omitempty"`
 	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	ApiKey        string                 `protobuf:"bytes,6,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	ApiKeyPreview string                 `protobuf:"bytes,7,opt,name=api_key_preview,json=apiKeyPreview,proto3" json:"api_key_preview,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -99,19 +101,35 @@ func (x *Namespace) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *Namespace) GetApiKey() string {
+	if x != nil {
+		return x.ApiKey
+	}
+	return ""
+}
+
+func (x *Namespace) GetApiKeyPreview() string {
+	if x != nil {
+		return x.ApiKeyPreview
+	}
+	return ""
+}
+
 var File_api_schema_v1_namespace_proto protoreflect.FileDescriptor
 
 const file_api_schema_v1_namespace_proto_rawDesc = "" +
 	"\n" +
-	"\x1dapi/schema/v1/namespace.proto\x12\rapi.schema.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xda\x01\n" +
+	"\x1dapi/schema/v1/namespace.proto\x12\rapi.schema.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x02\n" +
 	"\tNamespace\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
-	"\acreator\x18\x03 \x01(\tR\acreator\x12;\n" +
-	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTimeB\xa5\x01\n" +
+	"\acreator\x18\x03 \x01(\tR\acreator\x12@\n" +
+	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\x12\x1c\n" +
+	"\aapi_key\x18\x06 \x01(\tB\x03\xe0A\x03R\x06apiKey\x12+\n" +
+	"\x0fapi_key_preview\x18\a \x01(\tB\x03\xe0A\x03R\rapiKeyPreviewB\xa5\x01\n" +
 	"\x11com.api.schema.v1B\x0eNamespaceProtoP\x01Z*github.com/gonotelm-lab/flow/api/schema/v1\xa2\x02\x03ASX\xaa\x02\rApi.Schema.V1\xca\x02\rApi\\Schema\\V1\xe2\x02\x19Api\\Schema\\V1\\GPBMetadata\xea\x02\x0fApi::Schema::V1b\x06proto3"
 
 var (
