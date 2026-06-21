@@ -12,24 +12,6 @@ CREATE TABLE namespaces (
   update_time BIGINT NOT NULL DEFAULT 0
 );
 
-CREATE TABLE tasks (
-  id UUID PRIMARY KEY DEFAULT uuidv7(),
-  namespace VARCHAR(128) NOT NULL,
-  type VARCHAR(64) DEFAULT '',
-  state VARCHAR(16) DEFAULT '',
-  shard_no SMALLINT DEFAULT 0,
-  title VARCHAR(64),
-  input BYTEA,
-  result BYTEA,
-  checkpoint BYTEA,
-  create_time BIGINT NOT NULL DEFAULT 0,
-  update_time BIGINT NOT NULL DEFAULT 0,
-  expired_time BIGINT NOT NULL DEFAULT 0,
-  max_retry SMALLINT DEFAULT 0,
-  cur_retry SMALLINT DEFAULT 0,
-  worker_id VARCHAR(48)
-);
-
 -- 服务实例注册表
 CREATE TABLE instances (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
