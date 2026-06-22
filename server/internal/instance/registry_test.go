@@ -31,7 +31,7 @@ func TestRegistry_Register_WhenClosing(t *testing.T) {
 	r := NewRegistry(&repository.TxManager{}, &repository.Store{}, testRegistryConfig())
 	r.closing.Store(true)
 
-	_, err := r.Register(context.Background(), testInstanceGroup)
+	_, err := r.Register(context.Background(), testInstanceGroup, "v")
 	require.Error(t, err)
 }
 
@@ -144,7 +144,7 @@ func TestRegistry_Register_TransactionFailed(t *testing.T) {
 		},
 	}, testRegistryConfig())
 
-	_, err := r.Register(testTxContext(), testInstanceGroup)
+	_, err := r.Register(testTxContext(), testInstanceGroup, "v")
 	require.Error(t, err)
 	assert.True(t, called)
 }

@@ -47,3 +47,30 @@ func NewInstanceEventStore(driver sql.Driver, db *gorm.DB) (store.InstanceEvent,
 
 	return nil, errDriverNotSupported
 }
+
+func NewTaskStore(driver sql.Driver, db *gorm.DB) (store.Task, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewTaskStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}
+
+func NewTaskWorkerStore(driver sql.Driver, db *gorm.DB) (store.TaskWorker, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewTaskWorkerStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}
+
+func NewTaskEventStore(driver sql.Driver, db *gorm.DB) (store.TaskEvent, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewTaskEventStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}

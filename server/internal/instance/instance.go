@@ -118,8 +118,9 @@ func newInstanceFromSchema(ins *schema.Instance) *Instance {
 	}
 }
 
-func NewInstance(group string, createRevision int64, expiry time.Duration) *Instance {
+func NewInstance(group, value string, createRevision int64, expiry time.Duration) *Instance {
 	group = strings.TrimSpace(group)
+	value = strings.TrimSpace(value)
 
 	now := time.Now()
 	expireTime := now.Add(expiry)
@@ -128,7 +129,7 @@ func NewInstance(group string, createRevision int64, expiry time.Duration) *Inst
 	return &Instance{
 		group:          group,
 		key:            key,
-		value:          instanceValue,
+		value:          value,
 		startTime:      now.UnixMilli(),
 		expireTime:     expireTime.UnixMilli(),
 		fencingToken:   rand.Int63(),

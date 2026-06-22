@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package api.schema.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
+
+enum TaskState {
+  TASK_STATE_UNSPECIFIED = 0;
+  INITED = 1;
+  RUNNING = 2;
+  DONE = 3;
+  FAILED = 4;
+  CANCELLED = 5;
+}
+
+message Task {
+  string id = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).string.uuid = true
+  ];
+  string namespace = 2 [(buf.validate.field).required = true];
+  string task_type = 3 [(buf.validate.field).required = true];
+  bytes payload = 4;
+  bytes result = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  bytes error = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  TaskState state = 7 [
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).enum.defined_only = true
+  ];
+  google.protobuf.Timestamp create_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 next_run_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 max_retry = 11;
+  int32 attempt_no = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 worker_id = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

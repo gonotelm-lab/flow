@@ -40,7 +40,7 @@ func (s *Service) CreateNamespace(
 
 	ns, err := s.createNamespace(ctx, req.GetNamespace())
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.WithMessage(err, "failed to create namespace")
 	}
 
 	return ns, nil
@@ -61,7 +61,7 @@ func (s *Service) GetNamespace(
 
 	ns, err := s.getNamespace(ctx, name)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.WithMessage(err, "failed to get namespace")
 	}
 
 	return ns, nil

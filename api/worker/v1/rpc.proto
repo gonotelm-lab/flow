@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package api.worker.v1;
+
+import "api/schema/v1/task.proto";
+import "api/schema/v1/worker.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/gonotelm-lab/flow/api/worker/v1";
+
+message UnregisterRequest {
+  int64 id = 1 [(buf.validate.field).required = true];
+}
+
+message UnregisterResponse {}
+
+message HeartbeatRequest {
+  int64 id = 1 [(buf.validate.field).required = true];
+}
+
+message HeartbeatResponse {
+  google.protobuf.Timestamp heartbeat_time = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message PollRequest {
+  int64 id = 1 [(buf.validate.field).required = true];
+  string namespace = 2 [(buf.validate.field).required = true];
+  string task_type = 3 [(buf.validate.field).required = true];
+}
+
+message PollResponse {
+  api.schema.v1.Task task = 1;
+}
+
+enum ReportAction {
+  REPORT_ACTION_UNSPECIFIED = 0;
+  SUCCESS = 1;
+  FAIL = 2;
+}
+
+message ReportRequest {
+  int64 worker_id = 1 [(buf.validate.field).required = true];
+  string task_id = 2 [(buf.validate.field).required = true];
+  ReportAction action = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).enum.defined_only = true
+  ];
+  bytes payload = 4;
+}
+
+message ReportResponse {}
+
+service WorkerService {
+  rpc Register(api.schema.v1.Worker) returns (api.schema.v1.Worker);
+  rpc Unregister(UnregisterRequest) returns (UnregisterResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc Poll(PollRequest) returns (PollResponse);
+  rpc Report(ReportRequest) returns (ReportResponse);
+}

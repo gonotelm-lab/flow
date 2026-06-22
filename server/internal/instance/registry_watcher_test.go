@@ -280,7 +280,7 @@ func (a *watchAccumulator) snapshot() watchSnapshot {
 
 func runRegisterUnregisterRounds(registry *Registry, rounds int) error {
 	for i := 0; i < rounds; i++ {
-		ins, err := registry.Register(testTxContext(), testInstanceGroup)
+		ins, err := registry.Register(testTxContext(), testInstanceGroup, "v")
 		if err != nil {
 			return err
 		}

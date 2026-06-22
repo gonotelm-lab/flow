@@ -13,6 +13,9 @@ type Store struct {
 	InstanceEvent  store.InstanceEvent
 	GlobalRevision store.GlobalRevision
 	Namespace      store.Namespace
+	Task           store.Task
+	TaskWorker     store.TaskWorker
+	TaskEvent      store.TaskEvent
 }
 
 func newStore(driver sql.Driver, db *gorm.DB) (*Store, error) {
@@ -34,10 +37,28 @@ func newStore(driver sql.Driver, db *gorm.DB) (*Store, error) {
 		return nil, err
 	}
 
+	task, err := impl.NewTaskStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
+	taskWorker, err := impl.NewTaskWorkerStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
+	taskEvent, err := impl.NewTaskEventStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Store{
 		Instance:       instance,
 		InstanceEvent:  instanceEvent,
 		GlobalRevision: globalRevision,
 		Namespace:      namespace,
+		Task:           task,
+		TaskWorker:     taskWorker,
+		TaskEvent:      taskEvent,
 	}, nil
 }

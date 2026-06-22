@@ -34,7 +34,7 @@ func (s *Service) createNamespace(
 			return nil, srverr.NamespaceExists
 		}
 
-		return nil, errors.WithStack(srverr.Internal.WithDetail(err.Error()))
+		return nil, errors.WithMessage(err, "failed to create namespace")
 	}
 
 	return toApiNamespace(ns), nil
@@ -50,7 +50,7 @@ func (s *Service) getNamespace(
 			return nil, srverr.NamespaceNotFound
 		}
 
-		return nil, errors.WithStack(srverr.Internal.WithDetail(err.Error()))
+		return nil, errors.WithMessage(err, "failed to get namespace")
 	}
 
 	apiNs := toApiNamespace(ns)

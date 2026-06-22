@@ -70,5 +70,12 @@ func toStatusError(err error) error {
 		return bizStatus.Err()
 	}
 
-	return status.Error(codes.Internal, string(srverr.KeyInternalError))
+	errStatus := status.New(codes.Internal, string(srverr.KeyInternalError))
+	errStatus, _ = errStatus.WithDetails(
+		&errdetails.LocalizedMessage{
+			Message: err.Error(),
+		},
+	)
+
+	return errStatus.Err()
 }

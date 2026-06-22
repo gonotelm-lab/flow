@@ -20,7 +20,7 @@ func TestNewInstance(t *testing.T) {
 		expiry         time.Duration = 12 * time.Second
 	)
 
-	ins := NewInstance(testInstanceGroup, createRevision, expiry)
+	ins := NewInstance(testInstanceGroup, "v", createRevision, expiry)
 	require.NotNil(t, ins)
 
 	assert.Equal(t, testInstanceGroup, ins.group)
@@ -38,14 +38,14 @@ func TestNewInstance_CustomGroup(t *testing.T) {
 		expiry         = 2 * time.Second
 	)
 
-	ins := NewInstance(customGroup, createRevision, expiry)
+	ins := NewInstance(customGroup, "v", createRevision, expiry)
 	require.NotNil(t, ins)
 	assert.Equal(t, customGroup, ins.group)
 	assert.True(t, strings.HasPrefix(ins.key, customGroup+"/"))
 }
 
 func TestNewInstance_TrimGroup(t *testing.T) {
-	ins := NewInstance("  custom/instances  ", 1, time.Second)
+	ins := NewInstance("  custom/instances  ", "v", 1, time.Second)
 	require.NotNil(t, ins)
 	assert.Equal(t, "custom/instances", ins.group)
 	assert.True(t, strings.HasPrefix(ins.key, "custom/instances/"))

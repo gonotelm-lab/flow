@@ -13,6 +13,9 @@ var (
 	gTestNamespaceStore      *NamespaceStoreImpl
 	gTestGlobalRevisionStore *GlobalRevisionStoreImpl
 	gTestInstanceEventStore  *InstanceEventStoreImpl
+	gTestTaskStore           *TaskStoreImpl
+	gTestTaskWorkerStore     *TaskWorkerStoreImpl
+	gTestTaskEventStore      *TaskEventStoreImpl
 )
 
 func TestMain(m *testing.M) {
@@ -30,6 +33,9 @@ func TestMain(m *testing.M) {
 	gTestNamespaceStore = &NamespaceStoreImpl{db: gTestDB}
 	gTestGlobalRevisionStore = &GlobalRevisionStoreImpl{db: gTestDB}
 	gTestInstanceEventStore = &InstanceEventStoreImpl{db: gTestDB}
+	gTestTaskStore = &TaskStoreImpl{db: gTestDB}
+	gTestTaskWorkerStore = &TaskWorkerStoreImpl{db: gTestDB}
+	gTestTaskEventStore = &TaskEventStoreImpl{db: gTestDB}
 
 	m.Run()
 

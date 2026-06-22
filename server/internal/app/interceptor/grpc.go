@@ -8,6 +8,7 @@ func UnaryServerInterceptor() grpc.ServerOption {
 	return grpc.ChainUnaryInterceptor(
 		recoveryUnaryInterceptor(),
 		errorUnaryInterceptor(),
+		validateUnaryInterceptor(),
 	)
 }
 
@@ -15,5 +16,6 @@ func StreamServerInterceptor() grpc.ServerOption {
 	return grpc.ChainStreamInterceptor(
 		recoveryStreamInterceptor(),
 		errorStreamInterceptor(),
+		validateStreamInterceptor(),
 	)
 }

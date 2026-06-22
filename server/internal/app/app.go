@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"runtime/debug"
 	"sync/atomic"
@@ -85,7 +86,8 @@ func (a *App) bootstrap() error {
 	a.sweeper.Start(a.rootCtx)
 	a.startInstanceWatch()
 
-	newInst, err := a.registry.Register(a.rootCtx, registerGroupName)
+	regValue := fmt.Sprintf("%s:%d", config.Conf.ApiServer.Grpc.Listen, config.Conf.ApiServer.Grpc.Port)
+	newInst, err := a.registry.Register(a.rootCtx, registerGroupName, regValue)
 	if err != nil {
 		return errors.WithMessage(err, "register instance failed")
 	}
@@ -115,19 +117,13 @@ func (a *App) startInstanceWatch() {
 
 		for resp := range watchCh {
 			if err := resp.Err(); err != nil {
-				slog.ErrorContext(a.rootCtx,
-					"instance watcher exited",
-					slog.Any("err", err),
-				)
+				slog.ErrorContext(a.rootCtx, "instance watcher exited", slog.Any("err", err))
 				return
 			}
 
 			for _, event := range resp.Events {
 				if err := a.onInstanceEvent(a.rootCtx, event); err != nil {
-					slog.ErrorContext(a.rootCtx,
-						"handle instance event failed",
-						slog.Any("err", err),
-					)
+					slog.ErrorContext(a.rootCtx, "handle instance event failed", slog.Any("err", err))
 				}
 			}
 		}

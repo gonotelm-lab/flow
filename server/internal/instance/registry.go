@@ -82,7 +82,7 @@ func NewRegistry(
 
 func (r *Registry) registerOnce(
 	ctx context.Context,
-	group string,
+	group , value string,
 ) (*Instance, error) {
 	nowMs := nowUnixMilli()
 	zero := zeroRevision()
@@ -98,7 +98,11 @@ func (r *Registry) registerOnce(
 
 		// 2. insert instance
 		revision := curRev.CurrentRevision + 1
-		instance = NewInstance(group, revision, r.cfg.Expiry)
+		value = strings.TrimSpace(value)
+		if value == "" {
+			value = instanceValue
+		}
+		instance = NewInstance(group, value, revision, r.cfg.Expiry)
 		created, err := r.store.Instance.Create(ctx, instance.ToSchema())
 		if err != nil {
 			return errors.WithMessage(err, "create instance failed")
@@ -137,7 +141,7 @@ func (r *Registry) registerOnce(
 // 注册当前服务
 func (r *Registry) Register(
 	ctx context.Context,
-	group string,
+	group, value string,
 ) (*Instance, error) {
 	if r.closing.Load() {
 		return nil, errors.New("registry is closing")
@@ -147,7 +151,7 @@ func (r *Registry) Register(
 		return nil, errors.New("registry register group is empty")
 	}
 
-	instance, err := r.registerOnce(ctx, group)
+	instance, err := r.registerOnce(ctx, group, value)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +383,7 @@ func (r *Registry) tryAutoReRegister(ctx context.Context, instance *Instance) er
 		return nil
 	}
 
-	newInst, err := r.registerOnce(ctx, instance.group)
+	newInst, err := r.registerOnce(ctx, instance.group, instance.value)
 	if err != nil {
 		return errors.WithMessage(err, "register replacement instance failed")
 	}
