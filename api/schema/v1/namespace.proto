@@ -2,13 +2,18 @@ syntax = "proto3";
 
 package api.schema.v1;
 
+import "buf/validate/validate.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
 
 message Namespace {
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
   string description = 2;
   string creator = 3;
   google.protobuf.Timestamp create_time = 4 [(google.api.field_behavior) = OUTPUT_ONLY];

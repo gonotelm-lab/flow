@@ -17,6 +17,10 @@ watchInterval = "${FLOW_REGISTRY_WATCH_INTERVAL:-500ms}"
 watchBatchSize = ${FLOW_REGISTRY_WATCH_BATCH_SIZE:-200}
 watchMaxRetryBackoff = "${FLOW_REGISTRY_WATCH_MAX_RETRY_BACKOFF:-10s}"
 
+[worker]
+pollWait = "${FLOW_WORKER_POLL_WAIT:-10s}"
+pollCheckInterval = "${FLOW_WORKER_POLL_CHECK_INTERVAL:-500ms}"
+
 [apiServer]
 [apiServer.http]
 listen = "${FLOW_API_SERVER_HTTP_LISTEN:-0.0.0.0}"

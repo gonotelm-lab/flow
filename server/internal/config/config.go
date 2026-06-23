@@ -19,6 +19,8 @@ type Config struct {
 
 	Registry *RegistryConfig `toml:"registry"`
 
+	Worker *WorkerConfig `toml:"worker"`
+
 	ApiServer *ApiServer `toml:"apiServer"`
 }
 
@@ -36,6 +38,11 @@ type RegistryConfig struct {
 	WatchInterval        time.Duration `toml:"watchInterval"`
 	WatchBatchSize       int           `toml:"watchBatchSize"`
 	WatchMaxRetryBackoff time.Duration `toml:"watchMaxRetryBackoff"`
+}
+
+type WorkerConfig struct {
+	PollWait          time.Duration `toml:"pollWait"`
+	PollCheckInterval time.Duration `toml:"pollCheckInterval"`
 }
 
 func Init(path string) error {
@@ -101,6 +108,11 @@ func (cfg *Config) Validate() error {
 	if err := cfg.Registry.Validate(); err != nil {
 		return fmt.Errorf("registry validate failed: %w", err)
 	}
+	if cfg.Worker != nil {
+		if err := cfg.Worker.Validate(); err != nil {
+			return fmt.Errorf("worker validate failed: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -158,6 +170,20 @@ func (cfg *RegistryConfig) Validate() error {
 	}
 	if cfg.WatchMaxRetryBackoff <= 0 {
 		return fmt.Errorf("registry.watchMaxRetryBackoff must be positive")
+	}
+
+	return nil
+}
+
+func (cfg *WorkerConfig) Validate() error {
+	if cfg == nil {
+		return fmt.Errorf("worker config is nil")
+	}
+	if cfg.PollWait <= 0 {
+		return fmt.Errorf("worker.pollWait must be positive")
+	}
+	if cfg.PollCheckInterval < 0 {
+		return fmt.Errorf("worker.pollCheckInterval must be non-negative")
 	}
 
 	return nil

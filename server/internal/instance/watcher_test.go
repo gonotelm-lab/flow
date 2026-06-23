@@ -8,7 +8,7 @@ import (
 
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
-	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,7 +58,7 @@ func TestWatcher_CurrentRevision_NoRecord(t *testing.T) {
 	w := NewWatcher(&repository.Store{
 		GlobalRevision: &fakeGlobalRevisionStore{
 			getFn: func(_ context.Context, _ string) (*schema.GlobalRevision, error) {
-				return nil, pkgsql.ErrNoRecord
+				return nil, pkgerr.NoRecord
 			},
 		},
 	}, WatcherConfig{})

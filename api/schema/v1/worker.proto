@@ -11,11 +11,18 @@ option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
 message Worker {
   int64 id = 1 [
     (google.api.field_behavior) = IDENTIFIER,
-    (google.api.field_behavior) = OUTPUT_ONLY
+    (google.api.field_behavior) = OUTPUT_ONLY,
+    (buf.validate.field).int64.gt = 0
   ];
   string name = 2;
-  string namespace = 3 [(buf.validate.field).required = true];
-  string task_type = 4 [(buf.validate.field).required = true];
+  string namespace = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+  string task_type = 4 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
   google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
   google.protobuf.Timestamp heartbeat_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
   google.protobuf.Timestamp last_work_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];

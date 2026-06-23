@@ -107,7 +107,14 @@ func (s *ApiServer) Stop() {
 }
 
 func (s *ApiServer) registerGrpcServices(repoStore *repository.Store) {
-	workerService := worker.NewService(repoStore)
+	var workerCfg worker.ServiceConfig
+	if config.Conf != nil && config.Conf.Worker != nil {
+		workerCfg = worker.ServiceConfig{
+			PollWait:          config.Conf.Worker.PollWait,
+			PollCheckInterval: config.Conf.Worker.PollCheckInterval,
+		}
+	}
+	workerService := worker.NewService(repoStore, workerCfg)
 	workerv1.RegisterWorkerServiceServer(s.grpcServer, workerService)
 }
 

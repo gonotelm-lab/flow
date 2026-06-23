@@ -226,11 +226,13 @@ var File_api_schema_v1_task_proto protoreflect.FileDescriptor
 
 const file_api_schema_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/schema/v1/task.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8d\x04\n" +
+	"\x18api/schema/v1/task.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x04\n" +
 	"\x04Task\x12\x1b\n" +
-	"\x02id\x18\x01 \x01(\tB\v\xe0A\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12$\n" +
-	"\tnamespace\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\tnamespace\x12#\n" +
-	"\ttask_type\x18\x03 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\btaskType\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xe0A\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12(\n" +
+	"\tnamespace\x18\x02 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\tnamespace\x12'\n" +
+	"\ttask_type\x18\x03 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\btaskType\x12\x18\n" +
 	"\apayload\x18\x04 \x01(\fR\apayload\x12\x1b\n" +
 	"\x06result\x18\x05 \x01(\fB\x03\xe0A\x03R\x06result\x12\x19\n" +
 	"\x05error\x18\x06 \x01(\fB\x03\xe0A\x03R\x05error\x12;\n" +
@@ -240,8 +242,8 @@ const file_api_schema_v1_task_proto_rawDesc = "" +
 	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"updateTime\x12'\n" +
 	"\rnext_run_time\x18\n" +
-	" \x01(\x03B\x03\xe0A\x03R\vnextRunTime\x12\x1b\n" +
-	"\tmax_retry\x18\v \x01(\x03R\bmaxRetry\x12\"\n" +
+	" \x01(\x03B\x03\xe0A\x03R\vnextRunTime\x12$\n" +
+	"\tmax_retry\x18\v \x01(\x03B\a\xbaH\x04\"\x02(\x00R\bmaxRetry\x12\"\n" +
 	"\n" +
 	"attempt_no\x18\f \x01(\x05B\x03\xe0A\x03R\tattemptNo\x12 \n" +
 	"\tworker_id\x18\r \x01(\x03B\x03\xe0A\x03R\bworkerId*e\n" +

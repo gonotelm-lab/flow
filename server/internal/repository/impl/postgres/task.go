@@ -65,7 +65,7 @@ func (s *TaskStoreImpl) ClaimUpdate(
 	ctx context.Context,
 	id uuid.UUID,
 	oldState string,
-	params *store.ClaimUpdateParams,
+	params *store.TaskClaimUpdateParams,
 ) (bool, error) {
 	db := util.GetDB(ctx, s.db)
 	// update task set state = newState, update_time = updateTime, worker_id = workerId
@@ -88,8 +88,38 @@ func (s *TaskStoreImpl) ClaimUpdate(
 
 func (s *TaskStoreImpl) Update(ctx context.Context, task *schema.Task) (bool, error) {
 	db := util.GetDB(ctx, s.db)
-	if err := db.Model(&schema.Task{}).Where("id = ?", task.Id).Updates(task).Error; err != nil {
+	if err := db.Model(&schema.Task{}).
+		Where("id = ?", task.Id).
+		Updates(task).Error; err != nil {
 		return false, sql.WrapError(err)
 	}
-	return true, nil
+
+	return db.RowsAffected > 0, nil
+}
+
+func (s *TaskStoreImpl) UpdateOutcome(ctx context.Context,
+	id uuid.UUID,
+	success bool,
+	workerId int64,
+	oldState, newState string,
+	params *store.TaskUpdateOutcomeParams,
+) (bool, error) {
+	db := util.GetDB(ctx, s.db)
+	updates := make(map[string]any)
+	if success {
+		updates["result"] = params.Payload
+	} else {
+		updates["error"] = params.Payload
+	}
+	updates["state"] = newState
+	updates["update_time"] = params.UpdateTime
+
+	result := db.Model(&schema.Task{}).
+		Updates(updates).
+		Where("id = ? and state = ? and worker_id = ?", id, oldState, workerId)
+	if result.Error != nil {
+		return false, sql.WrapError(result.Error)
+	}
+
+	return result.RowsAffected > 0, nil
 }

@@ -3,7 +3,6 @@ package interceptor
 import (
 	"context"
 
-	srverr "github.com/gonotelm-lab/flow/server/internal/service/error"
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -70,7 +69,7 @@ func toStatusError(err error) error {
 		return bizStatus.Err()
 	}
 
-	errStatus := status.New(codes.Internal, string(srverr.KeyInternalError))
+	errStatus := status.New(codes.Internal, string(pkgerr.KeyInternalError))
 	errStatus, _ = errStatus.WithDetails(
 		&errdetails.LocalizedMessage{
 			Message: err.Error(),

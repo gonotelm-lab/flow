@@ -11,13 +11,19 @@ import "google/protobuf/timestamp.proto";
 option go_package = "github.com/gonotelm-lab/flow/api/worker/v1";
 
 message UnregisterRequest {
-  int64 id = 1 [(buf.validate.field).required = true];
+  int64 id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).int64.gt = 0
+  ];
 }
 
 message UnregisterResponse {}
 
 message HeartbeatRequest {
-  int64 id = 1 [(buf.validate.field).required = true];
+  int64 id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).int64.gt = 0
+  ];
 }
 
 message HeartbeatResponse {
@@ -25,7 +31,10 @@ message HeartbeatResponse {
 }
 
 message PollRequest {
-  int64 id = 1 [(buf.validate.field).required = true];
+  int64 id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).int64.gt = 0
+  ];
   string namespace = 2 [(buf.validate.field).required = true];
   string task_type = 3 [(buf.validate.field).required = true];
 }
@@ -41,8 +50,14 @@ enum ReportAction {
 }
 
 message ReportRequest {
-  int64 worker_id = 1 [(buf.validate.field).required = true];
-  string task_id = 2 [(buf.validate.field).required = true];
+  int64 worker_id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).int64.gt = 0
+  ];
+  string task_id = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
   ReportAction action = 3 [
     (buf.validate.field).required = true,
     (buf.validate.field).enum.defined_only = true

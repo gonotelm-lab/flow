@@ -2,14 +2,13 @@ package instance
 
 import (
 	"context"
-	stderr "errors"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
-	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"github.com/pkg/errors"
 )
@@ -102,7 +101,7 @@ func (w *Watcher) CurrentRevision(ctx context.Context) (int64, error) {
 
 	rev, err := w.store.GlobalRevision.Get(ctx, discovRevisionName)
 	if err != nil {
-		if stderr.Is(err, pkgsql.ErrNoRecord) {
+		if errors.Is(err, pkgerr.NoRecord) {
 			return 0, nil
 		}
 

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
-	"github.com/gonotelm-lab/flow/server/pkg/sql"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +66,7 @@ func TestTaskWorkerStore_Get_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := gTestTaskWorkerStore.Get(ctx, 999999)
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
 
 func TestTaskWorkerStore_UpdateHeartbeat(t *testing.T) {
@@ -99,5 +99,5 @@ func TestTaskWorkerStore_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = gTestTaskWorkerStore.Get(ctx, created.Id)
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }

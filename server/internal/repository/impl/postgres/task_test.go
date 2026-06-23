@@ -6,7 +6,7 @@ import (
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/store"
-	"github.com/gonotelm-lab/flow/server/pkg/sql"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +64,7 @@ func TestTaskStore_Create_DuplicateID(t *testing.T) {
 	dup := newTestTask("ns-dup", "email", "pending", 2000)
 	dup.Id = task.Id
 	_, err = gTestTaskStore.Create(ctx, dup)
-	assert.ErrorIs(t, err, sql.ErrDuplicatedKey)
+	assert.ErrorIs(t, err, pkgerr.DuplicatedResource)
 }
 
 func TestTaskStore_Get(t *testing.T) {
@@ -88,7 +88,7 @@ func TestTaskStore_Get_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := gTestTaskStore.Get(ctx, uuid.New())
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
 
 func TestTaskStore_Claim(t *testing.T) {
@@ -126,7 +126,7 @@ func TestTaskStore_Claim_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := gTestTaskStore.Claim(ctx, "ns-missing", "email", []string{"pending"})
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
 
 func TestTaskStore_ClaimUpdate(t *testing.T) {
@@ -137,7 +137,7 @@ func TestTaskStore_ClaimUpdate(t *testing.T) {
 	_, err := gTestTaskStore.Create(ctx, task)
 	require.NoError(t, err)
 
-	ok, err := gTestTaskStore.ClaimUpdate(ctx, task.Id, "pending", &store.ClaimUpdateParams{
+	ok, err := gTestTaskStore.ClaimUpdate(ctx, task.Id, "pending", &store.TaskClaimUpdateParams{
 		WorkerId:   42,
 		NewState:   "running",
 		UpdateTime: 2000,
@@ -160,7 +160,7 @@ func TestTaskStore_ClaimUpdate_StateMismatch(t *testing.T) {
 	_, err := gTestTaskStore.Create(ctx, task)
 	require.NoError(t, err)
 
-	ok, err := gTestTaskStore.ClaimUpdate(ctx, task.Id, "running", &store.ClaimUpdateParams{
+	ok, err := gTestTaskStore.ClaimUpdate(ctx, task.Id, "running", &store.TaskClaimUpdateParams{
 		WorkerId:   99,
 		NewState:   "done",
 		UpdateTime: 3000,
@@ -201,4 +201,95 @@ func TestTaskStore_Update(t *testing.T) {
 	assert.Equal(t, int64(4000), got.UpdateTime)
 	assert.Equal(t, int64(7), got.WorkerId)
 	assert.Equal(t, 2, got.AttemptNo)
+}
+
+func TestTaskStore_UpdateOutcome_Success(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	task := newTestTask("ns-outcome", "email", "running", 1000)
+	task.WorkerId = 42
+	_, err := gTestTaskStore.Create(ctx, task)
+	require.NoError(t, err)
+
+	ok, err := gTestTaskStore.UpdateOutcome(ctx, task.Id, true, 42, "running", "done", &store.TaskUpdateOutcomeParams{
+		Payload:    []byte(`{"ok":true}`),
+		UpdateTime: 5000,
+	})
+	require.NoError(t, err)
+	assert.True(t, ok)
+
+	got, err := gTestTaskStore.Get(ctx, task.Id)
+	require.NoError(t, err)
+	assert.Equal(t, "done", got.State)
+	assert.Equal(t, `{"ok":true}`, string(got.Result))
+	assert.Empty(t, got.Error)
+	assert.Equal(t, int64(5000), got.UpdateTime)
+}
+
+func TestTaskStore_UpdateOutcome_Failure(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	task := newTestTask("ns-outcome-fail", "email", "running", 1000)
+	task.WorkerId = 42
+	_, err := gTestTaskStore.Create(ctx, task)
+	require.NoError(t, err)
+
+	ok, err := gTestTaskStore.UpdateOutcome(ctx, task.Id, false, 42, "running", "failed", &store.TaskUpdateOutcomeParams{
+		Payload:    []byte(`{"reason":"timeout"}`),
+		UpdateTime: 6000,
+	})
+	require.NoError(t, err)
+	assert.True(t, ok)
+
+	got, err := gTestTaskStore.Get(ctx, task.Id)
+	require.NoError(t, err)
+	assert.Equal(t, "failed", got.State)
+	assert.Equal(t, `{"reason":"timeout"}`, string(got.Error))
+	assert.Empty(t, got.Result)
+	assert.Equal(t, int64(6000), got.UpdateTime)
+}
+
+func TestTaskStore_UpdateOutcome_StateMismatch(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	task := newTestTask("ns-outcome-mismatch", "email", "running", 1000)
+	task.WorkerId = 42
+	_, err := gTestTaskStore.Create(ctx, task)
+	require.NoError(t, err)
+
+	ok, err := gTestTaskStore.UpdateOutcome(ctx, task.Id, true, 42, "pending", "done", &store.TaskUpdateOutcomeParams{
+		Payload:    []byte(`{"ok":true}`),
+		UpdateTime: 7000,
+	})
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	got, err := gTestTaskStore.Get(ctx, task.Id)
+	require.NoError(t, err)
+	assert.Equal(t, "running", got.State)
+}
+
+func TestTaskStore_UpdateOutcome_WorkerMismatch(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	task := newTestTask("ns-outcome-worker", "email", "running", 1000)
+	task.WorkerId = 42
+	_, err := gTestTaskStore.Create(ctx, task)
+	require.NoError(t, err)
+
+	ok, err := gTestTaskStore.UpdateOutcome(ctx, task.Id, true, 99, "running", "done", &store.TaskUpdateOutcomeParams{
+		Payload:    []byte(`{"ok":true}`),
+		UpdateTime: 8000,
+	})
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	got, err := gTestTaskStore.Get(ctx, task.Id)
+	require.NoError(t, err)
+	assert.Equal(t, "running", got.State)
+	assert.Equal(t, int64(42), got.WorkerId)
 }

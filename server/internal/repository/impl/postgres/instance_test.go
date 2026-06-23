@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
-	"github.com/gonotelm-lab/flow/server/pkg/sql"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,7 +56,7 @@ func TestInstanceStore_Create_DuplicateKey(t *testing.T) {
 	ins2 := newTestInstance("dup2")
 	ins2.Key = ins1.Key
 	_, err = gTestInstanceStore.Create(ctx, ins2)
-	assert.ErrorIs(t, err, sql.ErrDuplicatedKey)
+	assert.ErrorIs(t, err, pkgerr.DuplicatedResource)
 }
 
 func TestInstanceStore_Get(t *testing.T) {
@@ -78,7 +78,7 @@ func TestInstanceStore_Get_NotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := gTestInstanceStore.Get(ctx, 999999)
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
 
 func TestInstanceStore_ListActive(t *testing.T) {
@@ -123,7 +123,7 @@ func TestInstanceStore_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = gTestInstanceStore.Get(ctx, created.Id)
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
 
 func TestInstanceStore_UpdateExpireTime(t *testing.T) {
@@ -199,7 +199,7 @@ func TestInstanceStore_DeleteExpired(t *testing.T) {
 	assert.True(t, deleted)
 
 	_, err = gTestInstanceStore.Get(ctx, created.Id)
-	assert.ErrorIs(t, err, sql.ErrNoRecord)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
 
 func TestInstanceStore_DeleteExpired_NotExpired(t *testing.T) {

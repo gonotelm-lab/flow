@@ -22,8 +22,14 @@ message Task {
     (google.api.field_behavior) = IDENTIFIER,
     (buf.validate.field).string.uuid = true
   ];
-  string namespace = 2 [(buf.validate.field).required = true];
-  string task_type = 3 [(buf.validate.field).required = true];
+  string namespace = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+  string task_type = 3 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
   bytes payload = 4;
   bytes result = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
   bytes error = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -34,7 +40,9 @@ message Task {
   google.protobuf.Timestamp create_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
   google.protobuf.Timestamp update_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
   int64 next_run_time = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
-  int64 max_retry = 11;
+  int64 max_retry = 11 [
+    (buf.validate.field).int64.gte = 0
+  ];
   int32 attempt_no = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
   int64 worker_id = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

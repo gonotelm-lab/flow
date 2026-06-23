@@ -136,12 +136,14 @@ var File_api_schema_v1_worker_proto protoreflect.FileDescriptor
 
 const file_api_schema_v1_worker_proto_rawDesc = "" +
 	"\n" +
-	"\x1aapi/schema/v1/worker.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa0\x03\n" +
-	"\x06Worker\x12\x16\n" +
-	"\x02id\x18\x01 \x01(\x03B\x06\xe0A\b\xe0A\x03R\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12$\n" +
-	"\tnamespace\x18\x03 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\tnamespace\x12#\n" +
-	"\ttask_type\x18\x04 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\btaskType\x12@\n" +
+	"\x1aapi/schema/v1/worker.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x03\n" +
+	"\x06Worker\x12\x1d\n" +
+	"\x02id\x18\x01 \x01(\x03B\r\xe0A\b\xe0A\x03\xbaH\x04\"\x02 \x00R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12(\n" +
+	"\tnamespace\x18\x03 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\tnamespace\x12'\n" +
+	"\ttask_type\x18\x04 \x01(\tB\n" +
+	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\btaskType\x12@\n" +
 	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12F\n" +
 	"\x0eheartbeat_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\rheartbeatTime\x12E\n" +

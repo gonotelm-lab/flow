@@ -8,8 +8,8 @@ import (
 
 	apischema "github.com/gonotelm-lab/flow/api/schema/v1"
 	reposchema "github.com/gonotelm-lab/flow/server/internal/repository/schema"
-	srverr "github.com/gonotelm-lab/flow/server/internal/service/error"
-	"github.com/gonotelm-lab/flow/server/pkg/sql"
+	srverr "github.com/gonotelm-lab/flow/server/internal/service/errors"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -30,7 +30,7 @@ func (s *Service) createNamespace(
 			UpdateTime:  now.UnixMilli(),
 		})
 	if err != nil {
-		if errors.Is(err, sql.ErrDuplicatedKey) {
+		if errors.Is(err, pkgerr.DuplicatedResource) {
 			return nil, srverr.NamespaceExists
 		}
 
@@ -46,7 +46,7 @@ func (s *Service) getNamespace(
 ) (*apischema.Namespace, error) {
 	ns, err := s.store.Namespace.Get(ctx, name)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRecord) {
+		if errors.Is(err, pkgerr.NoRecord) {
 			return nil, srverr.NamespaceNotFound
 		}
 

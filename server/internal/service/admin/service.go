@@ -7,7 +7,7 @@ import (
 	adminv1 "github.com/gonotelm-lab/flow/api/admin/v1"
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
-	srverr "github.com/gonotelm-lab/flow/server/internal/service/error"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"github.com/pkg/errors"
 )
@@ -31,11 +31,11 @@ func (s *Service) CreateNamespace(
 	req *adminv1.CreateNamespaceRequest,
 ) (*schemav1.Namespace, error) {
 	if req == nil || req.GetNamespace() == nil {
-		return nil, srverr.InvalidArgument.WithDetail("request namespace is empty")
+		return nil, pkgerr.InvalidArgument.WithDetail("request namespace is empty")
 	}
 
 	if name := strings.TrimSpace(req.GetNamespace().GetName()); name == "" {
-		return nil, srverr.InvalidArgument.WithDetail("namespace name is empty")
+		return nil, pkgerr.InvalidArgument.WithDetail("namespace name is empty")
 	}
 
 	ns, err := s.createNamespace(ctx, req.GetNamespace())
@@ -51,12 +51,12 @@ func (s *Service) GetNamespace(
 	req *adminv1.GetNamespaceRequest,
 ) (*schemav1.Namespace, error) {
 	if req == nil {
-		return nil, srverr.InvalidArgument
+		return nil, pkgerr.InvalidArgument
 	}
 
 	name := strings.TrimSpace(req.GetName())
 	if name == "" {
-		return nil, srverr.InvalidArgument
+		return nil, pkgerr.InvalidArgument
 	}
 
 	ns, err := s.getNamespace(ctx, name)

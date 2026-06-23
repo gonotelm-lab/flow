@@ -7,6 +7,7 @@
 package v1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -119,9 +120,9 @@ var File_api_schema_v1_namespace_proto protoreflect.FileDescriptor
 
 const file_api_schema_v1_namespace_proto_rawDesc = "" +
 	"\n" +
-	"\x1dapi/schema/v1/namespace.proto\x12\rapi.schema.v1\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x02\n" +
-	"\tNamespace\x12\x17\n" +
-	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12 \n" +
+	"\x1dapi/schema/v1/namespace.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb9\x02\n" +
+	"\tNamespace\x12!\n" +
+	"\x04name\x18\x01 \x01(\tB\r\xe0A\b\xbaH\a\xc8\x01\x01r\x02\x10\x01R\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
 	"\acreator\x18\x03 \x01(\tR\acreator\x12@\n" +
 	"\vcreate_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +

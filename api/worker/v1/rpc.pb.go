@@ -454,23 +454,27 @@ var File_api_worker_v1_rpc_proto protoreflect.FileDescriptor
 
 const file_api_worker_v1_rpc_proto_rawDesc = "" +
 	"\n" +
-	"\x17api/worker/v1/rpc.proto\x12\rapi.worker.v1\x1a\x18api/schema/v1/task.proto\x1a\x1aapi/schema/v1/worker.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"+\n" +
-	"\x11UnregisterRequest\x12\x16\n" +
-	"\x02id\x18\x01 \x01(\x03B\x06\xbaH\x03\xc8\x01\x01R\x02id\"\x14\n" +
-	"\x12UnregisterResponse\"*\n" +
-	"\x10HeartbeatRequest\x12\x16\n" +
-	"\x02id\x18\x01 \x01(\x03B\x06\xbaH\x03\xc8\x01\x01R\x02id\"[\n" +
+	"\x17api/worker/v1/rpc.proto\x12\rapi.worker.v1\x1a\x18api/schema/v1/task.proto\x1a\x1aapi/schema/v1/worker.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"/\n" +
+	"\x11UnregisterRequest\x12\x1a\n" +
+	"\x02id\x18\x01 \x01(\x03B\n" +
+	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\"\x14\n" +
+	"\x12UnregisterResponse\".\n" +
+	"\x10HeartbeatRequest\x12\x1a\n" +
+	"\x02id\x18\x01 \x01(\x03B\n" +
+	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\"[\n" +
 	"\x11HeartbeatResponse\x12F\n" +
-	"\x0eheartbeat_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\rheartbeatTime\"p\n" +
-	"\vPollRequest\x12\x16\n" +
-	"\x02id\x18\x01 \x01(\x03B\x06\xbaH\x03\xc8\x01\x01R\x02id\x12$\n" +
+	"\x0eheartbeat_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\rheartbeatTime\"t\n" +
+	"\vPollRequest\x12\x1a\n" +
+	"\x02id\x18\x01 \x01(\x03B\n" +
+	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\x12$\n" +
 	"\tnamespace\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\tnamespace\x12#\n" +
 	"\ttask_type\x18\x03 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\btaskType\"7\n" +
 	"\fPollResponse\x12'\n" +
-	"\x04task\x18\x01 \x01(\v2\x13.api.schema.v1.TaskR\x04task\"\xb1\x01\n" +
-	"\rReportRequest\x12#\n" +
-	"\tworker_id\x18\x01 \x01(\x03B\x06\xbaH\x03\xc8\x01\x01R\bworkerId\x12\x1f\n" +
-	"\atask_id\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x06taskId\x12@\n" +
+	"\x04task\x18\x01 \x01(\v2\x13.api.schema.v1.TaskR\x04task\"\xba\x01\n" +
+	"\rReportRequest\x12'\n" +
+	"\tworker_id\x18\x01 \x01(\x03B\n" +
+	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\bworkerId\x12$\n" +
+	"\atask_id\x18\x02 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x06taskId\x12@\n" +
 	"\x06action\x18\x03 \x01(\x0e2\x1b.api.worker.v1.ReportActionB\v\xbaH\b\xc8\x01\x01\x82\x01\x02\x10\x01R\x06action\x12\x18\n" +
 	"\apayload\x18\x04 \x01(\fR\apayload\"\x10\n" +
 	"\x0eReportResponse*D\n" +

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/tx"
-	pkgsql "github.com/gonotelm-lab/flow/server/pkg/sql"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -59,7 +59,7 @@ func (f *fakeInstanceStore) Get(ctx context.Context, id int64) (*schema.Instance
 	if f.getFn != nil {
 		return f.getFn(ctx, id)
 	}
-	return nil, pkgsql.ErrNoRecord
+	return nil, pkgerr.NoRecord
 }
 
 func (f *fakeInstanceStore) ListActive(
@@ -123,7 +123,7 @@ func (f *fakeInstanceEventStore) Last(ctx context.Context, group string) (*schem
 	if f.lastFn != nil {
 		return f.lastFn(ctx, group)
 	}
-	return nil, pkgsql.ErrNoRecord
+	return nil, pkgerr.NoRecord
 }
 
 func (f *fakeInstanceEventStore) List(
@@ -172,5 +172,5 @@ func (f *fakeGlobalRevisionStore) Get(
 	if f.getFn != nil {
 		return f.getFn(ctx, name)
 	}
-	return nil, pkgsql.ErrNoRecord
+	return nil, pkgerr.NoRecord
 }
