@@ -20,6 +20,11 @@ watchMaxRetryBackoff = "${FLOW_REGISTRY_WATCH_MAX_RETRY_BACKOFF:-10s}"
 [worker]
 pollWait = "${FLOW_WORKER_POLL_WAIT:-10s}"
 pollCheckInterval = "${FLOW_WORKER_POLL_CHECK_INTERVAL:-500ms}"
+staleTaskTimeout = "${FLOW_WORKER_STALE_TASK_TIMEOUT:-30s}"
+staleScanInterval = "${FLOW_WORKER_STALE_SCAN_INTERVAL:-10s}"
+retryScanInterval = "${FLOW_WORKER_RETRY_SCAN_INTERVAL:-10s}"
+retryScanBatch = ${FLOW_WORKER_RETRY_SCAN_BATCH:-100}
+staleScanBatch = ${FLOW_WORKER_STALE_SCAN_BATCH:-100}
 
 [apiServer]
 [apiServer.http]

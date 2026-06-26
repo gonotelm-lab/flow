@@ -43,6 +43,11 @@ type RegistryConfig struct {
 type WorkerConfig struct {
 	PollWait          time.Duration `toml:"pollWait"`
 	PollCheckInterval time.Duration `toml:"pollCheckInterval"`
+	StaleTaskTimeout  time.Duration `toml:"staleTaskTimeout"`
+	StaleScanInterval time.Duration `toml:"staleScanInterval"`
+	RetryScanInterval time.Duration `toml:"retryScanInterval"`
+	RetryScanBatch    int           `toml:"retryScanBatch"`
+	StaleScanBatch    int           `toml:"staleScanBatch"`
 }
 
 func Init(path string) error {
@@ -184,6 +189,21 @@ func (cfg *WorkerConfig) Validate() error {
 	}
 	if cfg.PollCheckInterval < 0 {
 		return fmt.Errorf("worker.pollCheckInterval must be non-negative")
+	}
+	if cfg.StaleTaskTimeout <= 0 {
+		return fmt.Errorf("worker.staleTaskTimeout must be positive")
+	}
+	if cfg.StaleScanInterval <= 0 {
+		return fmt.Errorf("worker.staleScanInterval must be positive")
+	}
+	if cfg.RetryScanInterval <= 0 {
+		return fmt.Errorf("worker.retryScanInterval must be positive")
+	}
+	if cfg.RetryScanBatch <= 0 {
+		return fmt.Errorf("worker.retryScanBatch must be positive")
+	}
+	if cfg.StaleScanBatch <= 0 {
+		return fmt.Errorf("worker.staleScanBatch must be positive")
 	}
 
 	return nil
