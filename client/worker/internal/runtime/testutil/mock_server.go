@@ -18,10 +18,18 @@ type MockWorkerService struct {
 
 	WorkerID        int64
 	HeartbeatCount  int
-	Reports         []workerv1.ReportRequest
+	Reports         []ReportRecord
 	PollTasks     []*schemav1.Task
 	PollResponses [][]*schemav1.Task // 每次 Poll 返回一批，按调用顺序消费
 	pollCall      int
+}
+
+// ReportRecord is a test-only snapshot of a report RPC (avoids copying protobuf mutex).
+type ReportRecord struct {
+	WorkerId int64
+	TaskId   string
+	Action   workerv1.ReportAction
+	Payload  []byte
 }
 
 func Register(s *grpc.Server, svc *MockWorkerService) {
@@ -73,14 +81,19 @@ func (m *MockWorkerService) Poll(ctx context.Context, req *workerv1.PollRequest)
 func (m *MockWorkerService) Report(ctx context.Context, req *workerv1.ReportRequest) (*workerv1.ReportResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.Reports = append(m.Reports, *req)
+	m.Reports = append(m.Reports, ReportRecord{
+		WorkerId: req.GetWorkerId(),
+		TaskId:   req.GetTaskId(),
+		Action:   req.GetAction(),
+		Payload:  append([]byte(nil), req.GetPayload()...),
+	})
 	return &workerv1.ReportResponse{}, nil
 }
 
-func (m *MockWorkerService) ReportsSnapshot() []workerv1.ReportRequest {
+func (m *MockWorkerService) ReportsSnapshot() []ReportRecord {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	out := make([]workerv1.ReportRequest, len(m.Reports))
+	out := make([]ReportRecord, len(m.Reports))
 	copy(out, m.Reports)
 	return out
 }
