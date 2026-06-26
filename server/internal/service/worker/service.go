@@ -90,13 +90,14 @@ func (s *Service) Heartbeat(
 		return nil, pkgerr.InvalidArgument.WithDetail("id is required")
 	}
 
-	heartbeatMs, err := s.heartbeat(ctx, req.GetId())
+	heartbeatMs, cancelledIds, err := s.heartbeat(ctx, req.GetId(), req.GetRunningTaskIds())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to heartbeat worker %d", req.GetId())
 	}
 
 	return &workerv1.HeartbeatResponse{
-		HeartbeatTime: timestamppb.New(time.UnixMilli(heartbeatMs)),
+		HeartbeatTime:    timestamppb.New(time.UnixMilli(heartbeatMs)),
+		CancelledTaskIds: cancelledIds,
 	}, nil
 }
 
@@ -214,6 +215,7 @@ func toProtoTask(task *reposchema.Task) *schemav1.Task {
 		NextRunTime: task.NextRunTime,
 		MaxRetry:    int64(task.MaxRetry),
 		AttemptNo:   int32(task.AttemptNo),
-		WorkerId:    task.WorkerId,
+		WorkerId:          task.WorkerId,
+		LastHeartbeatTime: timestamppb.New(time.UnixMilli(task.LastHeartbeatTime)),
 	}
 }

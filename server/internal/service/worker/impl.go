@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
@@ -54,14 +55,47 @@ func (s *Service) unregister(ctx context.Context, workerId int64) error {
 	return nil
 }
 
-func (s *Service) heartbeat(ctx context.Context, workerId int64) (int64, error) {
+func (s *Service) heartbeat(
+	ctx context.Context,
+	workerId int64,
+	runningTaskIds []string,
+) (int64, []string, error) {
 	heartbeatTime := time.Now().UnixMilli()
 	_, err := s.repo.TaskWorker.UpdateHeartbeat(ctx, workerId, heartbeatTime)
 	if err != nil {
-		return 0, errors.WithMessagef(err, "failed to update task worker heartbeat %d", workerId)
+		return 0, nil, errors.WithMessagef(err, "failed to update task worker heartbeat %d", workerId)
 	}
 
-	return heartbeatTime, nil
+	if len(runningTaskIds) > 0 {
+		ids := make([]uuid.UUID, 0, len(runningTaskIds))
+		for _, sid := range runningTaskIds {
+			id, err := uuid.Parse(sid)
+			if err != nil {
+				continue
+			}
+			ids = append(ids, id)
+		}
+		if len(ids) > 0 {
+			if err := s.repo.Task.UpdateHeartbeat(ctx, ids, workerId, heartbeatTime); err != nil {
+				slog.ErrorContext(ctx, "update task heartbeat failed",
+					"worker_id", workerId,
+					slog.Any("err", err),
+				)
+			}
+		}
+	}
+
+	cancelledIds, err := s.repo.Task.GetCancelledTasks(ctx, workerId)
+	if err != nil {
+		return 0, nil, errors.WithMessagef(err, "failed to get cancelled tasks for worker %d", workerId)
+	}
+
+	cancelledStrs := make([]string, 0, len(cancelledIds))
+	for _, id := range cancelledIds {
+		cancelledStrs = append(cancelledStrs, id.String())
+	}
+
+	return heartbeatTime, cancelledStrs, nil
 }
 
 func (s *Service) poll(
@@ -115,6 +149,18 @@ func (s *Service) report(ctx context.Context, req *workerv1.ReportRequest) error
 	taskId, err := uuid.Parse(req.GetTaskId())
 	if err != nil {
 		return pkgerr.InvalidArgument.WithDetail("task_id is invalid")
+	}
+
+	task, err := s.repo.Task.Get(ctx, taskId)
+	if err != nil {
+		if errors.Is(err, pkgerr.NoRecord) {
+			return nil
+		}
+		return errors.WithMessagef(err, "failed to get task %s", taskId)
+	}
+
+	if task.State != schemav1.TaskState_RUNNING.String() {
+		return nil
 	}
 
 	var (
