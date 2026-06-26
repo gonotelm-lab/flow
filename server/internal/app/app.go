@@ -12,6 +12,7 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/instance"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/sharding"
+	"github.com/gonotelm-lab/flow/server/internal/taskmender"
 
 	"github.com/pkg/errors"
 )
@@ -33,8 +34,8 @@ type App struct {
 
 	apiServer *endpoint.ApiServer
 
-	retryMender   *RetryMender
-	staleDetector *StaleDetector
+	retryMender   *taskmender.RetryMender
+	staleDetector *taskmender.StaleDetector
 
 	store *repository.Store
 }
@@ -94,10 +95,10 @@ func (a *App) bootstrap() error {
 	a.startInstanceWatch()
 
 	if config.Conf.Worker != nil {
-		a.retryMender = NewRetryMender(a.store, config.Conf.Worker)
+		a.retryMender = taskmender.NewRetryMender(a.store, config.Conf.Worker)
 		go a.retryMender.Run(a.rootCtx)
 
-		a.staleDetector = NewStaleDetector(a.store, config.Conf.Worker)
+		a.staleDetector = taskmender.NewStaleDetector(a.store, config.Conf.Worker)
 		go a.staleDetector.Run(a.rootCtx)
 	}
 
