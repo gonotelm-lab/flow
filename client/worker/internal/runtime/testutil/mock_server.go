@@ -16,8 +16,9 @@ type MockWorkerService struct {
 
 	mu sync.Mutex
 
-	WorkerID      int64
-	Reports       []workerv1.ReportRequest
+	WorkerID        int64
+	HeartbeatCount  int
+	Reports         []workerv1.ReportRequest
 	PollTasks     []*schemav1.Task
 	PollResponses [][]*schemav1.Task // 每次 Poll 返回一批，按调用顺序消费
 	pollCall      int
@@ -43,7 +44,16 @@ func (m *MockWorkerService) Unregister(ctx context.Context, req *workerv1.Unregi
 }
 
 func (m *MockWorkerService) Heartbeat(ctx context.Context, req *workerv1.HeartbeatRequest) (*workerv1.HeartbeatResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.HeartbeatCount++
 	return &workerv1.HeartbeatResponse{HeartbeatTime: timestamppb.Now()}, nil
+}
+
+func (m *MockWorkerService) HeartbeatCountSnapshot() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.HeartbeatCount
 }
 
 func (m *MockWorkerService) Poll(ctx context.Context, req *workerv1.PollRequest) (*workerv1.PollResponse, error) {
