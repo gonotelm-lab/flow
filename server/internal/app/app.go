@@ -32,6 +32,11 @@ type App struct {
 	ready     atomic.Bool
 
 	apiServer *endpoint.ApiServer
+
+	retryMender   *RetryMender
+	staleDetector *StaleDetector
+
+	store *repository.Store
 }
 
 func New(repo *repository.Impl) (*App, error) {
@@ -67,6 +72,7 @@ func New(repo *repository.Impl) (*App, error) {
 		sweeper:   sweeper,
 		watcher:   watcher,
 		shardCalc: &sharding.SequentialCalculator{},
+		store:     repo.Store(),
 	}
 	a.rootCtx, a.rootCancel = context.WithCancel(context.Background())
 
@@ -86,6 +92,14 @@ func New(repo *repository.Impl) (*App, error) {
 func (a *App) bootstrap() error {
 	a.sweeper.Start(a.rootCtx)
 	a.startInstanceWatch()
+
+	if config.Conf.Worker != nil {
+		a.retryMender = NewRetryMender(a.store, config.Conf.Worker)
+		go a.retryMender.Run(a.rootCtx)
+
+		a.staleDetector = NewStaleDetector(a.store, config.Conf.Worker)
+		go a.staleDetector.Run(a.rootCtx)
+	}
 
 	regValue := fmt.Sprintf("%s:%d", config.Conf.ApiServer.Grpc.Listen, config.Conf.ApiServer.Grpc.Port)
 	newInst, err := a.registry.Register(a.rootCtx, registerGroupName, regValue)
@@ -159,10 +173,16 @@ func (a *App) run() error {
 
 func (a *App) close() {
 	a.ready.Store(false)
-	a.rootCancel()
 	a.apiServer.Stop()
 	a.registry.Close()
 	a.sweeper.Close()
+	if a.retryMender != nil {
+		a.retryMender.Close()
+	}
+	if a.staleDetector != nil {
+		a.staleDetector.Close()
+	}
+	a.rootCancel()
 
 	slog.Info("app closed")
 }

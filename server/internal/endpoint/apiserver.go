@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"net"
 
+	taskv1 "github.com/gonotelm-lab/flow/api/task/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/endpoint/interceptor"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
+	"github.com/gonotelm-lab/flow/server/internal/service/task"
 	"github.com/gonotelm-lab/flow/server/internal/service/worker"
 
 	"golang.org/x/sync/errgroup"
@@ -88,4 +90,7 @@ func (s *ApiServer) registerGrpcServices(repoStore *repository.Store) {
 	}
 	workerService := worker.NewService(repoStore, workerCfg)
 	workerv1.RegisterWorkerServiceServer(s.grpcServer, workerService)
+
+	taskService := task.NewService(repoStore)
+	taskv1.RegisterTaskServiceServer(s.grpcServer, taskService)
 }
