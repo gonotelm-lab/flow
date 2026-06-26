@@ -45,4 +45,5 @@ message Task {
   ];
   int32 attempt_no = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
   int64 worker_id = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp last_heartbeat_time = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 }

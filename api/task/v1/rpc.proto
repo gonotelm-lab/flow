@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package api.task.v1;
+
+import "api/schema/v1/task.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+
+option go_package = "github.com/gonotelm-lab/flow/api/task/v1";
+
+message SubmitRequest {
+  string namespace = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+  string task_type = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1
+  ];
+  bytes payload = 3;
+  int64 max_retry = 4 [
+    (buf.validate.field).int64.gte = 0
+  ];
+}
+
+message SubmitResponse {
+  api.schema.v1.Task task = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message GetRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message GetResponse {
+  api.schema.v1.Task task = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message CancelRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message CancelResponse {}
+
+service TaskService {
+  rpc Submit(SubmitRequest) returns (SubmitResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc Cancel(CancelRequest) returns (CancelResponse);
+}

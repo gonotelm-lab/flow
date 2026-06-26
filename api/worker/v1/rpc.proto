@@ -24,10 +24,12 @@ message HeartbeatRequest {
     (buf.validate.field).required = true,
     (buf.validate.field).int64.gt = 0
   ];
+  repeated string running_task_ids = 2;
 }
 
 message HeartbeatResponse {
   google.protobuf.Timestamp heartbeat_time = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  repeated string cancelled_task_ids = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message PollRequest {

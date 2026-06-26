@@ -155,10 +155,11 @@ func (*UnregisterResponse) Descriptor() ([]byte, []int) {
 }
 
 type HeartbeatRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	RunningTaskIds []string               `protobuf:"bytes,2,rep,name=running_task_ids,json=runningTaskIds,proto3" json:"running_task_ids,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *HeartbeatRequest) Reset() {
@@ -198,11 +199,19 @@ func (x *HeartbeatRequest) GetId() int64 {
 	return 0
 }
 
+func (x *HeartbeatRequest) GetRunningTaskIds() []string {
+	if x != nil {
+		return x.RunningTaskIds
+	}
+	return nil
+}
+
 type HeartbeatResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	HeartbeatTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=heartbeat_time,json=heartbeatTime,proto3" json:"heartbeat_time,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	HeartbeatTime    *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=heartbeat_time,json=heartbeatTime,proto3" json:"heartbeat_time,omitempty"`
+	CancelledTaskIds []string               `protobuf:"bytes,2,rep,name=cancelled_task_ids,json=cancelledTaskIds,proto3" json:"cancelled_task_ids,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *HeartbeatResponse) Reset() {
@@ -238,6 +247,13 @@ func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
 func (x *HeartbeatResponse) GetHeartbeatTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.HeartbeatTime
+	}
+	return nil
+}
+
+func (x *HeartbeatResponse) GetCancelledTaskIds() []string {
+	if x != nil {
+		return x.CancelledTaskIds
 	}
 	return nil
 }
@@ -458,12 +474,14 @@ const file_api_worker_v1_rpc_proto_rawDesc = "" +
 	"\x11UnregisterRequest\x12\x1a\n" +
 	"\x02id\x18\x01 \x01(\x03B\n" +
 	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\"\x14\n" +
-	"\x12UnregisterResponse\".\n" +
+	"\x12UnregisterResponse\"X\n" +
 	"\x10HeartbeatRequest\x12\x1a\n" +
 	"\x02id\x18\x01 \x01(\x03B\n" +
-	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\"[\n" +
+	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\x12(\n" +
+	"\x10running_task_ids\x18\x02 \x03(\tR\x0erunningTaskIds\"\x8e\x01\n" +
 	"\x11HeartbeatResponse\x12F\n" +
-	"\x0eheartbeat_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\rheartbeatTime\"t\n" +
+	"\x0eheartbeat_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\rheartbeatTime\x121\n" +
+	"\x12cancelled_task_ids\x18\x02 \x03(\tB\x03\xe0A\x03R\x10cancelledTaskIds\"t\n" +
 	"\vPollRequest\x12\x1a\n" +
 	"\x02id\x18\x01 \x01(\x03B\n" +
 	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\x02id\x12$\n" +

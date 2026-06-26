@@ -83,22 +83,23 @@ func (TaskState) EnumDescriptor() ([]byte, []int) {
 }
 
 type Task struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	TaskType      string                 `protobuf:"bytes,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
-	Payload       []byte                 `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
-	Result        []byte                 `protobuf:"bytes,5,opt,name=result,proto3" json:"result,omitempty"`
-	Error         []byte                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
-	State         TaskState              `protobuf:"varint,7,opt,name=state,proto3,enum=api.schema.v1.TaskState" json:"state,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	NextRunTime   int64                  `protobuf:"varint,10,opt,name=next_run_time,json=nextRunTime,proto3" json:"next_run_time,omitempty"`
-	MaxRetry      int64                  `protobuf:"varint,11,opt,name=max_retry,json=maxRetry,proto3" json:"max_retry,omitempty"`
-	AttemptNo     int32                  `protobuf:"varint,12,opt,name=attempt_no,json=attemptNo,proto3" json:"attempt_no,omitempty"`
-	WorkerId      int64                  `protobuf:"varint,13,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Namespace         string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	TaskType          string                 `protobuf:"bytes,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	Payload           []byte                 `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	Result            []byte                 `protobuf:"bytes,5,opt,name=result,proto3" json:"result,omitempty"`
+	Error             []byte                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	State             TaskState              `protobuf:"varint,7,opt,name=state,proto3,enum=api.schema.v1.TaskState" json:"state,omitempty"`
+	CreateTime        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime        *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	NextRunTime       int64                  `protobuf:"varint,10,opt,name=next_run_time,json=nextRunTime,proto3" json:"next_run_time,omitempty"`
+	MaxRetry          int64                  `protobuf:"varint,11,opt,name=max_retry,json=maxRetry,proto3" json:"max_retry,omitempty"`
+	AttemptNo         int32                  `protobuf:"varint,12,opt,name=attempt_no,json=attemptNo,proto3" json:"attempt_no,omitempty"`
+	WorkerId          int64                  `protobuf:"varint,13,opt,name=worker_id,json=workerId,proto3" json:"worker_id,omitempty"`
+	LastHeartbeatTime *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=last_heartbeat_time,json=lastHeartbeatTime,proto3" json:"last_heartbeat_time,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Task) Reset() {
@@ -222,11 +223,18 @@ func (x *Task) GetWorkerId() int64 {
 	return 0
 }
 
+func (x *Task) GetLastHeartbeatTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastHeartbeatTime
+	}
+	return nil
+}
+
 var File_api_schema_v1_task_proto protoreflect.FileDescriptor
 
 const file_api_schema_v1_task_proto_rawDesc = "" +
 	"\n" +
-	"\x18api/schema/v1/task.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x04\n" +
+	"\x18api/schema/v1/task.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xef\x04\n" +
 	"\x04Task\x12\x1b\n" +
 	"\x02id\x18\x01 \x01(\tB\v\xe0A\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12(\n" +
 	"\tnamespace\x18\x02 \x01(\tB\n" +
@@ -246,7 +254,8 @@ const file_api_schema_v1_task_proto_rawDesc = "" +
 	"\tmax_retry\x18\v \x01(\x03B\a\xbaH\x04\"\x02(\x00R\bmaxRetry\x12\"\n" +
 	"\n" +
 	"attempt_no\x18\f \x01(\x05B\x03\xe0A\x03R\tattemptNo\x12 \n" +
-	"\tworker_id\x18\r \x01(\x03B\x03\xe0A\x03R\bworkerId*e\n" +
+	"\tworker_id\x18\r \x01(\x03B\x03\xe0A\x03R\bworkerId\x12O\n" +
+	"\x13last_heartbeat_time\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\x11lastHeartbeatTime*e\n" +
 	"\tTaskState\x12\x1a\n" +
 	"\x16TASK_STATE_UNSPECIFIED\x10\x00\x12\n" +
 	"\n" +
@@ -281,11 +290,12 @@ var file_api_schema_v1_task_proto_depIdxs = []int32{
 	0, // 0: api.schema.v1.Task.state:type_name -> api.schema.v1.TaskState
 	2, // 1: api.schema.v1.Task.create_time:type_name -> google.protobuf.Timestamp
 	2, // 2: api.schema.v1.Task.update_time:type_name -> google.protobuf.Timestamp
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2, // 3: api.schema.v1.Task.last_heartbeat_time:type_name -> google.protobuf.Timestamp
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_api_schema_v1_task_proto_init() }
