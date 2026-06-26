@@ -19,7 +19,10 @@ func TestHeartbeatLoop_SendsHeartbeat(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	hb := NewHeartbeatLoop(conn, 1, 20*time.Millisecond, slog.Default())
+	hb := NewHeartbeatLoop(conn, 1, 20*time.Millisecond, slog.Default(),
+		func() []string { return nil },
+		func(ids []string) {},
+	)
 	go hb.Run(ctx)
 
 	require.Eventually(t, func() bool {

@@ -72,7 +72,6 @@ func (r *Runtime) Start(ctx context.Context) error {
 	r.sem = NewSemaphore(r.cfg.MaxConcurrency)
 	reporter := NewReporter(r.client, r.cfg.Logger)
 
-	r.hb = NewHeartbeatLoop(r.cfg.Conn, r.workerID, r.cfg.HeartbeatInterval, r.cfg.Logger)
 	r.poll = NewPollLoop(PollLoopConfig{
 		Conn:      r.cfg.Conn,
 		WorkerID:  r.workerID,
@@ -83,6 +82,14 @@ func (r *Runtime) Start(ctx context.Context) error {
 		Semaphore: r.sem,
 		Logger:    r.cfg.Logger,
 	})
+	r.hb = NewHeartbeatLoop(r.cfg.Conn, r.workerID, r.cfg.HeartbeatInterval, r.cfg.Logger,
+		func() []string { return r.poll.RunningTaskIDs() },
+		func(ids []string) {
+			for _, id := range ids {
+				r.poll.CancelTask(id)
+			}
+		},
+	)
 
 	go r.hb.Run(runCtx)
 	go r.poll.Run(runCtx)

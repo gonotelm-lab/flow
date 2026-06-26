@@ -33,6 +33,14 @@ func (s *Semaphore) Acquire(ctx context.Context) error {
 	return nil
 }
 
+func (s *Semaphore) IsFull() bool {
+	if s.sem.TryAcquire(1) {
+		s.sem.Release(1)
+		return false
+	}
+	return true
+}
+
 func (s *Semaphore) Release() {
 	s.sem.Release(1)
 	s.wg.Done()
@@ -56,12 +64,37 @@ type PollLoopConfig struct {
 type PollLoop struct {
 	cfg    PollLoopConfig
 	client workerv1.WorkerServiceClient
+
+	mu          sync.Mutex
+	runningIDs  map[string]struct{}
+	cancelFuncs map[string]context.CancelFunc
 }
 
 func NewPollLoop(cfg PollLoopConfig) *PollLoop {
 	return &PollLoop{
-		cfg:    cfg,
-		client: workerv1.NewWorkerServiceClient(cfg.Conn),
+		cfg:         cfg,
+		client:      workerv1.NewWorkerServiceClient(cfg.Conn),
+		runningIDs:  make(map[string]struct{}),
+		cancelFuncs: make(map[string]context.CancelFunc),
+	}
+}
+
+func (p *PollLoop) RunningTaskIDs() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	ids := make([]string, 0, len(p.runningIDs))
+	for id := range p.runningIDs {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (p *PollLoop) CancelTask(taskID string) {
+	p.mu.Lock()
+	cancel, ok := p.cancelFuncs[taskID]
+	p.mu.Unlock()
+	if ok && cancel != nil {
+		cancel()
 	}
 }
 
@@ -71,6 +104,15 @@ func (p *PollLoop) Run(ctx context.Context) {
 	for {
 		if ctx.Err() != nil {
 			return
+		}
+
+		if p.cfg.Semaphore.IsFull() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(100 * time.Millisecond):
+			}
+			continue
 		}
 
 		resp, err := p.client.Poll(ctx, &workerv1.PollRequest{
@@ -108,10 +150,26 @@ func (p *PollLoop) Run(ctx context.Context) {
 func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task) {
 	defer p.cfg.Semaphore.Release()
 
+	taskID := task.GetId()
+	taskCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	p.mu.Lock()
+	p.runningIDs[taskID] = struct{}{}
+	p.cancelFuncs[taskID] = cancel
+	p.mu.Unlock()
+
+	defer func() {
+		p.mu.Lock()
+		delete(p.runningIDs, taskID)
+		delete(p.cancelFuncs, taskID)
+		p.mu.Unlock()
+	}()
+
 	defer func() {
 		if r := recover(); r != nil {
 			p.cfg.Logger.Error("task handler panic",
-				"task_id", task.GetId(),
+				"task_id", taskID,
 				"panic", r,
 				"stack", string(debug.Stack()),
 			)
@@ -119,8 +177,10 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task) {
 		}
 	}()
 
-	p.cfg.Logger.Info("task started", "task_id", task.GetId())
-	action, payload := p.cfg.Handler(ctx, task)
-	p.cfg.Logger.Info("task finished", "task_id", task.GetId(), "action", action.String())
-	_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, action, payload)
+	p.cfg.Logger.Info("task started", "task_id", taskID)
+	action, payload := p.cfg.Handler(taskCtx, task)
+	if taskCtx.Err() == nil {
+		p.cfg.Logger.Info("task finished", "task_id", taskID, "action", action.String())
+		_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, action, payload)
+	}
 }
