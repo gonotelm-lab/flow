@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/impl/util"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
@@ -122,4 +123,102 @@ func (s *TaskStoreImpl) UpdateOutcome(ctx context.Context,
 	}
 
 	return result.RowsAffected > 0, nil
+}
+
+func (s *TaskStoreImpl) UpdateHeartbeat(
+	ctx context.Context,
+	ids []uuid.UUID,
+	workerId int64,
+	heartTime int64,
+) error {
+	db := util.GetDB(ctx, s.db)
+	result := db.Model(&schema.Task{}).
+		Where("id IN ? AND worker_id = ? AND state = ?", ids, workerId, "RUNNING").
+		Update("last_heartbeat_time", heartTime)
+	if result.Error != nil {
+		return sql.WrapError(result.Error)
+	}
+	return nil
+}
+
+func (s *TaskStoreImpl) GetCancelledTasks(
+	ctx context.Context,
+	workerId int64,
+) ([]uuid.UUID, error) {
+	db := util.GetDB(ctx, s.db)
+	var ids []uuid.UUID
+	if err := db.Model(&schema.Task{}).
+		Where("worker_id = ? AND state = ?", workerId, "CANCELLED").
+		Pluck("id", &ids).Error; err != nil {
+		return nil, sql.WrapError(err)
+	}
+	return ids, nil
+}
+
+func (s *TaskStoreImpl) GetRetriableTasks(
+	ctx context.Context,
+	batchSize int,
+) ([]*schema.Task, error) {
+	db := util.GetDB(ctx, s.db)
+	var tasks []*schema.Task
+	err := db.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthUpdate,
+		Options:  clause.LockingOptionsSkipLocked,
+	}).Where("state = ? AND attempt_no < max_retry", "FAILED").
+		Order("id ASC").
+		Limit(batchSize).
+		Find(&tasks).Error
+	if err != nil {
+		return nil, sql.WrapError(err)
+	}
+	return tasks, nil
+}
+
+func (s *TaskStoreImpl) GetStaleTasks(
+	ctx context.Context,
+	timeout int64,
+	batchSize int,
+) ([]*schema.Task, error) {
+	db := util.GetDB(ctx, s.db)
+	cutoff := time.Now().UnixMilli() - timeout
+	var tasks []*schema.Task
+	err := db.Clauses(clause.Locking{
+		Strength: clause.LockingStrengthUpdate,
+		Options:  clause.LockingOptionsSkipLocked,
+	}).Where("state = ? AND last_heartbeat_time < ?", "RUNNING", cutoff).
+		Order("last_heartbeat_time ASC").
+		Limit(batchSize).
+		Find(&tasks).Error
+	if err != nil {
+		return nil, sql.WrapError(err)
+	}
+	return tasks, nil
+}
+
+func (s *TaskStoreImpl) BatchUpdate(
+	ctx context.Context,
+	tasks []*schema.Task,
+) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+	db := util.GetDB(ctx, s.db)
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, task := range tasks {
+			if err := tx.Model(&schema.Task{}).
+				Where("id = ?", task.Id).
+				Updates(map[string]any{
+					"state":               task.State,
+					"attempt_no":          task.AttemptNo,
+					"next_run_time":       task.NextRunTime,
+					"worker_id":           task.WorkerId,
+					"update_time":         task.UpdateTime,
+					"error":               task.Error,
+					"last_heartbeat_time": task.LastHeartbeatTime,
+				}).Error; err != nil {
+				return sql.WrapError(err)
+			}
+		}
+		return nil
+	})
 }
