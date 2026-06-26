@@ -61,6 +61,8 @@ CREATE TABLE tasks (
   attempt_no SMALLINT NOT NULL DEFAULT 0
 );
 
+ALTER TABLE tasks ADD COLUMN last_heartbeat_time BIGINT NOT NULL DEFAULT 0;
+
 CREATE INDEX idx_tasks_namespace_task_type
 ON tasks (namespace, task_type);
 
@@ -81,6 +83,7 @@ COMMENT ON COLUMN tasks.update_time IS 'task update time';
 COMMENT ON COLUMN tasks.worker_id IS 'task worker id';
 COMMENT ON COLUMN tasks.max_retry IS 'task max retry';
 COMMENT ON COLUMN tasks.attempt_no IS 'current attempt number';
+COMMENT ON COLUMN tasks.last_heartbeat_time IS 'task last heartbeat time from worker';
 
 CREATE TABLE task_workers (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
