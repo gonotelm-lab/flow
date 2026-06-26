@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/gonotelm-lab/flow/server/internal/config"
+	"github.com/gonotelm-lab/flow/server/internal/endpoint"
 	"github.com/gonotelm-lab/flow/server/internal/instance"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/sharding"
@@ -30,7 +31,7 @@ type App struct {
 	shardCalc sharding.Calculator
 	ready     atomic.Bool
 
-	apiServer *ApiServer
+	apiServer *endpoint.ApiServer
 }
 
 func New(repo *repository.Impl) (*App, error) {
@@ -69,7 +70,7 @@ func New(repo *repository.Impl) (*App, error) {
 	}
 	a.rootCtx, a.rootCancel = context.WithCancel(context.Background())
 
-	apiServer, err := NewApiServer(
+	apiServer, err := endpoint.NewApiServer(
 		a.rootCtx,
 		config.Conf.ApiServer,
 		repo.Store(),
@@ -136,7 +137,7 @@ func (a *App) Run() {
 		errCh <- a.run()
 	}()
 
-	if err := waitExitSignal(errCh); err != nil {
+	if err := waitSignal(errCh); err != nil {
 		slog.Error("app exit due to error", slog.Any("err", err))
 	}
 

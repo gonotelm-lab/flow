@@ -1,4 +1,4 @@
-package app
+package endpoint
 
 import (
 	"context"
@@ -9,12 +9,10 @@ import (
 	"os"
 
 	adminv1 "github.com/gonotelm-lab/flow/api/admin/v1"
-	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
-	"github.com/gonotelm-lab/flow/server/internal/app/interceptor"
 	"github.com/gonotelm-lab/flow/server/internal/config"
+	"github.com/gonotelm-lab/flow/server/internal/endpoint/interceptor"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/service/admin"
-	"github.com/gonotelm-lab/flow/server/internal/service/worker"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/sync/errgroup"
@@ -22,12 +20,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type ApiServer struct {
+type AdminServer struct {
 	rootCtx context.Context
 	cfg     *config.ApiServer
-
-	grpcListener net.Listener
-	grpcServer   *grpc.Server
 
 	adminGrpcListener net.Listener
 	adminGrpcServer   *grpc.Server
@@ -36,46 +31,22 @@ type ApiServer struct {
 	proxyConn  *grpc.ClientConn
 }
 
-func NewApiServer(
+func NewAdminServer(
 	ctx context.Context,
 	cfg *config.ApiServer,
 	repoStore *repository.Store,
-) (*ApiServer, error) {
-	// grpc server
-	listenAddr := fmt.Sprintf("%s:%d", cfg.Grpc.Listen, cfg.Grpc.Port)
-	grpcListener, err := net.Listen("tcp", listenAddr)
-	if err != nil {
+) (*AdminServer, error) {
+	s := &AdminServer{
+		rootCtx: ctx,
+		cfg:     cfg,
+	}
+	if err := s.init(repoStore); err != nil {
 		return nil, err
 	}
-
-	grpcServer := grpc.NewServer(
-		interceptor.UnaryServerInterceptor(),
-		interceptor.StreamServerInterceptor(),
-	)
-	apiServer := &ApiServer{
-		rootCtx:      ctx,
-		cfg:          cfg,
-		grpcListener: grpcListener,
-		grpcServer:   grpcServer,
-	}
-	apiServer.registerGrpcServices(repoStore)
-
-	err = apiServer.initHttpGrpcGateway(repoStore)
-	if err != nil {
-		return nil, err
-	}
-
-	return apiServer, nil
+	return s, nil
 }
 
-// block until server is stopped
-func (s *ApiServer) Spin() error {
-	var eg errgroup.Group
-	eg.Go(func() error {
-		slog.Info(fmt.Sprintf("grpc server listening on: %s", s.grpcListener.Addr().String()))
-		return s.grpcServer.Serve(s.grpcListener)
-	})
-
+func (s *AdminServer) RegisterWithGroup(eg *errgroup.Group) {
 	eg.Go(func() error {
 		slog.Info(fmt.Sprintf("admin grpc server listening on: %s", s.adminGrpcListener.Addr()))
 		return s.adminGrpcServer.Serve(s.adminGrpcListener)
@@ -85,40 +56,25 @@ func (s *ApiServer) Spin() error {
 		slog.Info(fmt.Sprintf("http server listening on: %s", s.httpServer.Addr))
 		return s.httpServer.ListenAndServe()
 	})
-
-	return eg.Wait()
 }
 
-func (s *ApiServer) Stop() {
+func (s *AdminServer) Stop() {
 	slog.Info("closing grpc-gateway proxy conn")
 	if err := s.proxyConn.Close(); err != nil {
 		slog.Error("failed to close proxy connection", slog.Any("err", err))
 	}
-	
+
 	slog.Info("closing http server")
 	if err := s.httpServer.Close(); err != nil {
 		slog.Error("failed to close http server", slog.Any("err", err))
 	}
 
-	slog.Info("stopping grpc server")
-	s.grpcServer.GracefulStop()
+	slog.Info("stopping admin grpc server")
 	s.adminGrpcServer.GracefulStop()
-	slog.Info("api server stopped")
+	slog.Info("admin server stopped")
 }
 
-func (s *ApiServer) registerGrpcServices(repoStore *repository.Store) {
-	var workerCfg worker.ServiceConfig
-	if config.Conf != nil && config.Conf.Worker != nil {
-		workerCfg = worker.ServiceConfig{
-			PollWait:          config.Conf.Worker.PollWait,
-			PollCheckInterval: config.Conf.Worker.PollCheckInterval,
-		}
-	}
-	workerService := worker.NewService(repoStore, workerCfg)
-	workerv1.RegisterWorkerServiceServer(s.grpcServer, workerService)
-}
-
-func (s *ApiServer) initHttpGrpcGateway(repoStore *repository.Store) error {
+func (s *AdminServer) init(repoStore *repository.Store) error {
 	const unixSocketPath = "/tmp/flow-admin.sock"
 	os.Remove(unixSocketPath)
 	var err error

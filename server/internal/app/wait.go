@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func waitExitSignal(errCh chan error) error {
+func waitSignal(errCh chan error) error {
 	signalToNotify := []os.Signal{syscall.SIGINT, syscall.SIGHUP, syscall.SIGTERM}
 	if signal.Ignored(syscall.SIGHUP) {
 		signalToNotify = []os.Signal{syscall.SIGINT, syscall.SIGTERM}
