@@ -136,9 +136,9 @@ var File_api_schema_v1_worker_proto protoreflect.FileDescriptor
 
 const file_api_schema_v1_worker_proto_rawDesc = "" +
 	"\n" +
-	"\x1aapi/schema/v1/worker.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xaf\x03\n" +
-	"\x06Worker\x12\x1d\n" +
-	"\x02id\x18\x01 \x01(\x03B\r\xe0A\b\xe0A\x03\xbaH\x04\"\x02 \x00R\x02id\x12\x12\n" +
+	"\x1aapi/schema/v1/worker.proto\x12\rapi.schema.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa8\x03\n" +
+	"\x06Worker\x12\x16\n" +
+	"\x02id\x18\x01 \x01(\x03B\x06\xe0A\b\xe0A\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12(\n" +
 	"\tnamespace\x18\x03 \x01(\tB\n" +
 	"\xbaH\a\xc8\x01\x01r\x02\x10\x01R\tnamespace\x12'\n" +
