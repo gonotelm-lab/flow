@@ -69,14 +69,16 @@ func (s *TaskStoreImpl) ClaimUpdate(
 	params *store.TaskClaimUpdateParams,
 ) (bool, error) {
 	db := util.GetDB(ctx, s.db)
-	// update task set state = newState, update_time = updateTime, worker_id = workerId
+	// update task set state = newState, update_time = updateTime, worker_id = workerId,
+	// last_heartbeat_time = updateTime
 	// where id = id and state = oldState
 	result := db.Model(&schema.Task{}).
 		Where("id = ? and state = ?", id, oldState).
 		Updates(map[string]any{
-			"state":       params.NewState,
-			"update_time": params.UpdateTime,
-			"worker_id":   params.WorkerId,
+			"state":               params.NewState,
+			"update_time":         params.UpdateTime,
+			"worker_id":           params.WorkerId,
+			"last_heartbeat_time": params.UpdateTime,
 		})
 	if result.Error != nil {
 		return false, sql.WrapError(result.Error)
@@ -89,13 +91,14 @@ func (s *TaskStoreImpl) ClaimUpdate(
 
 func (s *TaskStoreImpl) Update(ctx context.Context, task *schema.Task) (bool, error) {
 	db := util.GetDB(ctx, s.db)
-	if err := db.Model(&schema.Task{}).
+	result := db.Model(&schema.Task{}).
 		Where("id = ?", task.Id).
-		Updates(task).Error; err != nil {
-		return false, sql.WrapError(err)
+		Updates(task)
+	if result.Error != nil {
+		return false, sql.WrapError(result.Error)
 	}
 
-	return db.RowsAffected > 0, nil
+	return result.RowsAffected > 0, nil
 }
 
 func (s *TaskStoreImpl) UpdateOutcome(ctx context.Context,
@@ -116,8 +119,8 @@ func (s *TaskStoreImpl) UpdateOutcome(ctx context.Context,
 	updates["update_time"] = params.UpdateTime
 
 	result := db.Model(&schema.Task{}).
-		Updates(updates).
-		Where("id = ? and state = ? and worker_id = ?", id, oldState, workerId)
+		Where("id = ? and state = ? and worker_id = ?", id, oldState, workerId).
+		Updates(updates)
 	if result.Error != nil {
 		return false, sql.WrapError(result.Error)
 	}

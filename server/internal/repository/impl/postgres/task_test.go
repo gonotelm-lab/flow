@@ -175,6 +175,30 @@ func TestTaskStore_ClaimUpdate_StateMismatch(t *testing.T) {
 	assert.NotEqual(t, int64(3000), got.UpdateTime)
 }
 
+func TestTaskStore_ClaimUpdate_InitializesLastHeartbeatTime(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	task := newTestTask("ns-claim-update-heartbeat", "email", "pending", 1000)
+	_, err := gTestTaskStore.Create(ctx, task)
+	require.NoError(t, err)
+
+	ok, err := gTestTaskStore.ClaimUpdate(ctx, task.Id, "pending", &store.TaskClaimUpdateParams{
+		WorkerId:   42,
+		NewState:   "running",
+		UpdateTime: 2000,
+	})
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	got, err := gTestTaskStore.Get(ctx, task.Id)
+	require.NoError(t, err)
+	assert.Equal(t, "running", got.State)
+	assert.Equal(t, int64(42), got.WorkerId)
+	assert.Equal(t, int64(2000), got.UpdateTime)
+	assert.Equal(t, int64(2000), got.LastHeartbeatTime)
+}
+
 func TestTaskStore_Update(t *testing.T) {
 	cleanTasks(t)
 	ctx := context.Background()
