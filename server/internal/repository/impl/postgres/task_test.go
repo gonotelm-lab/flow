@@ -316,4 +316,59 @@ func TestTaskStore_UpdateOutcome_WorkerMismatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "running", got.State)
 	assert.Equal(t, int64(42), got.WorkerId)
+	assert.Equal(t, int64(2000), got.LastHeartbeatTime)
+}
+
+func TestTaskStore_List(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	now := nowMs()
+	t1 := newTestTask("ns-aaa", "email", "INITED", now)
+	t2 := newTestTask("ns-aaa", "sms", "RUNNING", now+100)
+	t3 := newTestTask("ns-bbb", "email", "DONE", now+200)
+
+	for _, task := range []*schema.Task{t1, t2, t3} {
+		_, err := gTestTaskStore.Create(ctx, task)
+		require.NoError(t, err)
+	}
+
+	t.Run("all", func(t *testing.T) {
+		got, total, err := gTestTaskStore.List(ctx, &store.TaskListParams{Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), total)
+		assert.Len(t, got, 3)
+	})
+
+	t.Run("filter_by_namespace", func(t *testing.T) {
+		got, total, err := gTestTaskStore.List(ctx, &store.TaskListParams{Namespace: "ns-aaa", Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+		assert.Len(t, got, 2)
+		for _, task := range got {
+			assert.Equal(t, "ns-aaa", task.Namespace)
+		}
+	})
+
+	t.Run("filter_by_task_type", func(t *testing.T) {
+		got, total, err := gTestTaskStore.List(ctx, &store.TaskListParams{TaskType: "email", Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+		assert.Len(t, got, 2)
+	})
+
+	t.Run("filter_by_state", func(t *testing.T) {
+		got, total, err := gTestTaskStore.List(ctx, &store.TaskListParams{State: "INITED", Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), total)
+		assert.Len(t, got, 1)
+		assert.Equal(t, "INITED", got[0].State)
+	})
+
+	t.Run("pagination", func(t *testing.T) {
+		got, total, err := gTestTaskStore.List(ctx, &store.TaskListParams{Offset: 0, Limit: 1})
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), total)
+		assert.Len(t, got, 1)
+	})
 }

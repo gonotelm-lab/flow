@@ -225,3 +225,35 @@ func (s *TaskStoreImpl) BatchUpdate(
 		return nil
 	})
 }
+
+func (s *TaskStoreImpl) List(
+	ctx context.Context,
+	params *store.TaskListParams,
+) ([]*schema.Task, int64, error) {
+	db := util.GetDB(ctx, s.db)
+	q := db.Model(&schema.Task{})
+
+	if params.Namespace != "" {
+		q = q.Where("namespace = ?", params.Namespace)
+	}
+	if params.TaskType != "" {
+		q = q.Where("task_type = ?", params.TaskType)
+	}
+	if params.State != "" {
+		q = q.Where("state = ?", params.State)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
+	}
+
+	var tasks []*schema.Task
+	if err := q.Offset(params.Offset).Limit(params.Limit).
+		Order("create_time DESC").
+		Find(&tasks).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
+	}
+
+	return tasks, total, nil
+}

@@ -27,9 +27,19 @@ type TaskBatchUpdateParams struct {
 	Error       []byte
 }
 
+type TaskListParams struct {
+	Namespace string
+	TaskType  string
+	State     string
+	Offset    int
+	Limit     int
+}
+
 type Task interface {
 	Create(ctx context.Context, task *schema.Task) (*schema.Task, error)
 	Get(ctx context.Context, id uuid.UUID) (*schema.Task, error)
+
+	List(ctx context.Context, params *TaskListParams) ([]*schema.Task, int64, error)
 
 	// 获取下一个可执行的任务
 	Claim(ctx context.Context, namespace, taskType string, states []string) (*schema.Task, error)
