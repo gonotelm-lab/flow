@@ -3,9 +3,13 @@ syntax = "proto3";
 package api.admin.v1;
 
 import "api/schema/v1/namespace.proto";
+import "api/schema/v1/task.proto";
+import "api/schema/v1/taskevent.proto";
+import "api/schema/v1/worker.proto";
 import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "github.com/gonotelm-lab/flow/api/admin/v1";
 
@@ -20,6 +24,96 @@ message GetNamespaceRequest {
   ];
 }
 
+message PageRequest {
+  int32 page = 1 [(buf.validate.field).int32.gte = 1];
+  int32 page_size = 2 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+}
+
+message PageResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total_count = 3;
+}
+
+message ListNamespacesRequest {
+  PageRequest page = 1;
+}
+
+message ListNamespacesResponse {
+  PageResponse page = 1;
+  repeated api.schema.v1.Namespace namespaces = 2;
+}
+
+message UpdateNamespaceRequest {
+  string name = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field).required = true
+  ];
+  string description = 2;
+  string creator = 3;
+}
+
+message ListTasksRequest {
+  PageRequest page = 1;
+  string namespace = 2;
+  string task_type = 3;
+  api.schema.v1.TaskState state = 4;
+}
+
+message ListTasksResponse {
+  PageResponse page = 1;
+  repeated api.schema.v1.Task tasks = 2;
+}
+
+message GetTaskRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message CancelTaskRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message DeleteTaskRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message ListTaskEventsRequest {
+  string task_id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+  PageRequest page = 2;
+}
+
+message ListTaskEventsResponse {
+  PageResponse page = 1;
+  repeated api.schema.v1.TaskEvent events = 2;
+}
+
+message ListWorkersRequest {
+  PageRequest page = 1;
+  string namespace = 2;
+  string task_type = 3;
+}
+
+message ListWorkersResponse {
+  PageResponse page = 1;
+  repeated api.schema.v1.Worker workers = 2;
+}
+
+message GetWorkerRequest {
+  int64 id = 1 [(buf.validate.field).int64.gte = 1];
+}
+
 service AdminService {
   rpc CreateNamespace(CreateNamespaceRequest) returns (api.schema.v1.Namespace) {
     option (google.api.http) = {
@@ -30,5 +124,47 @@ service AdminService {
 
   rpc GetNamespace(GetNamespaceRequest) returns (api.schema.v1.Namespace) {
     option (google.api.http) = {get: "/api/admin/v1/namespaces/{name}"};
+  }
+
+  rpc ListNamespaces(ListNamespacesRequest) returns (ListNamespacesResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/namespaces"};
+  }
+
+  rpc UpdateNamespace(UpdateNamespaceRequest) returns (api.schema.v1.Namespace) {
+    option (google.api.http) = {
+      put: "/api/admin/v1/namespaces/{name}"
+      body: "*"
+    };
+  }
+
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/tasks"};
+  }
+
+  rpc GetTask(GetTaskRequest) returns (api.schema.v1.Task) {
+    option (google.api.http) = {get: "/api/admin/v1/tasks/{id}"};
+  }
+
+  rpc CancelTask(CancelTaskRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/tasks/{id}/cancel"
+      body: "*"
+    };
+  }
+
+  rpc DeleteTask(DeleteTaskRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/admin/v1/tasks/{id}"};
+  }
+
+  rpc ListTaskEvents(ListTaskEventsRequest) returns (ListTaskEventsResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/tasks/{task_id}/events"};
+  }
+
+  rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/workers"};
+  }
+
+  rpc GetWorker(GetWorkerRequest) returns (api.schema.v1.Worker) {
+    option (google.api.http) = {get: "/api/admin/v1/workers/{id}"};
   }
 }

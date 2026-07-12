@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package api.schema.v1;
+
+option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
+
+message TaskEvent {
+  int64 id = 1;
+  string task_id = 2;
+  string event_type = 3;
+  int64 create_time = 4;
+  bytes payload = 5;
+}

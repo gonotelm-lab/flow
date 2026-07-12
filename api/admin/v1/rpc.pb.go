@@ -12,6 +12,7 @@ import (
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -112,18 +113,858 @@ func (x *GetNamespaceRequest) GetName() string {
 	return ""
 }
 
+type PageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PageRequest) Reset() {
+	*x = PageRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PageRequest) ProtoMessage() {}
+
+func (x *PageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PageRequest.ProtoReflect.Descriptor instead.
+func (*PageRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *PageRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *PageRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type PageResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,3,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PageResponse) Reset() {
+	*x = PageResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PageResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PageResponse) ProtoMessage() {}
+
+func (x *PageResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PageResponse.ProtoReflect.Descriptor instead.
+func (*PageResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *PageResponse) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *PageResponse) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *PageResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+type ListNamespacesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNamespacesRequest) Reset() {
+	*x = ListNamespacesRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNamespacesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNamespacesRequest) ProtoMessage() {}
+
+func (x *ListNamespacesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNamespacesRequest.ProtoReflect.Descriptor instead.
+func (*ListNamespacesRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListNamespacesRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+type ListNamespacesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Namespaces    []*v1.Namespace        `protobuf:"bytes,2,rep,name=namespaces,proto3" json:"namespaces,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListNamespacesResponse) Reset() {
+	*x = ListNamespacesResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNamespacesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNamespacesResponse) ProtoMessage() {}
+
+func (x *ListNamespacesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNamespacesResponse.ProtoReflect.Descriptor instead.
+func (*ListNamespacesResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ListNamespacesResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListNamespacesResponse) GetNamespaces() []*v1.Namespace {
+	if x != nil {
+		return x.Namespaces
+	}
+	return nil
+}
+
+type UpdateNamespaceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Creator       string                 `protobuf:"bytes,3,opt,name=creator,proto3" json:"creator,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateNamespaceRequest) Reset() {
+	*x = UpdateNamespaceRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateNamespaceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateNamespaceRequest) ProtoMessage() {}
+
+func (x *UpdateNamespaceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateNamespaceRequest.ProtoReflect.Descriptor instead.
+func (*UpdateNamespaceRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateNamespaceRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpdateNamespaceRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *UpdateNamespaceRequest) GetCreator() string {
+	if x != nil {
+		return x.Creator
+	}
+	return ""
+}
+
+type ListTasksRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	TaskType      string                 `protobuf:"bytes,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	State         v1.TaskState           `protobuf:"varint,4,opt,name=state,proto3,enum=api.schema.v1.TaskState" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTasksRequest) Reset() {
+	*x = ListTasksRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTasksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTasksRequest) ProtoMessage() {}
+
+func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTasksRequest.ProtoReflect.Descriptor instead.
+func (*ListTasksRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListTasksRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListTasksRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ListTasksRequest) GetTaskType() string {
+	if x != nil {
+		return x.TaskType
+	}
+	return ""
+}
+
+func (x *ListTasksRequest) GetState() v1.TaskState {
+	if x != nil {
+		return x.State
+	}
+	return v1.TaskState(0)
+}
+
+type ListTasksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Tasks         []*v1.Task             `protobuf:"bytes,2,rep,name=tasks,proto3" json:"tasks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTasksResponse) Reset() {
+	*x = ListTasksResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTasksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTasksResponse) ProtoMessage() {}
+
+func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
+func (*ListTasksResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListTasksResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListTasksResponse) GetTasks() []*v1.Task {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+type GetTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTaskRequest) Reset() {
+	*x = GetTaskRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTaskRequest) ProtoMessage() {}
+
+func (x *GetTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTaskRequest.ProtoReflect.Descriptor instead.
+func (*GetTaskRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *GetTaskRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type CancelTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelTaskRequest) Reset() {
+	*x = CancelTaskRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelTaskRequest) ProtoMessage() {}
+
+func (x *CancelTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelTaskRequest.ProtoReflect.Descriptor instead.
+func (*CancelTaskRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *CancelTaskRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteTaskRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTaskRequest) Reset() {
+	*x = DeleteTaskRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTaskRequest) ProtoMessage() {}
+
+func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTaskRequest.ProtoReflect.Descriptor instead.
+func (*DeleteTaskRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *DeleteTaskRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListTaskEventsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Page          *PageRequest           `protobuf:"bytes,2,opt,name=page,proto3" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTaskEventsRequest) Reset() {
+	*x = ListTaskEventsRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTaskEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTaskEventsRequest) ProtoMessage() {}
+
+func (x *ListTaskEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTaskEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListTaskEventsRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListTaskEventsRequest) GetTaskId() string {
+	if x != nil {
+		return x.TaskId
+	}
+	return ""
+}
+
+func (x *ListTaskEventsRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+type ListTaskEventsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Events        []*v1.TaskEvent        `protobuf:"bytes,2,rep,name=events,proto3" json:"events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTaskEventsResponse) Reset() {
+	*x = ListTaskEventsResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTaskEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTaskEventsResponse) ProtoMessage() {}
+
+func (x *ListTaskEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTaskEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListTaskEventsResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ListTaskEventsResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListTaskEventsResponse) GetEvents() []*v1.TaskEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+type ListWorkersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	TaskType      string                 `protobuf:"bytes,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkersRequest) Reset() {
+	*x = ListWorkersRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkersRequest) ProtoMessage() {}
+
+func (x *ListWorkersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkersRequest.ProtoReflect.Descriptor instead.
+func (*ListWorkersRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListWorkersRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListWorkersRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ListWorkersRequest) GetTaskType() string {
+	if x != nil {
+		return x.TaskType
+	}
+	return ""
+}
+
+type ListWorkersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Workers       []*v1.Worker           `protobuf:"bytes,2,rep,name=workers,proto3" json:"workers,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWorkersResponse) Reset() {
+	*x = ListWorkersResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWorkersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWorkersResponse) ProtoMessage() {}
+
+func (x *ListWorkersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWorkersResponse.ProtoReflect.Descriptor instead.
+func (*ListWorkersResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ListWorkersResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListWorkersResponse) GetWorkers() []*v1.Worker {
+	if x != nil {
+		return x.Workers
+	}
+	return nil
+}
+
+type GetWorkerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetWorkerRequest) Reset() {
+	*x = GetWorkerRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetWorkerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetWorkerRequest) ProtoMessage() {}
+
+func (x *GetWorkerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetWorkerRequest.ProtoReflect.Descriptor instead.
+func (*GetWorkerRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetWorkerRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
 var File_api_admin_v1_rpc_proto protoreflect.FileDescriptor
 
 const file_api_admin_v1_rpc_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/admin/v1/rpc.proto\x12\fapi.admin.v1\x1a\x1dapi/schema/v1/namespace.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"U\n" +
+	"\x16api/admin/v1/rpc.proto\x12\fapi.admin.v1\x1a\x1dapi/schema/v1/namespace.proto\x1a\x18api/schema/v1/task.proto\x1a\x1dapi/schema/v1/taskevent.proto\x1a\x1aapi/schema/v1/worker.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\"U\n" +
 	"\x16CreateNamespaceRequest\x12;\n" +
 	"\tnamespace\x18\x01 \x01(\v2\x18.api.schema.v1.NamespaceB\x03\xe0A\x02R\tnamespace\"4\n" +
 	"\x13GetNamespaceRequest\x12\x1d\n" +
-	"\x04name\x18\x01 \x01(\tB\t\xe0A\x02\xbaH\x03\xc8\x01\x01R\x04name2\xfc\x01\n" +
+	"\x04name\x18\x01 \x01(\tB\t\xe0A\x02\xbaH\x03\xc8\x01\x01R\x04name\"R\n" +
+	"\vPageRequest\x12\x1b\n" +
+	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x04page\x12&\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\bpageSize\"`\n" +
+	"\fPageResponse\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1f\n" +
+	"\vtotal_count\x18\x03 \x01(\x03R\n" +
+	"totalCount\"F\n" +
+	"\x15ListNamespacesRequest\x12-\n" +
+	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\"\x82\x01\n" +
+	"\x16ListNamespacesResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x128\n" +
+	"\n" +
+	"namespaces\x18\x02 \x03(\v2\x18.api.schema.v1.NamespaceR\n" +
+	"namespaces\"s\n" +
+	"\x16UpdateNamespaceRequest\x12\x1d\n" +
+	"\x04name\x18\x01 \x01(\tB\t\xe0A\b\xbaH\x03\xc8\x01\x01R\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
+	"\acreator\x18\x03 \x01(\tR\acreator\"\xac\x01\n" +
+	"\x10ListTasksRequest\x12-\n" +
+	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1b\n" +
+	"\ttask_type\x18\x03 \x01(\tR\btaskType\x12.\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x18.api.schema.v1.TaskStateR\x05state\"n\n" +
+	"\x11ListTasksResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x12)\n" +
+	"\x05tasks\x18\x02 \x03(\v2\x13.api.schema.v1.TaskR\x05tasks\"-\n" +
+	"\x0eGetTaskRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"0\n" +
+	"\x11CancelTaskRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"0\n" +
+	"\x11DeleteTaskRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"l\n" +
+	"\x15ListTaskEventsRequest\x12$\n" +
+	"\atask_id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x06taskId\x12-\n" +
+	"\x04page\x18\x02 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\"z\n" +
+	"\x16ListTaskEventsResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x120\n" +
+	"\x06events\x18\x02 \x03(\v2\x18.api.schema.v1.TaskEventR\x06events\"~\n" +
+	"\x12ListWorkersRequest\x12-\n" +
+	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1b\n" +
+	"\ttask_type\x18\x03 \x01(\tR\btaskType\"v\n" +
+	"\x13ListWorkersResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x12/\n" +
+	"\aworkers\x18\x02 \x03(\v2\x15.api.schema.v1.WorkerR\aworkers\"+\n" +
+	"\x10GetWorkerRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\x02id2\x88\n" +
+	"\n" +
 	"\fAdminService\x12v\n" +
 	"\x0fCreateNamespace\x12$.api.admin.v1.CreateNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/admin/v1/namespaces\x12t\n" +
-	"\fGetNamespace\x12!.api.admin.v1.GetNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/admin/v1/namespaces/{name}B\x99\x01\n" +
+	"\fGetNamespace\x12!.api.admin.v1.GetNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/admin/v1/namespaces/{name}\x12}\n" +
+	"\x0eListNamespaces\x12#.api.admin.v1.ListNamespacesRequest\x1a$.api.admin.v1.ListNamespacesResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/admin/v1/namespaces\x12}\n" +
+	"\x0fUpdateNamespace\x12$.api.admin.v1.UpdateNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"*\x82\xd3\xe4\x93\x02$:\x01*\x1a\x1f/api/admin/v1/namespaces/{name}\x12i\n" +
+	"\tListTasks\x12\x1e.api.admin.v1.ListTasksRequest\x1a\x1f.api.admin.v1.ListTasksResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/admin/v1/tasks\x12^\n" +
+	"\aGetTask\x12\x1c.api.admin.v1.GetTaskRequest\x1a\x13.api.schema.v1.Task\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/admin/v1/tasks/{id}\x12q\n" +
+	"\n" +
+	"CancelTask\x12\x1f.api.admin.v1.CancelTaskRequest\x1a\x16.google.protobuf.Empty\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/admin/v1/tasks/{id}/cancel\x12g\n" +
+	"\n" +
+	"DeleteTask\x12\x1f.api.admin.v1.DeleteTaskRequest\x1a\x16.google.protobuf.Empty\" \x82\xd3\xe4\x93\x02\x1a*\x18/api/admin/v1/tasks/{id}\x12\x89\x01\n" +
+	"\x0eListTaskEvents\x12#.api.admin.v1.ListTaskEventsRequest\x1a$.api.admin.v1.ListTaskEventsResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/admin/v1/tasks/{task_id}/events\x12q\n" +
+	"\vListWorkers\x12 .api.admin.v1.ListWorkersRequest\x1a!.api.admin.v1.ListWorkersResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/admin/v1/workers\x12f\n" +
+	"\tGetWorker\x12\x1e.api.admin.v1.GetWorkerRequest\x1a\x15.api.schema.v1.Worker\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/admin/v1/workers/{id}B\x99\x01\n" +
 	"\x10com.api.admin.v1B\bRpcProtoP\x01Z)github.com/gonotelm-lab/flow/api/admin/v1\xa2\x02\x03AAX\xaa\x02\fApi.Admin.V1\xca\x02\fApi\\Admin\\V1\xe2\x02\x18Api\\Admin\\V1\\GPBMetadata\xea\x02\x0eApi::Admin::V1b\x06proto3"
 
 var (
@@ -138,23 +979,74 @@ func file_api_admin_v1_rpc_proto_rawDescGZIP() []byte {
 	return file_api_admin_v1_rpc_proto_rawDescData
 }
 
-var file_api_admin_v1_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_api_admin_v1_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_api_admin_v1_rpc_proto_goTypes = []any{
 	(*CreateNamespaceRequest)(nil), // 0: api.admin.v1.CreateNamespaceRequest
 	(*GetNamespaceRequest)(nil),    // 1: api.admin.v1.GetNamespaceRequest
-	(*v1.Namespace)(nil),           // 2: api.schema.v1.Namespace
+	(*PageRequest)(nil),            // 2: api.admin.v1.PageRequest
+	(*PageResponse)(nil),           // 3: api.admin.v1.PageResponse
+	(*ListNamespacesRequest)(nil),  // 4: api.admin.v1.ListNamespacesRequest
+	(*ListNamespacesResponse)(nil), // 5: api.admin.v1.ListNamespacesResponse
+	(*UpdateNamespaceRequest)(nil), // 6: api.admin.v1.UpdateNamespaceRequest
+	(*ListTasksRequest)(nil),       // 7: api.admin.v1.ListTasksRequest
+	(*ListTasksResponse)(nil),      // 8: api.admin.v1.ListTasksResponse
+	(*GetTaskRequest)(nil),         // 9: api.admin.v1.GetTaskRequest
+	(*CancelTaskRequest)(nil),      // 10: api.admin.v1.CancelTaskRequest
+	(*DeleteTaskRequest)(nil),      // 11: api.admin.v1.DeleteTaskRequest
+	(*ListTaskEventsRequest)(nil),  // 12: api.admin.v1.ListTaskEventsRequest
+	(*ListTaskEventsResponse)(nil), // 13: api.admin.v1.ListTaskEventsResponse
+	(*ListWorkersRequest)(nil),     // 14: api.admin.v1.ListWorkersRequest
+	(*ListWorkersResponse)(nil),    // 15: api.admin.v1.ListWorkersResponse
+	(*GetWorkerRequest)(nil),       // 16: api.admin.v1.GetWorkerRequest
+	(*v1.Namespace)(nil),           // 17: api.schema.v1.Namespace
+	(v1.TaskState)(0),              // 18: api.schema.v1.TaskState
+	(*v1.Task)(nil),                // 19: api.schema.v1.Task
+	(*v1.TaskEvent)(nil),           // 20: api.schema.v1.TaskEvent
+	(*v1.Worker)(nil),              // 21: api.schema.v1.Worker
+	(*emptypb.Empty)(nil),          // 22: google.protobuf.Empty
 }
 var file_api_admin_v1_rpc_proto_depIdxs = []int32{
-	2, // 0: api.admin.v1.CreateNamespaceRequest.namespace:type_name -> api.schema.v1.Namespace
-	0, // 1: api.admin.v1.AdminService.CreateNamespace:input_type -> api.admin.v1.CreateNamespaceRequest
-	1, // 2: api.admin.v1.AdminService.GetNamespace:input_type -> api.admin.v1.GetNamespaceRequest
-	2, // 3: api.admin.v1.AdminService.CreateNamespace:output_type -> api.schema.v1.Namespace
-	2, // 4: api.admin.v1.AdminService.GetNamespace:output_type -> api.schema.v1.Namespace
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	17, // 0: api.admin.v1.CreateNamespaceRequest.namespace:type_name -> api.schema.v1.Namespace
+	2,  // 1: api.admin.v1.ListNamespacesRequest.page:type_name -> api.admin.v1.PageRequest
+	3,  // 2: api.admin.v1.ListNamespacesResponse.page:type_name -> api.admin.v1.PageResponse
+	17, // 3: api.admin.v1.ListNamespacesResponse.namespaces:type_name -> api.schema.v1.Namespace
+	2,  // 4: api.admin.v1.ListTasksRequest.page:type_name -> api.admin.v1.PageRequest
+	18, // 5: api.admin.v1.ListTasksRequest.state:type_name -> api.schema.v1.TaskState
+	3,  // 6: api.admin.v1.ListTasksResponse.page:type_name -> api.admin.v1.PageResponse
+	19, // 7: api.admin.v1.ListTasksResponse.tasks:type_name -> api.schema.v1.Task
+	2,  // 8: api.admin.v1.ListTaskEventsRequest.page:type_name -> api.admin.v1.PageRequest
+	3,  // 9: api.admin.v1.ListTaskEventsResponse.page:type_name -> api.admin.v1.PageResponse
+	20, // 10: api.admin.v1.ListTaskEventsResponse.events:type_name -> api.schema.v1.TaskEvent
+	2,  // 11: api.admin.v1.ListWorkersRequest.page:type_name -> api.admin.v1.PageRequest
+	3,  // 12: api.admin.v1.ListWorkersResponse.page:type_name -> api.admin.v1.PageResponse
+	21, // 13: api.admin.v1.ListWorkersResponse.workers:type_name -> api.schema.v1.Worker
+	0,  // 14: api.admin.v1.AdminService.CreateNamespace:input_type -> api.admin.v1.CreateNamespaceRequest
+	1,  // 15: api.admin.v1.AdminService.GetNamespace:input_type -> api.admin.v1.GetNamespaceRequest
+	4,  // 16: api.admin.v1.AdminService.ListNamespaces:input_type -> api.admin.v1.ListNamespacesRequest
+	6,  // 17: api.admin.v1.AdminService.UpdateNamespace:input_type -> api.admin.v1.UpdateNamespaceRequest
+	7,  // 18: api.admin.v1.AdminService.ListTasks:input_type -> api.admin.v1.ListTasksRequest
+	9,  // 19: api.admin.v1.AdminService.GetTask:input_type -> api.admin.v1.GetTaskRequest
+	10, // 20: api.admin.v1.AdminService.CancelTask:input_type -> api.admin.v1.CancelTaskRequest
+	11, // 21: api.admin.v1.AdminService.DeleteTask:input_type -> api.admin.v1.DeleteTaskRequest
+	12, // 22: api.admin.v1.AdminService.ListTaskEvents:input_type -> api.admin.v1.ListTaskEventsRequest
+	14, // 23: api.admin.v1.AdminService.ListWorkers:input_type -> api.admin.v1.ListWorkersRequest
+	16, // 24: api.admin.v1.AdminService.GetWorker:input_type -> api.admin.v1.GetWorkerRequest
+	17, // 25: api.admin.v1.AdminService.CreateNamespace:output_type -> api.schema.v1.Namespace
+	17, // 26: api.admin.v1.AdminService.GetNamespace:output_type -> api.schema.v1.Namespace
+	5,  // 27: api.admin.v1.AdminService.ListNamespaces:output_type -> api.admin.v1.ListNamespacesResponse
+	17, // 28: api.admin.v1.AdminService.UpdateNamespace:output_type -> api.schema.v1.Namespace
+	8,  // 29: api.admin.v1.AdminService.ListTasks:output_type -> api.admin.v1.ListTasksResponse
+	19, // 30: api.admin.v1.AdminService.GetTask:output_type -> api.schema.v1.Task
+	22, // 31: api.admin.v1.AdminService.CancelTask:output_type -> google.protobuf.Empty
+	22, // 32: api.admin.v1.AdminService.DeleteTask:output_type -> google.protobuf.Empty
+	13, // 33: api.admin.v1.AdminService.ListTaskEvents:output_type -> api.admin.v1.ListTaskEventsResponse
+	15, // 34: api.admin.v1.AdminService.ListWorkers:output_type -> api.admin.v1.ListWorkersResponse
+	21, // 35: api.admin.v1.AdminService.GetWorker:output_type -> api.schema.v1.Worker
+	25, // [25:36] is the sub-list for method output_type
+	14, // [14:25] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_api_admin_v1_rpc_proto_init() }
@@ -168,7 +1060,7 @@ func file_api_admin_v1_rpc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_admin_v1_rpc_proto_rawDesc), len(file_api_admin_v1_rpc_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
