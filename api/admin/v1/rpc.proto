@@ -61,6 +61,7 @@ message ListTasksRequest {
   string namespace = 2;
   string task_type = 3;
   api.schema.v1.TaskState state = 4;
+  string id = 5;
 }
 
 message ListTasksResponse {

@@ -34,7 +34,10 @@ _testmain.go
 gotest
 .env
 /.cursor
+/.superpowers
 __debug*
 main
 .venv
 __pycache__
+node_modules
+.impeccable

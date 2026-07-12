@@ -248,10 +248,13 @@ func (s *TaskStoreImpl) List(
 		q = q.Where("namespace = ?", params.Namespace)
 	}
 	if params.TaskType != "" {
-		q = q.Where("task_type = ?", params.TaskType)
+		q = q.Where("task_type ILIKE ?", "%"+params.TaskType+"%")
 	}
 	if params.State != "" {
 		q = q.Where("state = ?", params.State)
+	}
+	if params.Id != "" {
+		q = q.Where("id::text ILIKE ?", "%"+params.Id+"%")
 	}
 
 	var total int64

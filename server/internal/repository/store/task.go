@@ -31,6 +31,7 @@ type TaskListParams struct {
 	Namespace string
 	TaskType  string
 	State     string
+	Id        string
 	Offset    int
 	Limit     int
 }

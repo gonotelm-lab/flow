@@ -387,6 +387,7 @@ type ListTasksRequest struct {
 	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
 	TaskType      string                 `protobuf:"bytes,3,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
 	State         v1.TaskState           `protobuf:"varint,4,opt,name=state,proto3,enum=api.schema.v1.TaskState" json:"state,omitempty"`
+	Id            string                 `protobuf:"bytes,5,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -447,6 +448,13 @@ func (x *ListTasksRequest) GetState() v1.TaskState {
 		return x.State
 	}
 	return v1.TaskState(0)
+}
+
+func (x *ListTasksRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
 }
 
 type ListTasksResponse struct {
@@ -920,12 +928,13 @@ const file_api_admin_v1_rpc_proto_rawDesc = "" +
 	"\x16UpdateNamespaceRequest\x12\x1d\n" +
 	"\x04name\x18\x01 \x01(\tB\t\xe0A\b\xbaH\x03\xc8\x01\x01R\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x18\n" +
-	"\acreator\x18\x03 \x01(\tR\acreator\"\xac\x01\n" +
+	"\acreator\x18\x03 \x01(\tR\acreator\"\xbc\x01\n" +
 	"\x10ListTasksRequest\x12-\n" +
 	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\x12\x1c\n" +
 	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1b\n" +
 	"\ttask_type\x18\x03 \x01(\tR\btaskType\x12.\n" +
-	"\x05state\x18\x04 \x01(\x0e2\x18.api.schema.v1.TaskStateR\x05state\"n\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x18.api.schema.v1.TaskStateR\x05state\x12\x0e\n" +
+	"\x02id\x18\x05 \x01(\tR\x02id\"n\n" +
 	"\x11ListTasksResponse\x12.\n" +
 	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x12)\n" +
 	"\x05tasks\x18\x02 \x03(\v2\x13.api.schema.v1.TaskR\x05tasks\"-\n" +

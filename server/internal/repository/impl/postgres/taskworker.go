@@ -80,7 +80,7 @@ func (s *TaskWorkerStoreImpl) List(
 		q = q.Where("namespace = ?", params.Namespace)
 	}
 	if params.TaskType != "" {
-		q = q.Where("task_type = ?", params.TaskType)
+		q = q.Where("task_type ILIKE ?", "%"+params.TaskType+"%")
 	}
 
 	var total int64

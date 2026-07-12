@@ -165,7 +165,7 @@ func generateApiKey() string {
 func (s *Service) listTasks(
 	ctx context.Context,
 	page, pageSize int32,
-	namespace, taskType, state string,
+	namespace, taskType, state, id string,
 ) ([]*apischema.Task, int64, error) {
 	offset := int((page - 1) * pageSize)
 	limit := int(pageSize)
@@ -174,6 +174,7 @@ func (s *Service) listTasks(
 		Namespace: namespace,
 		TaskType:  taskType,
 		State:     state,
+		Id:        strings.TrimSpace(id),
 		Offset:    offset,
 		Limit:     limit,
 	})
@@ -340,17 +341,20 @@ func toProtoWorker(w *reposchema.TaskWorker) *apischema.Worker {
 		return nil
 	}
 
-	return &apischema.Worker{
+	worker := &apischema.Worker{
 		Id:            w.Id,
 		Name:          w.Name,
 		Namespace:     w.Namespace,
 		TaskType:      w.TaskType,
 		CreateTime:    timestamppb.New(time.UnixMilli(w.CreateTime)),
 		HeartbeatTime: timestamppb.New(time.UnixMilli(w.HeartbeatTime)),
-		LastWorkTime:  timestamppb.New(time.UnixMilli(w.LastWorkTime)),
 		TotalDealt:    w.TotalDealt,
 		SuccessDealt:  w.SuccessDealt,
 	}
+	if w.LastWorkTime > 0 {
+		worker.LastWorkTime = timestamppb.New(time.UnixMilli(w.LastWorkTime))
+	}
+	return worker
 }
 
 func toProtoTask(task *reposchema.Task) *apischema.Task {

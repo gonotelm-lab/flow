@@ -121,7 +121,7 @@ func (s *Service) ListTasks(
 		state = req.GetState().String()
 	}
 
-	tasks, total, err := s.listTasks(ctx, page, pageSize, req.GetNamespace(), req.GetTaskType(), state)
+	tasks, total, err := s.listTasks(ctx, page, pageSize, req.GetNamespace(), req.GetTaskType(), state, req.GetId())
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to list tasks")
 	}
