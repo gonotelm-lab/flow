@@ -10,6 +10,7 @@ import (
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type Service struct {
@@ -107,4 +108,97 @@ func (s *Service) UpdateNamespace(
 	}
 
 	return ns, nil
+}
+
+func (s *Service) ListTasks(
+	ctx context.Context,
+	req *adminv1.ListTasksRequest,
+) (*adminv1.ListTasksResponse, error) {
+	page, pageSize := normalizePage(req.GetPage())
+
+	var state string
+	if req.GetState() != schemav1.TaskState_TASK_STATE_UNSPECIFIED {
+		state = req.GetState().String()
+	}
+
+	tasks, total, err := s.listTasks(ctx, page, pageSize, req.GetNamespace(), req.GetTaskType(), state)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to list tasks")
+	}
+
+	return &adminv1.ListTasksResponse{
+		Page: &adminv1.PageResponse{
+			Page:       page,
+			PageSize:   pageSize,
+			TotalCount: total,
+		},
+		Tasks: tasks,
+	}, nil
+}
+
+func (s *Service) GetTask(
+	ctx context.Context,
+	req *adminv1.GetTaskRequest,
+) (*schemav1.Task, error) {
+	if req == nil {
+		return nil, pkgerr.InvalidArgument
+	}
+
+	task, err := s.getTask(ctx, req.GetId())
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get task")
+	}
+
+	return task, nil
+}
+
+func (s *Service) CancelTask(
+	ctx context.Context,
+	req *adminv1.CancelTaskRequest,
+) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, pkgerr.InvalidArgument
+	}
+
+	if err := s.cancelTask(ctx, req.GetId()); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) DeleteTask(
+	ctx context.Context,
+	req *adminv1.DeleteTaskRequest,
+) (*emptypb.Empty, error) {
+	if req == nil {
+		return nil, pkgerr.InvalidArgument
+	}
+
+	if err := s.deleteTask(ctx, req.GetId()); err != nil {
+		return nil, err
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (s *Service) ListTaskEvents(
+	ctx context.Context,
+	req *adminv1.ListTaskEventsRequest,
+) (*adminv1.ListTaskEventsResponse, error) {
+	page, pageSize := normalizePage(req.GetPage())
+
+	events, total, err := s.listTaskEvents(ctx, req.GetTaskId(), page, pageSize)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to list task events")
+	}
+
+	return &adminv1.ListTaskEventsResponse{
+		Page: &adminv1.PageResponse{
+			Page:       page,
+			PageSize:   pageSize,
+			TotalCount: total,
+		},
+		Events: events,
+	}, nil
 }
