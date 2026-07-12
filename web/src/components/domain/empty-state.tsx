@@ -16,15 +16,17 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Icon className="mb-3 h-8 w-8 text-muted-foreground" />
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+      </div>
       <p className="text-sm font-medium">{title}</p>
       {description && (
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+        <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
           {description}
         </p>
       )}
       {action && (
-        <Button className="mt-4" size="sm" onClick={action.onClick}>
+        <Button className="mt-5" size="sm" onClick={action.onClick}>
           {action.label}
         </Button>
       )}

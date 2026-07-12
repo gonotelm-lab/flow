@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import { Pagination } from "@/components/domain/pagination";
 import { STATE_DOT_COLORS, StatusDot } from "@/components/domain/status-dot";
 import { TaskDetailPanel } from "@/components/domain/task-detail-panel";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useNamespace } from "@/lib/namespace-context";
 import {
   formatTimestamp,
@@ -39,10 +40,11 @@ import {
 } from "@/hooks/use-tasks";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import type { Task } from "@/api/types";
-import { ListTodo } from "lucide-react";
+import { Copy, ListTodo, Search } from "lucide-react";
 
 const STATUS_TABS = [
   { value: "all", label: "全部" },
+  { value: "INITED", label: "待运行" },
   { value: "RUNNING", label: "运行中" },
   { value: "FAILED", label: "失败" },
   { value: "DONE", label: "已完成" },
@@ -50,6 +52,7 @@ const STATUS_TABS = [
 ] as const;
 
 const VALID_STATES = new Set<string>([
+  "INITED",
   "RUNNING",
   "FAILED",
   "DONE",
@@ -67,21 +70,51 @@ export function TaskTable() {
   const [status, setStatus] = useState(() =>
     parseStatusParam(searchParams.get("state")),
   );
-  const [taskType, setTaskType] = useState("");
-  const [taskId, setTaskId] = useState("");
-  const debouncedTaskType = useDebouncedValue(taskType.trim());
-  const debouncedTaskId = useDebouncedValue(taskId.trim());
-  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [taskTypeDraft, setTaskTypeDraft] = useState("");
+  const [taskIdDraft, setTaskIdDraft] = useState("");
+  const [appliedTaskType, setAppliedTaskType] = useState("");
+  const [appliedTaskId, setAppliedTaskId] = useState("");
+  const debouncedTaskType = useDebouncedValue(taskTypeDraft.trim());
+  const debouncedTaskId = useDebouncedValue(taskIdDraft.trim());
+  const detailTaskId = searchParams.get("task");
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const skipDetailReset = useRef(true);
 
   useEffect(() => {
     setStatus(parseStatusParam(searchParams.get("state")));
   }, [searchParams]);
 
   useEffect(() => {
+    setAppliedTaskType(debouncedTaskType);
+    setAppliedTaskId(debouncedTaskId);
+  }, [debouncedTaskType, debouncedTaskId]);
+
+  useEffect(() => {
     setPage(1);
-    setDetailTaskId(null);
-  }, [selectedNamespace, status, debouncedTaskType, debouncedTaskId]);
+    if (skipDetailReset.current) {
+      skipDetailReset.current = false;
+      return;
+    }
+    if (searchParams.get("task")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("task");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only reset detail when filters change
+  }, [selectedNamespace, status, appliedTaskType, appliedTaskId]);
+
+  const setDetailTaskId = (id: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set("task", id);
+    else next.delete("task");
+    setSearchParams(next, { replace: true });
+  };
+
+  const applySearch = () => {
+    setAppliedTaskType(taskTypeDraft.trim());
+    setAppliedTaskId(taskIdDraft.trim());
+    setPage(1);
+  };
 
   const handleStatusChange = (v: string) => {
     setStatus(v);
@@ -95,8 +128,8 @@ export function TaskTable() {
     page,
     pageSize: DEFAULT_PAGE_SIZE,
     namespace: selectedNamespace ?? undefined,
-    taskType: debouncedTaskType || undefined,
-    taskId: debouncedTaskId || undefined,
+    taskType: appliedTaskType || undefined,
+    taskId: appliedTaskId || undefined,
     state: status === "all" ? undefined : status,
   };
 
@@ -127,7 +160,7 @@ export function TaskTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Tabs value={status} onValueChange={handleStatusChange}>
           <TabsList>
             {STATUS_TABS.map((t) => (
@@ -139,44 +172,58 @@ export function TaskTable() {
         </Tabs>
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="任务类型（支持模糊匹配）"
+            placeholder="任务类型"
             className="h-8 w-44"
-            value={taskType}
-            onChange={(e) => setTaskType(e.target.value)}
+            value={taskTypeDraft}
+            onChange={(e) => setTaskTypeDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applySearch()}
           />
           <Input
-            placeholder="任务 ID（支持部分匹配）"
-            className="h-8 w-52 font-mono text-xs"
-            value={taskId}
-            onChange={(e) => setTaskId(e.target.value)}
+            placeholder="任务 ID"
+            className="h-8 w-52"
+            value={taskIdDraft}
+            onChange={(e) => setTaskIdDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applySearch()}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            aria-label="搜索任务"
+            onClick={applySearch}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {isError && (
         <p className="text-sm text-destructive">
-          加载任务失败，请在设置中检查 API 连接。
+          加载任务失败，请检查 API 连接。
         </p>
       )}
 
-      <Table>
+      <Table className="table-auto">
         <colgroup>
-          <col style={{ width: "2.5rem" }} />
+          <col className="w-10" />
+          <col style={{ minWidth: "20rem" }} />
           <col />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "18%" }} />
-          <col style={{ width: "8.5rem" }} />
+          <col className="w-24" />
+          <col />
+          <col className="w-[7.5rem]" />
         </colgroup>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10 px-3" />
+            <TableHead className="px-3" />
             <TableHead className="px-3">ID</TableHead>
             <TableHead className="px-3">类型</TableHead>
             <TableHead className="px-3">状态</TableHead>
             <TableHead className="px-3">创建时间</TableHead>
-            <TableHead className="px-3">
-              <div className="flex h-7 items-center">操作</div>
+            <TableHead className="p-0 align-middle">
+              <div className="flex h-11 items-center px-3 text-xs font-medium tracking-normal text-muted-foreground">
+                操作
+              </div>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -213,47 +260,61 @@ export function TaskTable() {
                 className="cursor-pointer"
                 onClick={() => setDetailTaskId(task.id)}
               >
-                <TableCell className="w-10 px-3">
+                <TableCell className="px-3">
                   <StatusDot
-                    color={STATE_DOT_COLORS[task.state] ?? "bg-zinc-500"}
+                    color={
+                      STATE_DOT_COLORS[task.state] ?? "bg-muted-foreground/50"
+                    }
                     pulse={task.state === "RUNNING"}
                   />
                 </TableCell>
-                <TableCell className="truncate px-3 font-mono text-xs">
-                  {task.id}
+                <TableCell className="whitespace-nowrap px-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span>{task.id}</span>
+                    <button
+                      type="button"
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground"
+                      aria-label="复制任务 ID"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copyToClipboard(task.id, "任务 ID 已复制");
+                      }}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </button>
+                  </div>
                 </TableCell>
-                <TableCell className="truncate px-3 text-muted-foreground">
+                <TableCell className="px-3 text-sm text-muted-foreground">
                   {task.taskType || "—"}
                 </TableCell>
                 <TableCell className="px-3">
                   <Badge variant={meta.variant}>{meta.label}</Badge>
                 </TableCell>
-                <TableCell className="whitespace-nowrap px-3 text-muted-foreground">
+                <TableCell className="whitespace-nowrap px-3 text-sm text-muted-foreground">
                   {formatTimestamp(task.createTime)}
                 </TableCell>
-                <TableCell className="px-3">
+                <TableCell className="p-0 align-middle">
                   <div
-                    className="flex h-7 items-center gap-2"
+                    className="flex h-11 items-center gap-3 px-3"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {canCancel && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 !px-0 text-xs hover:bg-transparent"
-                        onClick={() => handleCancel(task)}
+                    <div className="flex w-8 shrink-0 items-center justify-start">
+                      <button
+                        type="button"
+                        disabled={!canCancel}
+                        className="inline-flex h-7 items-center rounded-md px-0 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                        onClick={() => canCancel && handleCancel(task)}
                       >
                         取消
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 !px-0 text-xs text-destructive hover:bg-transparent"
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="inline-flex h-7 items-center rounded-md px-0 text-xs font-medium text-destructive/80 transition-colors duration-150 hover:bg-destructive/8 hover:text-destructive"
                       onClick={() => setDeleteTarget(task)}
                     >
                       删除
-                    </Button>
+                    </button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -291,7 +352,7 @@ export function TaskTable() {
             <DialogTitle>删除任务？</DialogTitle>
             <DialogDescription>
               将永久删除任务{" "}
-              <code className="font-mono text-xs">{deleteTarget?.id}</code>
+              <span className="text-sm">{deleteTarget?.id}</span>
               ，此操作不可撤销。
             </DialogDescription>
           </DialogHeader>

@@ -21,3 +21,5 @@ export const TASK_STATE_META: Record<
 };
 
 export const DEFAULT_PAGE_SIZE = 20;
+
+export const HEARTBEAT_STALE_THRESHOLD_SEC = 30;

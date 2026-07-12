@@ -11,7 +11,7 @@ export function StatusDot({ color, pulse }: StatusDotProps) {
       {pulse && (
         <span
           className={cn(
-            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-60",
             color,
           )}
         />
@@ -22,9 +22,9 @@ export function StatusDot({ color, pulse }: StatusDotProps) {
 }
 
 export const STATE_DOT_COLORS: Record<string, string> = {
-  INITED: "bg-zinc-500",
-  RUNNING: "bg-amber-500",
-  DONE: "bg-green-500",
-  FAILED: "bg-red-500",
-  CANCELLED: "bg-zinc-400",
+  INITED: "bg-muted-foreground/50",
+  RUNNING: "bg-warning",
+  DONE: "bg-success",
+  FAILED: "bg-destructive",
+  CANCELLED: "bg-muted-foreground/30",
 };

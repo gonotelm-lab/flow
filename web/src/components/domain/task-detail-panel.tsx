@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +17,7 @@ import {
   formatUnixMillis,
 } from "@/lib/format";
 import { useTask, useTaskEvents } from "@/hooks/use-tasks";
+import { copyToClipboard } from "@/lib/clipboard";
 import type { TaskEvent } from "@/api/types";
 
 type TaskDetailPanelProps = {
@@ -42,9 +44,17 @@ export function TaskDetailPanel({ taskId }: TaskDetailPanelProps) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <Badge variant={meta.variant}>{meta.label}</Badge>
-        <code className="break-all font-mono text-xs text-muted-foreground">
-          {task.id}
-        </code>
+        <code className="break-all text-sm text-muted-foreground">{task.id}</code>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          aria-label="复制任务 ID"
+          onClick={() => copyToClipboard(task.id, "任务 ID 已复制")}
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-4">
@@ -79,7 +89,7 @@ function TaskEventsTimeline({ events }: { events: TaskEvent[] }) {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="overflow-x-auto rounded-md border border-border bg-muted/20 px-3 py-3">
+      <div className="overflow-x-auto rounded-lg border border-border bg-muted/20 px-3 py-3">
         <div className="flex min-w-min items-center gap-1.5">
           {events.map((ev, index) => (
             <div key={ev.id} className="flex items-center gap-1.5">
@@ -122,17 +132,17 @@ function EventChip({ event }: { event: TaskEvent }) {
         >
           <Badge
             variant={EVENT_VARIANT[event.eventType] ?? "secondary"}
-            className="cursor-default font-mono text-[11px] hover:opacity-90"
+            className="cursor-default text-xs hover:opacity-90"
           >
             {event.eventType}
           </Badge>
         </button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-xs space-y-1.5">
-        <p className="font-mono text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {formatUnixMillis(event.createTime)}
         </p>
-        <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed">
+        <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all text-xs leading-relaxed">
           {description}
         </pre>
       </TooltipContent>
@@ -162,10 +172,10 @@ function BytesBlock({
   if (!value) return null;
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
+    <div className="overflow-hidden rounded-lg border border-border">
       <button
         type="button"
-        className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/30"
+        className="flex w-full cursor-pointer items-center justify-between px-3 py-2.5 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-muted/40"
         onClick={() => setOpen((v) => !v)}
       >
         <span>{label}</span>
@@ -177,7 +187,7 @@ function BytesBlock({
         />
       </button>
       {open && (
-        <pre className="max-h-56 overflow-auto border-t border-border bg-muted/30 p-3 font-mono text-xs">
+        <pre className="max-h-56 overflow-auto border-t border-border bg-muted/30 p-3 text-sm">
           {decodeProtoBytes(value)}
         </pre>
       )}

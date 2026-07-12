@@ -1,4 +1,4 @@
-import { TASK_STATE_META } from "./constants";
+import { HEARTBEAT_STALE_THRESHOLD_SEC, TASK_STATE_META } from "./constants";
 
 function parseTime(iso?: string): number | null {
   if (!iso) return null;
@@ -104,7 +104,10 @@ export function truncateId(id: string, len = 8): string {
   return id.length > len * 2 ? `${id.slice(0, len)}…${id.slice(-4)}` : id;
 }
 
-export function isHeartbeatStale(iso?: string, thresholdSec = 30): boolean {
+export function isHeartbeatStale(
+  iso?: string,
+  thresholdSec = HEARTBEAT_STALE_THRESHOLD_SEC,
+): boolean {
   const t = parseTime(iso);
   if (t === null) return false;
   return Date.now() - t > thresholdSec * 1000;

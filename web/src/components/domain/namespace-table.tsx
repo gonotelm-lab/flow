@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
-import { Boxes, Copy } from "lucide-react";
+import { Boxes, ChevronRight, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +22,7 @@ import {
   useUpdateNamespace,
 } from "@/hooks/use-namespaces";
 import type { Namespace } from "@/api/types";
+import { cn } from "@/lib/utils";
 
 export function NamespaceTable() {
   const [page, setPage] = useState(1);
@@ -93,10 +94,10 @@ export function NamespaceTable() {
       </div>
 
       {newApiKey && (
-        <div className="rounded-md border border-warning/30 bg-warning/10 p-4 text-sm">
+        <div className="rounded-lg border border-warning/30 bg-warning/8 p-4 text-sm">
           <p className="font-medium">API 密钥（仅显示一次）</p>
           <div className="mt-2 flex items-center gap-2">
-            <code className="flex-1 break-all font-mono text-xs">
+            <code className="flex-1 break-all text-sm">
               {newApiKey}
             </code>
             <Button
@@ -120,7 +121,7 @@ export function NamespaceTable() {
       )}
 
       {showCreate && (
-        <div className="rounded-md border border-border bg-muted/30 p-4">
+        <div className="page-panel p-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <Input
               placeholder="名称 *"
@@ -157,6 +158,7 @@ export function NamespaceTable() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-8 px-2" aria-hidden />
             <TableHead>名称</TableHead>
             <TableHead>描述</TableHead>
             <TableHead>创建者</TableHead>
@@ -168,7 +170,7 @@ export function NamespaceTable() {
           {isLoading &&
             Array.from({ length: 4 }).map((_, i) => (
               <TableRow key={i}>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <Skeleton className="h-8 w-full" />
                 </TableCell>
               </TableRow>
@@ -176,7 +178,7 @@ export function NamespaceTable() {
 
           {!isLoading && data?.namespaces.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5}>
+              <TableCell colSpan={6}>
                 <EmptyState
                   icon={Boxes}
                   title="暂无命名空间"
@@ -196,16 +198,25 @@ export function NamespaceTable() {
               <Fragment key={ns.name}>
                 <TableRow
                   key={ns.name}
-                  className="cursor-pointer"
+                  className={cn("cursor-pointer", isOpen && "bg-muted/40")}
                   data-state={isOpen ? "selected" : undefined}
+                  aria-expanded={isOpen}
                   onClick={() => openEdit(ns)}
                 >
+                  <TableCell className="w-8 px-2">
+                    <ChevronRight
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform duration-150",
+                        isOpen && "rotate-90",
+                      )}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">{ns.name}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {ns.description || "—"}
                   </TableCell>
                   <TableCell>{ns.creator || "—"}</TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="text-sm">
                     {ns.apiKeyPreview || "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -216,7 +227,7 @@ export function NamespaceTable() {
                 </TableRow>
                 {isOpen && (
                   <TableRow key={`${ns.name}-edit`}>
-                    <TableCell colSpan={5} className="bg-muted/40 p-4">
+                    <TableCell colSpan={6} className="bg-muted/30 p-4">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <Input
                           placeholder="描述"

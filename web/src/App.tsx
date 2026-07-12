@@ -8,7 +8,6 @@ import { HomePage } from "@/pages/home-page";
 import { TasksPage } from "@/pages/tasks-page";
 import { WorkersPage } from "@/pages/workers-page";
 import { NamespacesPage } from "@/pages/namespaces-page";
-import { SettingsPage } from "@/pages/settings-page";
 
 export default function App() {
   const { open, setOpen } = useCommandMenu();
@@ -31,10 +30,6 @@ export default function App() {
         <Route
           path="/namespaces"
           element={<NamespacesPage onOpenCommand={() => setOpen(true)} />}
-        />
-        <Route
-          path="/settings"
-          element={<SettingsPage onOpenCommand={() => setOpen(true)} />}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

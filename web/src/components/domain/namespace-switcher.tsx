@@ -21,7 +21,7 @@ export function NamespaceSwitcher() {
       <Button
         variant="outline"
         size="sm"
-        className="h-8 gap-1.5 font-mono text-xs"
+        className="h-8 gap-1.5 text-sm"
         onClick={() => setOpen(true)}
       >
         {namespace}

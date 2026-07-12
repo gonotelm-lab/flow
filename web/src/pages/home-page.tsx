@@ -8,7 +8,7 @@ type PageProps = {
 export function HomePage({ onOpenCommand }: PageProps) {
   return (
     <AppShell title="选择命名空间" onOpenCommand={onOpenCommand}>
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-5xl">
         <NamespacePicker />
       </div>
     </AppShell>
