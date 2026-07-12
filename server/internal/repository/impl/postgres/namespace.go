@@ -40,3 +40,25 @@ func (s *NamespaceStoreImpl) Get(
 
 	return &namespace, nil
 }
+
+func (s *NamespaceStoreImpl) List(
+	ctx context.Context,
+	offset, limit int,
+) ([]*schema.Namespace, int64, error) {
+	db := util.GetDB(ctx, s.db)
+	q := db.Model(&schema.Namespace{})
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
+	}
+
+	var namespaces []*schema.Namespace
+	if err := q.Offset(offset).Limit(limit).
+		Order("create_time DESC").
+		Find(&namespaces).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
+	}
+
+	return namespaces, total, nil
+}
