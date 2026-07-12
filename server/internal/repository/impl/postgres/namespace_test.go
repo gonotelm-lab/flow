@@ -136,3 +136,29 @@ func TestNamespaceStore_List(t *testing.T) {
 		assert.Len(t, got, 0)
 	})
 }
+
+func TestNamespaceStore_Update(t *testing.T) {
+	cleanNamespaces(t)
+	ctx := context.Background()
+
+	now := time.Now().UnixNano()
+	ns := &schema.Namespace{
+		Name:        fmt.Sprintf("ns-update-%d", now),
+		Description: "original",
+		ApiKey:      fmt.Sprintf("ak-update-%d", now),
+		Creator:     "old",
+	}
+	created, err := gTestNamespaceStore.Create(ctx, ns)
+	require.NoError(t, err)
+
+	created.Description = "updated desc"
+	created.Creator = "new creator"
+	err = gTestNamespaceStore.Update(ctx, created)
+	require.NoError(t, err)
+
+	got, err := gTestNamespaceStore.Get(ctx, created.Name)
+	require.NoError(t, err)
+	assert.Equal(t, "updated desc", got.Description)
+	assert.Equal(t, "new creator", got.Creator)
+	assert.Equal(t, created.Name, got.Name)
+}

@@ -62,3 +62,20 @@ func (s *NamespaceStoreImpl) List(
 
 	return namespaces, total, nil
 }
+
+func (s *NamespaceStoreImpl) Update(
+	ctx context.Context,
+	ns *schema.Namespace,
+) error {
+	db := util.GetDB(ctx, s.db)
+	res := db.Model(&schema.Namespace{}).
+		Where("name = ?", ns.Name).
+		Updates(map[string]any{
+			"description": ns.Description,
+			"creator":     ns.Creator,
+		})
+	if err := res.Error; err != nil {
+		return sql.WrapError(err)
+	}
+	return nil
+}
