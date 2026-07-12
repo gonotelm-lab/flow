@@ -226,6 +226,17 @@ func (s *TaskStoreImpl) BatchUpdate(
 	})
 }
 
+func (s *TaskStoreImpl) Delete(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	db := util.GetDB(ctx, s.db)
+	if err := db.Delete(&schema.Task{}, "id = ?", id).Error; err != nil {
+		return sql.WrapError(err)
+	}
+	return nil
+}
+
 func (s *TaskStoreImpl) List(
 	ctx context.Context,
 	params *store.TaskListParams,

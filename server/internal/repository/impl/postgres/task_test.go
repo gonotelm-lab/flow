@@ -372,3 +372,18 @@ func TestTaskStore_List(t *testing.T) {
 		assert.Len(t, got, 1)
 	})
 }
+
+func TestTaskStore_Delete(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	task := newTestTask("ns-del", "email", "INITED", 1000)
+	created, err := gTestTaskStore.Create(ctx, task)
+	require.NoError(t, err)
+
+	err = gTestTaskStore.Delete(ctx, created.Id)
+	require.NoError(t, err)
+
+	_, err = gTestTaskStore.Get(ctx, created.Id)
+	assert.ErrorIs(t, err, pkgerr.NoRecord)
+}

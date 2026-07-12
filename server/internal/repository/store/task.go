@@ -38,6 +38,7 @@ type TaskListParams struct {
 type Task interface {
 	Create(ctx context.Context, task *schema.Task) (*schema.Task, error)
 	Get(ctx context.Context, id uuid.UUID) (*schema.Task, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 
 	List(ctx context.Context, params *TaskListParams) ([]*schema.Task, int64, error)
 
