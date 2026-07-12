@@ -66,3 +66,45 @@ func (s *Service) GetNamespace(
 
 	return ns, nil
 }
+
+func (s *Service) ListNamespaces(
+	ctx context.Context,
+	req *adminv1.ListNamespacesRequest,
+) (*adminv1.ListNamespacesResponse, error) {
+	page, pageSize := normalizePage(req.GetPage())
+
+	nsList, total, err := s.listNamespaces(ctx, page, pageSize)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to list namespaces")
+	}
+
+	return &adminv1.ListNamespacesResponse{
+		Page: &adminv1.PageResponse{
+			Page:       page,
+			PageSize:   pageSize,
+			TotalCount: total,
+		},
+		Namespaces: nsList,
+	}, nil
+}
+
+func (s *Service) UpdateNamespace(
+	ctx context.Context,
+	req *adminv1.UpdateNamespaceRequest,
+) (*schemav1.Namespace, error) {
+	if req == nil {
+		return nil, pkgerr.InvalidArgument
+	}
+
+	name := strings.TrimSpace(req.GetName())
+	if name == "" {
+		return nil, pkgerr.InvalidArgument.WithDetail("namespace name is required")
+	}
+
+	ns, err := s.updateNamespace(ctx, name, req.GetDescription(), req.GetCreator())
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update namespace")
+	}
+
+	return ns, nil
+}
