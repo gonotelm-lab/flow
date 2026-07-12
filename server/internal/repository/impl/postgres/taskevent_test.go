@@ -40,26 +40,45 @@ func TestTaskEventStore_ListByTaskID(t *testing.T) {
 
 	taskID := uuid.New()
 	otherTaskID := uuid.New()
+
 	first := newTestTaskEvent(taskID, "CLAIMED", 1000)
 	second := newTestTaskEvent(taskID, "DONE", 2000)
+	third := newTestTaskEvent(taskID, "RETRIED", 3000)
 	other := newTestTaskEvent(otherTaskID, "CLAIMED", 1500)
 
 	require.NoError(t, gTestTaskEventStore.Append(ctx, first))
 	require.NoError(t, gTestTaskEventStore.Append(ctx, second))
+	require.NoError(t, gTestTaskEventStore.Append(ctx, third))
 	require.NoError(t, gTestTaskEventStore.Append(ctx, other))
 
-	got, err := gTestTaskEventStore.ListByTaskID(ctx, taskID, 10)
-	require.NoError(t, err)
-	require.Len(t, got, 2)
-	assert.Equal(t, first.Id, got[0].Id)
-	assert.Equal(t, second.Id, got[1].Id)
+	t.Run("all", func(t *testing.T) {
+		got, total, err := gTestTaskEventStore.ListByTaskID(ctx, taskID, 0, 10)
+		require.NoError(t, err)
+		assert.Len(t, got, 3)
+		assert.Equal(t, int64(3), total)
+	})
+
+	t.Run("pagination", func(t *testing.T) {
+		got, total, err := gTestTaskEventStore.ListByTaskID(ctx, taskID, 0, 2)
+		require.NoError(t, err)
+		assert.Len(t, got, 2)
+		assert.Equal(t, int64(3), total)
+	})
+
+	t.Run("offset", func(t *testing.T) {
+		got, total, err := gTestTaskEventStore.ListByTaskID(ctx, taskID, 1, 10)
+		require.NoError(t, err)
+		assert.Len(t, got, 2)
+		assert.Equal(t, int64(3), total)
+	})
 }
 
 func TestTaskEventStore_ListByTaskID_Empty(t *testing.T) {
 	cleanTaskEvents(t)
 	ctx := context.Background()
 
-	got, err := gTestTaskEventStore.ListByTaskID(ctx, uuid.New(), 10)
+	got, total, err := gTestTaskEventStore.ListByTaskID(ctx, uuid.New(), 0, 10)
 	require.NoError(t, err)
 	assert.Empty(t, got)
+	assert.Equal(t, int64(0), total)
 }

@@ -33,18 +33,21 @@ func (s *TaskEventStoreImpl) Append(
 func (s *TaskEventStoreImpl) ListByTaskID(
 	ctx context.Context,
 	taskID uuid.UUID,
-	limit int,
-) ([]*schema.TaskEvent, error) {
+	offset, limit int,
+) ([]*schema.TaskEvent, int64, error) {
 	db := util.GetDB(ctx, s.db)
-	q := db.Where("task_id = ?", taskID).
-		Order("id ASC")
-	if limit > 0 {
-		q = q.Limit(limit)
+	q := db.Where("task_id = ?", taskID)
+
+	var total int64
+	if err := q.Model(&schema.TaskEvent{}).Count(&total).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
 	}
 
 	var events []*schema.TaskEvent
-	if err := q.Find(&events).Error; err != nil {
-		return nil, sql.WrapError(err)
+	if err := q.Offset(offset).Limit(limit).
+		Order("create_time ASC").
+		Find(&events).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
 	}
-	return events, nil
+	return events, total, nil
 }
