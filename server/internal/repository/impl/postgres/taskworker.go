@@ -68,3 +68,32 @@ func (s *TaskWorkerStoreImpl) Delete(
 	}
 	return nil
 }
+
+func (s *TaskWorkerStoreImpl) List(
+	ctx context.Context,
+	params *store.WorkerListParams,
+) ([]*schema.TaskWorker, int64, error) {
+	db := util.GetDB(ctx, s.db)
+	q := db.Model(&schema.TaskWorker{})
+
+	if params.Namespace != "" {
+		q = q.Where("namespace = ?", params.Namespace)
+	}
+	if params.TaskType != "" {
+		q = q.Where("task_type = ?", params.TaskType)
+	}
+
+	var total int64
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
+	}
+
+	var workers []*schema.TaskWorker
+	if err := q.Offset(params.Offset).Limit(params.Limit).
+		Order("create_time DESC").
+		Find(&workers).Error; err != nil {
+		return nil, 0, sql.WrapError(err)
+	}
+
+	return workers, total, nil
+}

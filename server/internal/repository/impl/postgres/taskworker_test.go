@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/internal/repository/store"
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,6 +86,47 @@ func TestTaskWorkerStore_UpdateHeartbeat(t *testing.T) {
 	got, err := gTestTaskWorkerStore.Get(ctx, created.Id)
 	require.NoError(t, err)
 	assert.Equal(t, newHeartbeat, got.HeartbeatTime)
+}
+
+func TestTaskWorkerStore_List(t *testing.T) {
+	cleanTaskWorkers(t)
+	ctx := context.Background()
+
+	w1 := newTestTaskWorker("w1")
+	w1.Namespace = "ns-wl-aaa"
+	w1.TaskType = "email"
+	w2 := newTestTaskWorker("w2")
+	w2.Namespace = "ns-wl-aaa"
+	w2.TaskType = "sms"
+	w3 := newTestTaskWorker("w3")
+	w3.Namespace = "ns-wl-bbb"
+	w3.TaskType = "email"
+
+	for _, w := range []*schema.TaskWorker{w1, w2, w3} {
+		_, err := gTestTaskWorkerStore.Create(ctx, w)
+		require.NoError(t, err)
+	}
+
+	t.Run("all", func(t *testing.T) {
+		got, total, err := gTestTaskWorkerStore.List(ctx, &store.WorkerListParams{Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), total)
+		assert.Len(t, got, 3)
+	})
+
+	t.Run("filter_by_namespace", func(t *testing.T) {
+		got, total, err := gTestTaskWorkerStore.List(ctx, &store.WorkerListParams{Namespace: "ns-wl-aaa", Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+		assert.Len(t, got, 2)
+	})
+
+	t.Run("pagination", func(t *testing.T) {
+		got, total, err := gTestTaskWorkerStore.List(ctx, &store.WorkerListParams{Offset: 0, Limit: 1})
+		require.NoError(t, err)
+		assert.Equal(t, int64(3), total)
+		assert.Len(t, got, 1)
+	})
 }
 
 func TestTaskWorkerStore_Delete(t *testing.T) {
