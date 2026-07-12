@@ -126,5 +126,11 @@ func (d *StaleDetector) detect(ctx context.Context) {
 			CreateTime: nowMilli,
 			Payload:    payload,
 		})
+		_ = d.store.TaskEvent.Append(ctx, &reposchema.TaskEvent{
+			TaskId:     task.Id,
+			EventType:  schemav1.TaskState_FAILED.String(),
+			CreateTime: nowMilli,
+			Payload:    payload,
+		})
 	}
 }

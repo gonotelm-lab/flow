@@ -142,6 +142,12 @@ func (s *Service) poll(
 	task.State = newState
 	task.UpdateTime = nowMilli
 
+	_ = s.repo.TaskEvent.Append(ctx, &reposchema.TaskEvent{
+		TaskId:     task.Id,
+		EventType:  schemav1.TaskState_RUNNING.String(),
+		CreateTime: nowMilli,
+	})
+
 	return task, nil
 }
 
@@ -196,6 +202,13 @@ func (s *Service) report(ctx context.Context, req *workerv1.ReportRequest) error
 	if err != nil {
 		return errors.WithMessagef(err, "failed to update task outcome %s", taskId)
 	}
+
+	_ = s.repo.TaskEvent.Append(ctx, &reposchema.TaskEvent{
+		TaskId:     taskId,
+		EventType:  newState,
+		CreateTime: nowMilli,
+		Payload:    req.GetPayload(),
+	})
 
 	return nil
 }
