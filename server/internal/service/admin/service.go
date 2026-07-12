@@ -182,6 +182,43 @@ func (s *Service) DeleteTask(
 	return &emptypb.Empty{}, nil
 }
 
+func (s *Service) ListWorkers(
+	ctx context.Context,
+	req *adminv1.ListWorkersRequest,
+) (*adminv1.ListWorkersResponse, error) {
+	page, pageSize := normalizePage(req.GetPage())
+
+	workers, total, err := s.listWorkers(ctx, page, pageSize, req.GetNamespace(), req.GetTaskType())
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to list workers")
+	}
+
+	return &adminv1.ListWorkersResponse{
+		Page: &adminv1.PageResponse{
+			Page:       page,
+			PageSize:   pageSize,
+			TotalCount: total,
+		},
+		Workers: workers,
+	}, nil
+}
+
+func (s *Service) GetWorker(
+	ctx context.Context,
+	req *adminv1.GetWorkerRequest,
+) (*schemav1.Worker, error) {
+	if req == nil {
+		return nil, pkgerr.InvalidArgument
+	}
+
+	worker, err := s.getWorker(ctx, req.GetId())
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get worker")
+	}
+
+	return worker, nil
+}
+
 func (s *Service) ListTaskEvents(
 	ctx context.Context,
 	req *adminv1.ListTaskEventsRequest,

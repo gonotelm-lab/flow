@@ -294,6 +294,65 @@ func (s *Service) listTaskEvents(
 	return result, total, nil
 }
 
+func (s *Service) listWorkers(
+	ctx context.Context,
+	page, pageSize int32,
+	namespace, taskType string,
+) ([]*apischema.Worker, int64, error) {
+	offset := int((page - 1) * pageSize)
+	limit := int(pageSize)
+
+	workers, total, err := s.store.TaskWorker.List(ctx, &store.WorkerListParams{
+		Namespace: namespace,
+		TaskType:  taskType,
+		Offset:    offset,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, 0, errors.WithMessage(err, "failed to list workers")
+	}
+
+	result := make([]*apischema.Worker, 0, len(workers))
+	for _, w := range workers {
+		result = append(result, toProtoWorker(w))
+	}
+
+	return result, total, nil
+}
+
+func (s *Service) getWorker(
+	ctx context.Context,
+	id int64,
+) (*apischema.Worker, error) {
+	worker, err := s.store.TaskWorker.Get(ctx, id)
+	if err != nil {
+		if errors.Is(err, pkgerr.NoRecord) {
+			return nil, srverr.WorkerNotFound
+		}
+		return nil, errors.WithMessage(err, "failed to get worker")
+	}
+
+	return toProtoWorker(worker), nil
+}
+
+func toProtoWorker(w *reposchema.TaskWorker) *apischema.Worker {
+	if w == nil {
+		return nil
+	}
+
+	return &apischema.Worker{
+		Id:            w.Id,
+		Name:          w.Name,
+		Namespace:     w.Namespace,
+		TaskType:      w.TaskType,
+		CreateTime:    timestamppb.New(time.UnixMilli(w.CreateTime)),
+		HeartbeatTime: timestamppb.New(time.UnixMilli(w.HeartbeatTime)),
+		LastWorkTime:  timestamppb.New(time.UnixMilli(w.LastWorkTime)),
+		TotalDealt:    w.TotalDealt,
+		SuccessDealt:  w.SuccessDealt,
+	}
+}
+
 func toProtoTask(task *reposchema.Task) *apischema.Task {
 	if task == nil {
 		return nil
