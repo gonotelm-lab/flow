@@ -14,5 +14,5 @@ func GetDB(ctx context.Context, raw *gorm.DB) *gorm.DB {
 		return tx
 	}
 
-	return raw
+	return raw.WithContext(ctx)
 }

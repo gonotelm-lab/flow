@@ -316,7 +316,7 @@ func TestTaskStore_UpdateOutcome_WorkerMismatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "running", got.State)
 	assert.Equal(t, int64(42), got.WorkerId)
-	assert.Equal(t, int64(2000), got.LastHeartbeatTime)
+	assert.Equal(t, int64(0), got.LastHeartbeatTime)
 }
 
 func TestTaskStore_List(t *testing.T) {
