@@ -37,6 +37,23 @@ func NewHeartbeatLoop(
 	}
 }
 
+func (h *HeartbeatLoop) filterCancelledByRunning(cancelled, running []string) []string {
+	if len(cancelled) == 0 || len(running) == 0 {
+		return nil
+	}
+	set := make(map[string]struct{}, len(running))
+	for _, id := range running {
+		set[id] = struct{}{}
+	}
+	result := make([]string, 0, len(cancelled))
+	for _, id := range cancelled {
+		if _, ok := set[id]; ok {
+			result = append(result, id)
+		}
+	}
+	return result
+}
+
 func (h *HeartbeatLoop) Run(ctx context.Context) {
 	ticker := time.NewTicker(h.interval)
 	defer ticker.Stop()
@@ -57,8 +74,11 @@ func (h *HeartbeatLoop) Run(ctx context.Context) {
 			}
 
 			if cancelled := resp.GetCancelledTaskIds(); len(cancelled) > 0 {
-				h.logger.Info("received cancelled tasks", "task_ids", cancelled)
-				h.onCancelled(cancelled)
+				filtered := h.filterCancelledByRunning(cancelled, runningIDs)
+				if len(filtered) > 0 {
+					h.logger.Info("received cancelled tasks", "task_ids", filtered)
+					h.onCancelled(filtered)
+				}
 			}
 		}
 	}
