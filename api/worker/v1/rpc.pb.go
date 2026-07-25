@@ -368,6 +368,7 @@ type ReportRequest struct {
 	TaskId        string                 `protobuf:"bytes,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Action        ReportAction           `protobuf:"varint,3,opt,name=action,proto3,enum=api.worker.v1.ReportAction" json:"action,omitempty"`
 	Payload       []byte                 `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`
+	SkipRetry     bool                   `protobuf:"varint,5,opt,name=skip_retry,json=skipRetry,proto3" json:"skip_retry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -430,6 +431,13 @@ func (x *ReportRequest) GetPayload() []byte {
 	return nil
 }
 
+func (x *ReportRequest) GetSkipRetry() bool {
+	if x != nil {
+		return x.SkipRetry
+	}
+	return false
+}
+
 type ReportResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -488,13 +496,15 @@ const file_api_worker_v1_rpc_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\tnamespace\x12#\n" +
 	"\ttask_type\x18\x03 \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\btaskType\"7\n" +
 	"\fPollResponse\x12'\n" +
-	"\x04task\x18\x01 \x01(\v2\x13.api.schema.v1.TaskR\x04task\"\xba\x01\n" +
+	"\x04task\x18\x01 \x01(\v2\x13.api.schema.v1.TaskR\x04task\"\xd9\x01\n" +
 	"\rReportRequest\x12'\n" +
 	"\tworker_id\x18\x01 \x01(\x03B\n" +
 	"\xbaH\a\xc8\x01\x01\"\x02 \x00R\bworkerId\x12$\n" +
 	"\atask_id\x18\x02 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x06taskId\x12@\n" +
 	"\x06action\x18\x03 \x01(\x0e2\x1b.api.worker.v1.ReportActionB\v\xbaH\b\xc8\x01\x01\x82\x01\x02\x10\x01R\x06action\x12\x18\n" +
-	"\apayload\x18\x04 \x01(\fR\apayload\"\x10\n" +
+	"\apayload\x18\x04 \x01(\fR\apayload\x12\x1d\n" +
+	"\n" +
+	"skip_retry\x18\x05 \x01(\bR\tskipRetry\"\x10\n" +
 	"\x0eReportResponse*D\n" +
 	"\fReportAction\x12\x1d\n" +
 	"\x19REPORT_ACTION_UNSPECIFIED\x10\x00\x12\v\n" +

@@ -114,6 +114,9 @@ func (s *TaskStoreImpl) UpdateOutcome(ctx context.Context,
 		updates["result"] = params.Payload
 	} else {
 		updates["error"] = params.Payload
+		if params.SkipRetry {
+			updates["max_retry"] = -1
+		}
 	}
 	updates["state"] = newState
 	updates["update_time"] = params.UpdateTime

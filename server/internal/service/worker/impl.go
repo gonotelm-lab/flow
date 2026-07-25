@@ -197,6 +197,7 @@ func (s *Service) report(ctx context.Context, req *workerv1.ReportRequest) error
 		&store.TaskUpdateOutcomeParams{
 			Payload:    req.GetPayload(),
 			UpdateTime: nowMilli,
+			SkipRetry:  req.GetSkipRetry(),
 		},
 	)
 	if err != nil {

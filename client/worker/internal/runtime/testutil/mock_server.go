@@ -26,10 +26,11 @@ type MockWorkerService struct {
 
 // ReportRecord is a test-only snapshot of a report RPC (avoids copying protobuf mutex).
 type ReportRecord struct {
-	WorkerId int64
-	TaskId   string
-	Action   workerv1.ReportAction
-	Payload  []byte
+	WorkerId  int64
+	TaskId    string
+	Action    workerv1.ReportAction
+	Payload   []byte
+	SkipRetry bool
 }
 
 func Register(s *grpc.Server, svc *MockWorkerService) {
@@ -82,10 +83,11 @@ func (m *MockWorkerService) Report(ctx context.Context, req *workerv1.ReportRequ
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.Reports = append(m.Reports, ReportRecord{
-		WorkerId: req.GetWorkerId(),
-		TaskId:   req.GetTaskId(),
-		Action:   req.GetAction(),
-		Payload:  append([]byte(nil), req.GetPayload()...),
+		WorkerId:  req.GetWorkerId(),
+		TaskId:    req.GetTaskId(),
+		Action:    req.GetAction(),
+		Payload:   append([]byte(nil), req.GetPayload()...),
+		SkipRetry: req.GetSkipRetry(),
 	})
 	return &workerv1.ReportResponse{}, nil
 }

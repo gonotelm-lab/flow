@@ -47,7 +47,7 @@ func TestReporter_ReportTask(t *testing.T) {
 	client := workerv1.NewWorkerServiceClient(conn)
 	reporter := NewReporter(client, slog.Default())
 
-	err := reporter.ReportTask(context.Background(), 1, &schemav1.Task{Id: "550e8400-e29b-41d4-a716-446655440000"}, workerv1.ReportAction_SUCCESS, []byte("done"))
+	err := reporter.ReportTask(context.Background(), 1, &schemav1.Task{Id: "550e8400-e29b-41d4-a716-446655440000"}, workerv1.ReportAction_SUCCESS, []byte("done"), false)
 	require.NoError(t, err)
 
 	reports := mock.ReportsSnapshot()

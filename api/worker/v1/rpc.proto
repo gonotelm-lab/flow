@@ -65,6 +65,7 @@ message ReportRequest {
     (buf.validate.field).enum.defined_only = true
   ];
   bytes payload = 4;
+  bool skip_retry = 5;
 }
 
 message ReportResponse {}

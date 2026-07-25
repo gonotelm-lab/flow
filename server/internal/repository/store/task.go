@@ -16,6 +16,7 @@ type TaskClaimUpdateParams struct {
 type TaskUpdateOutcomeParams struct {
 	Payload    []byte
 	UpdateTime int64
+	SkipRetry  bool
 }
 
 type TaskBatchUpdateParams struct {

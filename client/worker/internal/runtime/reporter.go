@@ -24,12 +24,14 @@ func (r *Reporter) ReportTask(
 	task *schemav1.Task,
 	action workerv1.ReportAction,
 	payload []byte,
+	skipRetry bool,
 ) error {
 	_, err := r.client.Report(ctx, &workerv1.ReportRequest{
-		WorkerId: workerID,
-		TaskId:   task.GetId(),
-		Action:   action,
-		Payload:  payload,
+		WorkerId:  workerID,
+		TaskId:    task.GetId(),
+		Action:    action,
+		Payload:   payload,
+		SkipRetry: skipRetry,
 	})
 	if err != nil {
 		r.logger.Error("report task failed",

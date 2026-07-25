@@ -25,8 +25,8 @@ func TestRuntime_StartStop(t *testing.T) {
 		Name:              "w1",
 		MaxConcurrency:    1,
 		HeartbeatInterval: 20 * time.Millisecond,
-		Handler: func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte) {
-			return workerv1.ReportAction_SUCCESS, []byte("ok")
+		Handler: func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte, bool) {
+			return workerv1.ReportAction_SUCCESS, []byte("ok"), false
 		},
 		Logger: slog.Default(),
 	})

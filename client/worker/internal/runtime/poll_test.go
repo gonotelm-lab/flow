@@ -26,10 +26,10 @@ func TestPollLoop_ProcessesTaskAndReports(t *testing.T) {
 	defer cleanup()
 
 	var handled atomic.Int32
-	handler := func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte) {
+	handler := func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte, bool) {
 		handled.Add(1)
 		require.Equal(t, []byte("input"), task.GetPayload())
-		return workerv1.ReportAction_SUCCESS, []byte("output")
+		return workerv1.ReportAction_SUCCESS, []byte("output"), false
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

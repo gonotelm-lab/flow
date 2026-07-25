@@ -105,9 +105,13 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) adaptHandler(fn HandleFunc) runtime.TaskHandler {
-	return func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte) {
+	return func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte, bool) {
 		result, err := fn(ctx, task.GetPayload())
 		action, payload := ResolveReport(result, err)
-		return action, payload
+		skipRetry := false
+		if er, ok := result.(ErrorResult); ok && er.SkipRetry {
+			skipRetry = true
+		}
+		return action, payload, skipRetry
 	}
 }

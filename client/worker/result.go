@@ -15,7 +15,8 @@ type OkResult struct {
 }
 
 type ErrorResult struct {
-	Data []byte
+	Data      []byte
+	SkipRetry bool
 }
 
 func (OkResult) isResult()    {}

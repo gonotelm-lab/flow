@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type TaskHandler func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte)
+type TaskHandler func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte, bool)
 
 type Semaphore struct {
 	sem *semaphore.Weighted
@@ -173,14 +173,14 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task) {
 				"panic", r,
 				"stack", string(debug.Stack()),
 			)
-			_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"))
+			_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
 		}
 	}()
 
 	p.cfg.Logger.Info("task started", "task_id", taskID)
-	action, payload := p.cfg.Handler(taskCtx, task)
+	action, payload, skipRetry := p.cfg.Handler(taskCtx, task)
 	if taskCtx.Err() == nil {
 		p.cfg.Logger.Info("task finished", "task_id", taskID, "action", action.String())
-		_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, action, payload)
+		_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, action, payload, skipRetry)
 	}
 }
