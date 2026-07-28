@@ -155,14 +155,14 @@ func (s *Service) tryPoll(
 	requestCtx context.Context,
 	req *workerv1.PollRequest,
 ) (*workerv1.PollResponse, error) {
-	task, err := s.poll(pollCtx, req.GetId(), req.GetNamespace(), req.GetTaskType())
-	if err != nil {
-		// 本地长轮询超时，按空任务正常返回
-		if pollCtx.Err() != nil && requestCtx.Err() == nil {
-			return &workerv1.PollResponse{}, nil
-		}
+	// pollCtx 只控制长轮询等待窗口；到期后不再发起 Claim，避免用已取消 ctx 打库刷 ERROR。
+	// Claim 本身走 requestCtx：客户端取消仍会取消 SQL 并保留日志。
+	if pollCtx.Err() != nil {
+		return &workerv1.PollResponse{}, nil
+	}
 
-		// 调用方主动取消/超时，透传 context 错误
+	task, err := s.poll(requestCtx, req.GetId(), req.GetNamespace(), req.GetTaskType())
+	if err != nil {
 		if requestCtx.Err() != nil {
 			return nil, status.FromContextError(requestCtx.Err()).Err()
 		}
