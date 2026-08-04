@@ -7,6 +7,7 @@ import (
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	taskv1 "github.com/gonotelm-lab/flow/api/task/v1"
 	reposchema "github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	serverotel "github.com/gonotelm-lab/flow/server/internal/otel"
 	srverr "github.com/gonotelm-lab/flow/server/internal/service/errors"
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/google/uuid"
@@ -45,6 +46,7 @@ func (s *Service) Submit(
 		MaxRetry:    int(req.GetMaxRetry()),
 		AttemptNo:   0,
 		WorkerId:    0,
+		Traceparent: serverotel.TraceparentFromContext(ctx),
 	}
 
 	created, err := s.repo.Task.Create(ctx, task)

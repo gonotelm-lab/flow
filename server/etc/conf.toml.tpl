@@ -34,3 +34,10 @@ port = ${FLOW_API_SERVER_HTTP_PORT:-7090}
 [apiServer.grpc]
 listen = "${FLOW_API_SERVER_GRPC_LISTEN:-0.0.0.0}"
 port = ${FLOW_API_SERVER_GRPC_PORT:-7091}
+
+[otel]
+enabled = ${FLOW_OTEL_ENABLED:-false}
+serviceName = "${FLOW_OTEL_SERVICE_NAME:-flow-server}"
+endpoint = "${FLOW_OTEL_ENDPOINT:-}"
+protocol = "${FLOW_OTEL_PROTOCOL:-}"
+samplerRatio = ${FLOW_OTEL_SAMPLER_RATIO:-1.0}

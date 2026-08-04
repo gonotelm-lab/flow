@@ -22,6 +22,8 @@ type Config struct {
 	Worker *WorkerConfig `toml:"worker"`
 
 	ApiServer *ApiServer `toml:"apiServer"`
+
+	Otel *OtelConfig `toml:"otel"`
 }
 
 type DBConfig struct {
@@ -112,6 +114,9 @@ func (cfg *Config) Validate() error {
 	}
 	if err := cfg.Registry.Validate(); err != nil {
 		return fmt.Errorf("registry validate failed: %w", err)
+	}
+	if err := cfg.Otel.Validate(); err != nil {
+		return fmt.Errorf("otel validate failed: %w", err)
 	}
 	if cfg.Worker != nil {
 		if err := cfg.Worker.Validate(); err != nil {
@@ -222,4 +227,27 @@ type HttpServer struct {
 type GrpcServer struct {
 	Listen string `toml:"listen"`
 	Port   int    `toml:"port"`
+}
+
+type OtelConfig struct {
+	Enabled      bool    `toml:"enabled"`
+	ServiceName  string  `toml:"serviceName"`
+	Endpoint     string  `toml:"endpoint"`
+	Protocol     string  `toml:"protocol"`
+	SamplerRatio float64 `toml:"samplerRatio"`
+}
+
+func (cfg *OtelConfig) Validate() error {
+	if cfg == nil || !cfg.Enabled {
+		return nil
+	}
+	switch cfg.Protocol {
+	case "", "grpc", "http":
+	default:
+		return fmt.Errorf("otel.protocol must be one of grpc, http, got %q", cfg.Protocol)
+	}
+	if cfg.SamplerRatio < 0 || cfg.SamplerRatio > 1 {
+		return fmt.Errorf("otel.samplerRatio must be in [0, 1], got %v", cfg.SamplerRatio)
+	}
+	return nil
 }

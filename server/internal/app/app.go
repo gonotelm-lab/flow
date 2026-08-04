@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"sync/atomic"
+	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/endpoint"
 	"github.com/gonotelm-lab/flow/server/internal/instance"
+	"github.com/gonotelm-lab/flow/server/internal/otel"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/sharding"
 	"github.com/gonotelm-lab/flow/server/internal/taskmender"
@@ -91,6 +93,7 @@ func New(repo *repository.Impl) (*App, error) {
 }
 
 func (a *App) bootstrap() error {
+	a.initTelemetry()
 	a.sweeper.Start(a.rootCtx)
 	a.startInstanceWatch()
 
@@ -116,6 +119,20 @@ func (a *App) bootstrap() error {
 	a.ready.Store(true)
 
 	return nil
+}
+
+func (a *App) initTelemetry() {
+	oc := config.Conf.Otel
+	if oc == nil || !oc.Enabled {
+		return
+	}
+
+	// 初始化失败不中断启动，仅降级为无追踪
+	if err := otel.Init(a.rootCtx, oc); err != nil {
+		slog.WarnContext(a.rootCtx, "[otel] init failed, tracing disabled", slog.Any("err", err))
+		return
+	}
+	slog.InfoContext(a.rootCtx, "[otel] tracing enabled")
 }
 
 func (a *App) startInstanceWatch() {
@@ -184,6 +201,10 @@ func (a *App) close() {
 		a.staleDetector.Close()
 	}
 	a.rootCancel()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	otel.Shutdown(shutdownCtx)
 
 	slog.Info("app closed")
 }

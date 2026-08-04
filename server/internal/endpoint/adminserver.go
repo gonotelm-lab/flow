@@ -16,6 +16,8 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/sync/errgroup"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -83,7 +85,10 @@ func (s *AdminServer) init(repoStore *repository.Store) error {
 		return err
 	}
 
-	s.adminGrpcServer = grpc.NewServer(interceptor.UnaryServerInterceptor())
+	s.adminGrpcServer = grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		interceptor.UnaryServerInterceptor(),
+	)
 
 	adminService := admin.NewService(repoStore)
 	adminv1.RegisterAdminServiceServer(s.adminGrpcServer, adminService)
@@ -91,6 +96,7 @@ func (s *AdminServer) init(repoStore *repository.Store) error {
 	conn, err := grpc.NewClient(
 		fmt.Sprintf("unix:///%s", unixSocketPath),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)
 	if err != nil {
 		return err
@@ -105,7 +111,7 @@ func (s *AdminServer) init(repoStore *repository.Store) error {
 
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", s.cfg.Http.Port),
-		Handler: mux,
+		Handler: otelhttp.NewHandler(mux, "flow.admin.http"),
 	}
 
 	return nil

@@ -8,9 +8,24 @@ import (
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
 	"github.com/gonotelm-lab/flow/client/worker/internal/runtime"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/stats"
 )
+
+// frequentMethodFilter 过滤高频 RPC（poll/heartbeat）的 otelgrpc span：
+// 成功不产生 span，失败由 runtime 手动记录错误 span（见 recordFailureSpan）。
+func frequentMethodFilter() otelgrpc.Filter {
+	skip := filters.Any(
+		filters.FullMethodName(workerv1.WorkerService_Poll_FullMethodName),
+		filters.FullMethodName(workerv1.WorkerService_Heartbeat_FullMethodName),
+	)
+	return func(tag *stats.RPCTagInfo) bool {
+		return !skip(tag)
+	}
+}
 
 type Client struct {
 	cfg     Config
@@ -23,7 +38,10 @@ type Client struct {
 }
 
 func New(addr string, cfg Config, opts ...grpc.DialOption) (*Client, error) {
-	baseOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	baseOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithFilter(frequentMethodFilter()))),
+	}
 	baseOpts = append(baseOpts, opts...)
 
 	conn, err := grpc.NewClient(addr, baseOpts...)
@@ -71,6 +89,7 @@ func (c *Client) Start() error {
 		Handler:           c.adaptHandler(handler),
 		Logger:            c.cfg.Logger,
 		OwnsConn:          false,
+		TraceMode:         c.cfg.TraceMode,
 	})
 	return c.rt.Start(context.Background())
 }

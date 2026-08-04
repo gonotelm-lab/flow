@@ -5,6 +5,7 @@ import (
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	taskv1 "github.com/gonotelm-lab/flow/api/task/v1"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -16,7 +17,10 @@ type Client struct {
 }
 
 func New(addr string, opts ...grpc.DialOption) (*Client, error) {
-	baseOpts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	baseOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	}
 	baseOpts = append(baseOpts, opts...)
 
 	conn, err := grpc.NewClient(addr, baseOpts...)

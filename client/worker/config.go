@@ -3,6 +3,16 @@ package worker
 import (
 	"log/slog"
 	"time"
+
+	"github.com/gonotelm-lab/flow/client/worker/internal/runtime"
+)
+
+// TraceMode 及其常量由 runtime 包定义，此处类型别名导出为 worker 对外 API。
+type TraceMode = runtime.TraceMode
+
+const (
+	TraceModeChild = runtime.TraceModeChild
+	TraceModeLink  = runtime.TraceModeLink
 )
 
 type Config struct {
@@ -13,6 +23,7 @@ type Config struct {
 	HeartbeatInterval time.Duration
 	Codec             Codec
 	Logger            *slog.Logger
+	TraceMode         TraceMode
 }
 
 func ConfigWithDefaults(cfg Config) Config {
@@ -27,6 +38,9 @@ func ConfigWithDefaults(cfg Config) Config {
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
+	}
+	if cfg.TraceMode == "" {
+		cfg.TraceMode = TraceModeChild
 	}
 	return cfg
 }

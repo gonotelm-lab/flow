@@ -11,6 +11,8 @@ import (
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -171,6 +173,11 @@ func (s *Service) tryPoll(
 	}
 	if task == nil {
 		return nil, nil
+	}
+
+	// 通过 gRPC response trailer 下发 traceparent（标准 metadata 载体，不加 proto 字段）
+	if task.Traceparent != "" {
+		_ = grpc.SetTrailer(requestCtx, metadata.Pairs("traceparent", task.Traceparent))
 	}
 
 	return &workerv1.PollResponse{Task: toProtoTask(task)}, nil
