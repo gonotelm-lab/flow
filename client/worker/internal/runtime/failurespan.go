@@ -10,8 +10,6 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-const tracerName = "flow.worker"
-
 // tracer 每次调用获取当前全局 provider 的 tracer。
 func tracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 
@@ -19,7 +17,7 @@ func tracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 // 关联 ctx 中的父 span；成功路径不产生 span（dial 层已用 filter 排除），避免 trace 量过大。
 func recordFailureSpan(ctx context.Context, name string, workerID int64, err error) {
 	_, span := tracer().Start(ctx, name,
-		oteltrace.WithAttributes(attribute.Int64("flow.worker.id", workerID)),
+		oteltrace.WithAttributes(attribute.Int64(attrWorkerID, workerID)),
 	)
 	span.RecordError(err)
 	span.SetStatus(codes.Error, err.Error())

@@ -42,7 +42,7 @@ type App struct {
 	store *repository.Store
 }
 
-func New(repo *repository.Impl) (*App, error) {
+func New(repo *repository.Impl, rootCtx context.Context) (*App, error) {
 	registry := instance.NewRegistry(
 		repo.TxManager(),
 		repo.Store(),
@@ -77,7 +77,7 @@ func New(repo *repository.Impl) (*App, error) {
 		shardCalc: &sharding.SequentialCalculator{},
 		store:     repo.Store(),
 	}
-	a.rootCtx, a.rootCancel = context.WithCancel(context.Background())
+	a.rootCtx, a.rootCancel = context.WithCancel(rootCtx)
 
 	apiServer, err := endpoint.NewApiServer(
 		a.rootCtx,
@@ -93,7 +93,6 @@ func New(repo *repository.Impl) (*App, error) {
 }
 
 func (a *App) bootstrap() error {
-	a.initTelemetry()
 	a.sweeper.Start(a.rootCtx)
 	a.startInstanceWatch()
 
@@ -119,20 +118,6 @@ func (a *App) bootstrap() error {
 	a.ready.Store(true)
 
 	return nil
-}
-
-func (a *App) initTelemetry() {
-	oc := config.Conf.Otel
-	if oc == nil || !oc.Enabled {
-		return
-	}
-
-	// 初始化失败不中断启动，仅降级为无追踪
-	if err := otel.Init(a.rootCtx, oc); err != nil {
-		slog.WarnContext(a.rootCtx, "[otel] init failed, tracing disabled", slog.Any("err", err))
-		return
-	}
-	slog.InfoContext(a.rootCtx, "[otel] tracing enabled")
 }
 
 func (a *App) startInstanceWatch() {

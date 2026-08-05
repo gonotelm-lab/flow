@@ -178,15 +178,16 @@ func (p *PollLoop) Run(ctx context.Context) {
 func (p *PollLoop) startTaskSpan(ctx context.Context, task *schemav1.Task, traceparent string) (context.Context, oteltrace.Span) {
 	sc, ok := spanContextFromTraceparent(traceparent)
 	if !ok {
-		return ctx, oteltrace.SpanFromContext(ctx)
+		// 返回独立的 noop span：End 无副作用，且不会误结束调用方 ctx 中的活跃 span
+		return ctx, oteltrace.SpanFromContext(context.Background())
 	}
 
 	opts := []oteltrace.SpanStartOption{
 		oteltrace.WithAttributes(
-			attribute.String("flow.task.id", task.GetId()),
-			attribute.String("flow.task.namespace", task.GetNamespace()),
-			attribute.String("flow.task.type", task.GetTaskType()),
-			attribute.Int64("flow.worker.id", p.cfg.WorkerID),
+			attribute.String(attrTaskID, task.GetId()),
+			attribute.String(attrTaskNamespace, task.GetNamespace()),
+			attribute.String(attrTaskType, task.GetTaskType()),
+			attribute.Int64(attrWorkerID, p.cfg.WorkerID),
 		),
 	}
 
@@ -212,6 +213,10 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent
 	p.cancelFuncs[taskID] = cancel
 	p.mu.Unlock()
 
+	p.cfg.Logger.Info("task started", "task_id", taskID)
+	handlerCtx, taskSpan := p.startTaskSpan(taskCtx, task, traceparent)
+	defer taskSpan.End()
+
 	defer func() {
 		p.mu.Lock()
 		delete(p.runningIDs, taskID)
@@ -226,16 +231,13 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent
 				"panic", r,
 				"stack", string(debug.Stack()),
 			)
-			_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
+			_ = p.cfg.Reporter.ReportTask(handlerCtx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
 		}
 	}()
 
-	p.cfg.Logger.Info("task started", "task_id", taskID)
-	handlerCtx, taskSpan := p.startTaskSpan(taskCtx, task, traceparent)
-	defer taskSpan.End()
 	action, payload, skipRetry := p.cfg.Handler(handlerCtx, task)
 	if taskCtx.Err() == nil {
 		p.cfg.Logger.Info("task finished", "task_id", taskID, "action", action.String())
-		_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, action, payload, skipRetry)
+		_ = p.cfg.Reporter.ReportTask(handlerCtx, p.cfg.WorkerID, task, action, payload, skipRetry)
 	}
 }

@@ -230,11 +230,11 @@ type GrpcServer struct {
 }
 
 type OtelConfig struct {
-	Enabled      bool    `toml:"enabled"`
-	ServiceName  string  `toml:"serviceName"`
-	Endpoint     string  `toml:"endpoint"`
-	Protocol     string  `toml:"protocol"`
-	SamplerRatio float64 `toml:"samplerRatio"`
+	Enabled      bool     `toml:"enabled"`
+	ServiceName  string   `toml:"serviceName"`
+	Endpoint     string   `toml:"endpoint"`
+	Protocol     string   `toml:"protocol"`
+	SamplerRatio *float64 `toml:"samplerRatio"` // OTel traceidratio 语义，0=不采样；nil=未配置（环境变量/SDK 默认）
 }
 
 func (cfg *OtelConfig) Validate() error {
@@ -246,8 +246,8 @@ func (cfg *OtelConfig) Validate() error {
 	default:
 		return fmt.Errorf("otel.protocol must be one of grpc, http, got %q", cfg.Protocol)
 	}
-	if cfg.SamplerRatio < 0 || cfg.SamplerRatio > 1 {
-		return fmt.Errorf("otel.samplerRatio must be in [0, 1], got %v", cfg.SamplerRatio)
+	if cfg.SamplerRatio != nil && (*cfg.SamplerRatio < 0 || *cfg.SamplerRatio > 1) {
+		return fmt.Errorf("otel.samplerRatio must be in [0, 1], got %v", *cfg.SamplerRatio)
 	}
 	return nil
 }

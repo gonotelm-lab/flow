@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	serverotel "github.com/gonotelm-lab/flow/server/internal/otel"
 	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"gorm.io/gorm"
 )
@@ -16,6 +17,9 @@ var (
 func MustInit(driver sql.Driver, c *sql.Config) {
 	db, err := sql.Open(driver, c)
 	if err != nil {
+		panic(err)
+	}
+	if err := serverotel.InstallGormTrace(db); err != nil {
 		panic(err)
 	}
 

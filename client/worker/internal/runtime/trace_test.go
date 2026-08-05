@@ -143,6 +143,25 @@ func TestRunTask_NoTraceparent_NoSpan(t *testing.T) {
 	}
 }
 
+func TestStartTaskSpan_NoTraceparent_DoesNotEndParentSpan(t *testing.T) {
+	setupTraceTest(t)
+	ctx, parent := otel.Tracer("test").Start(context.Background(), "parent")
+	defer parent.End()
+
+	poll := NewPollLoop(PollLoopConfig{
+		WorkerID:  1,
+		Namespace: "ns",
+		TaskType:  "t",
+		Logger:    slog.Default(),
+		TraceMode: TraceModeChild,
+	})
+	handlerCtx, span := poll.startTaskSpan(ctx, &schemav1.Task{Id: "t1"}, "")
+	require.NotNil(t, handlerCtx)
+	span.End()
+
+	require.True(t, parent.IsRecording(), "task span must not end the parent span in run ctx")
+}
+
 func TestPollFailureRecordsErrorSpan(t *testing.T) {
 	exporter, _ := setupTraceTest(t)
 	mock := &testutil.MockWorkerService{}

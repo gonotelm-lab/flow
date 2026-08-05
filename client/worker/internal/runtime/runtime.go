@@ -93,6 +93,7 @@ func (r *Runtime) Start(ctx context.Context) error {
 		Reporter:  reporter,
 		Semaphore: r.sem,
 		Logger:    r.cfg.Logger,
+		TraceMode: r.cfg.TraceMode,
 	})
 	r.hb = NewHeartbeatLoop(r.cfg.Conn, r.workerID, r.cfg.HeartbeatInterval, r.cfg.Logger,
 		func() []string { return r.poll.RunningTaskIDs() },

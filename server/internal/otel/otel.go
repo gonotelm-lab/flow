@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"strconv"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -20,34 +23,31 @@ import (
 )
 
 var (
-	mu          sync.Mutex
-	initialized bool
-	provider    *sdktrace.TracerProvider
+	initOnce sync.Once
+	initErr  error
+	mu       sync.Mutex
+	provider *sdktrace.TracerProvider
 )
 
-// Init 初始化 server 自身的 OpenTelemetry SDK 并设置全局 provider。
-// 显式配置优先（[otel] TOML 段），未配置项回落到 OTEL_* 环境变量标准（SDK 原生支持）。
+// Init 初始化 server 自身的 OpenTelemetry SDK 并设置全局 provider，只执行一次。
+// 显式配置优先（[otel] TOML 段），未配置项回落到 OTEL_* 环境变量标准。
 func Init(ctx context.Context, cfg *config.OtelConfig) error {
+	initOnce.Do(func() { initErr = initProvider(ctx, cfg) })
+	return initErr
+}
+
+func initProvider(ctx context.Context, cfg *config.OtelConfig) error {
 	o := &options{}
 	if cfg != nil {
 		o.serviceName = cfg.ServiceName
 		o.endpoint = cfg.Endpoint
 		o.protocol = Protocol(cfg.Protocol)
-		if cfg.SamplerRatio > 0 {
-			o.samplerRatio = cfg.SamplerRatio
-		}
+		o.samplerRatio = cfg.SamplerRatio
 	}
 
 	exporter, err := newExporter(ctx, o)
 	if err != nil {
 		return err
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	if initialized {
-		slog.InfoContext(ctx, "[otel] already initialized, skip")
-		return nil
 	}
 
 	var attrs []attribute.KeyValue
@@ -60,15 +60,15 @@ func Init(ctx context.Context, cfg *config.OtelConfig) error {
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
 	}
-	// 仅当显式指定采样率时覆盖环境变量；否则 OTEL_TRACES_SAMPLER 由 SDK 原生处理
-	if o.samplerRatio > 0 {
-		tpOpts = append(tpOpts, sdktrace.WithSampler(
-			sdktrace.ParentBased(sdktrace.TraceIDRatioBased(o.samplerRatio)),
-		))
+	// sampler 优先级：显式 samplerRatio（OTel traceidratio 语义，0=不采样）
+	// > OTEL_TRACES_SAMPLER 环境变量 > SDK 默认 parentbased_always_on
+	if s := o.sampler(); s != nil {
+		tpOpts = append(tpOpts, sdktrace.WithSampler(s))
 	}
 
+	mu.Lock()
 	provider = sdktrace.NewTracerProvider(tpOpts...)
-	initialized = true
+	mu.Unlock()
 
 	otel.SetTracerProvider(provider)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
@@ -84,7 +84,7 @@ func Init(ctx context.Context, cfg *config.OtelConfig) error {
 	return nil
 }
 
-// Shutdown 刷新并关闭 TracerProvider。幂等，可重入（之后可再次 Init）。
+// Shutdown 刷新并关闭 TracerProvider。幂等；Init 只执行一次，Shutdown 后不再重新初始化。
 func Shutdown(ctx context.Context) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -97,7 +97,6 @@ func Shutdown(ctx context.Context) {
 	}
 	slog.InfoContext(ctx, "[otel] shutdown complete")
 	provider = nil
-	initialized = false
 	otel.SetTracerProvider(noop.NewTracerProvider())
 }
 
@@ -112,7 +111,53 @@ type options struct {
 	serviceName  string
 	endpoint     string
 	protocol     Protocol
-	samplerRatio float64
+	samplerRatio *float64
+}
+
+// sampler 返回采样器。优先级：显式 samplerRatio > OTEL_TRACES_SAMPLER 环境变量 > nil（SDK 默认）。
+func (o *options) sampler() sdktrace.Sampler {
+	if o.samplerRatio != nil {
+		return sdktrace.ParentBased(sdktrace.TraceIDRatioBased(*o.samplerRatio))
+	}
+	return samplerFromEnv()
+}
+
+// samplerFromEnv 按 OTel 标准解析 OTEL_TRACES_SAMPLER / OTEL_TRACES_SAMPLER_ARG；
+// 未设置或值无效时返回 nil。
+func samplerFromEnv() sdktrace.Sampler {
+	kind := strings.TrimSpace(os.Getenv("OTEL_TRACES_SAMPLER"))
+	if kind == "" {
+		return nil
+	}
+
+	ratioSampler := func() sdktrace.Sampler {
+		arg := strings.TrimSpace(os.Getenv("OTEL_TRACES_SAMPLER_ARG"))
+		r, err := strconv.ParseFloat(arg, 64)
+		if err != nil || r < 0 || r > 1 {
+			return nil
+		}
+		return sdktrace.TraceIDRatioBased(r)
+	}
+
+	switch kind {
+	case "always_on":
+		return sdktrace.AlwaysSample()
+	case "always_off":
+		return sdktrace.NeverSample()
+	case "traceidratio":
+		return ratioSampler()
+	case "parentbased_always_on":
+		return sdktrace.ParentBased(sdktrace.AlwaysSample())
+	case "parentbased_always_off":
+		return sdktrace.ParentBased(sdktrace.NeverSample())
+	case "parentbased_traceidratio":
+		if s := ratioSampler(); s != nil {
+			return sdktrace.ParentBased(s)
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 type Protocol string
@@ -125,7 +170,7 @@ const (
 // traceContextPropagator 固定使用 W3C TraceContext。
 var traceContextPropagator = propagation.TraceContext{}
 
-// newExporter 按 protocol 创建 OTLP exporter。protocol 优先级：配置 > OTEL_EXPORTER_OTLP_PROTOCOL > grpc。
+// newExporter 按 protocol 创建 OTLP exporter；未配置时默认 grpc。
 // endpoint 为空时由 exporter 原生读取 OTEL_EXPORTER_OTLP_ENDPOINT。
 func newExporter(ctx context.Context, o *options) (sdktrace.SpanExporter, error) {
 	protocol := o.protocol

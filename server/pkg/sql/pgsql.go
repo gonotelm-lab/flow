@@ -7,7 +7,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-	"gorm.io/plugin/opentelemetry/tracing"
 )
 
 func OpenPgSql(config *Config) (*gorm.DB, error) {
@@ -30,10 +29,6 @@ func OpenPgSqlWithLogger(config *Config, lg logger.Interface) (*gorm.DB, error) 
 	db, err := gorm.Open(postgres.Open(dsn), gormConfig)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := db.Use(tracing.NewPlugin(tracing.WithoutMetrics())); err != nil {
-		return nil, fmt.Errorf("register otel tracing plugin failed: %w", err)
 	}
 
 	sqlDB, err := db.DB()
