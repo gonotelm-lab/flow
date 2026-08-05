@@ -12,6 +12,17 @@ import (
 	"google.golang.org/grpc"
 )
 
+// TraceMode 控制 worker 恢复任务 traceparent 的方式。
+// 定义在 runtime 包：worker 包通过类型别名导出，避免 import cycle。
+type TraceMode string
+
+const (
+	// TraceModeChild 默认：handler span 作为存储 span 的子 span（remote parent），延续同一条链路。
+	TraceModeChild TraceMode = "child"
+	// TraceModeLink：handler span 为根 span，通过 link 关联存储 span。
+	TraceModeLink TraceMode = "link"
+)
+
 type RuntimeConfig struct {
 	Conn              grpc.ClientConnInterface
 	Namespace         string
@@ -22,6 +33,7 @@ type RuntimeConfig struct {
 	Handler           TaskHandler
 	Logger            *slog.Logger
 	OwnsConn          bool // true 时 Stop 关闭连接
+	TraceMode         TraceMode
 }
 
 type Runtime struct {
@@ -81,6 +93,7 @@ func (r *Runtime) Start(ctx context.Context) error {
 		Reporter:  reporter,
 		Semaphore: r.sem,
 		Logger:    r.cfg.Logger,
+		TraceMode: r.cfg.TraceMode,
 	})
 	r.hb = NewHeartbeatLoop(r.cfg.Conn, r.workerID, r.cfg.HeartbeatInterval, r.cfg.Logger,
 		func() []string { return r.poll.RunningTaskIDs() },

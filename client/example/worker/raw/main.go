@@ -4,6 +4,9 @@
 //	其他 payload → OkResult，内容为 "echo:" + payload
 //
 //	go run ./example/raw -addr localhost:7091 -namespace demo -task-type raw
+//
+// 追踪：SDK 自动接入全局 OTel（取全局 TracerProvider/Propagator）。
+// 宿主进程自行初始化 OTel（任意实现）后即自动参与链路；未初始化则自动 no-op。
 package main
 
 import (

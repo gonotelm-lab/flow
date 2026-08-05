@@ -6,10 +6,12 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"sync/atomic"
+	"time"
 
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/endpoint"
 	"github.com/gonotelm-lab/flow/server/internal/instance"
+	"github.com/gonotelm-lab/flow/server/internal/otel"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/sharding"
 	"github.com/gonotelm-lab/flow/server/internal/taskmender"
@@ -40,7 +42,7 @@ type App struct {
 	store *repository.Store
 }
 
-func New(repo *repository.Impl) (*App, error) {
+func New(repo *repository.Impl, rootCtx context.Context) (*App, error) {
 	registry := instance.NewRegistry(
 		repo.TxManager(),
 		repo.Store(),
@@ -75,7 +77,7 @@ func New(repo *repository.Impl) (*App, error) {
 		shardCalc: &sharding.SequentialCalculator{},
 		store:     repo.Store(),
 	}
-	a.rootCtx, a.rootCancel = context.WithCancel(context.Background())
+	a.rootCtx, a.rootCancel = context.WithCancel(rootCtx)
 
 	apiServer, err := endpoint.NewApiServer(
 		a.rootCtx,
@@ -184,6 +186,10 @@ func (a *App) close() {
 		a.staleDetector.Close()
 	}
 	a.rootCancel()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	otel.Shutdown(shutdownCtx)
 
 	slog.Info("app closed")
 }

@@ -8,6 +8,7 @@ import (
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -16,12 +17,13 @@ type MockWorkerService struct {
 
 	mu sync.Mutex
 
-	WorkerID        int64
-	HeartbeatCount  int
-	Reports         []ReportRecord
-	PollTasks     []*schemav1.Task
-	PollResponses [][]*schemav1.Task // 每次 Poll 返回一批，按调用顺序消费
-	pollCall      int
+	WorkerID         int64
+	HeartbeatCount   int
+	Reports          []ReportRecord
+	PollTasks        []*schemav1.Task
+	PollResponses    [][]*schemav1.Task // 每次 Poll 返回一批，按调用顺序消费
+	PollTraceparent  string             // 非空时在 Poll 响应 trailer 下发 "traceparent"
+	pollCall         int
 }
 
 // ReportRecord is a test-only snapshot of a report RPC (avoids copying protobuf mutex).
@@ -73,6 +75,9 @@ func (m *MockWorkerService) Poll(ctx context.Context, req *workerv1.PollRequest)
 		tasks := m.PollResponses[m.pollCall]
 		m.pollCall++
 		if len(tasks) > 0 {
+			if m.PollTraceparent != "" {
+				_ = grpc.SetTrailer(ctx, metadata.Pairs("traceparent", m.PollTraceparent))
+			}
 			return &workerv1.PollResponse{Task: tasks[0]}, nil
 		}
 	}

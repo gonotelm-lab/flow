@@ -10,9 +10,27 @@ import (
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
+
+// traceContextPropagator 固定使用 W3C TraceContext，不依赖宿主全局 propagator 配置。
+var traceContextPropagator = propagation.TraceContext{}
+
+// spanContextFromTraceparent 解析 W3C traceparent 为远程 SpanContext；无效时 ok=false。
+func spanContextFromTraceparent(tp string) (oteltrace.SpanContext, bool) {
+	if tp == "" {
+		return oteltrace.SpanContext{}, false
+	}
+	carrier := propagation.MapCarrier{"traceparent": tp}
+	ctx := traceContextPropagator.Extract(context.Background(), carrier)
+	sc := oteltrace.SpanContextFromContext(ctx)
+	return sc, sc.IsValid()
+}
 
 type TaskHandler func(ctx context.Context, task *schemav1.Task) (workerv1.ReportAction, []byte, bool)
 
@@ -59,6 +77,7 @@ type PollLoopConfig struct {
 	Reporter  *Reporter
 	Semaphore *Semaphore
 	Logger    *slog.Logger
+	TraceMode TraceMode
 }
 
 type PollLoop struct {
@@ -115,16 +134,18 @@ func (p *PollLoop) Run(ctx context.Context) {
 			continue
 		}
 
+		var md metadata.MD
 		resp, err := p.client.Poll(ctx, &workerv1.PollRequest{
 			Id:        p.cfg.WorkerID,
 			Namespace: p.cfg.Namespace,
 			TaskType:  p.cfg.TaskType,
-		})
+		}, grpc.Trailer(&md))
 		if err != nil {
 			if ctx.Err() != nil {
 				return
 			}
 			p.cfg.Logger.Error("poll failed", "err", err)
+			recordFailureSpan(ctx, "worker.poll", p.cfg.WorkerID, err)
 			time.Sleep(backoff)
 			if backoff < 30*time.Second {
 				backoff *= 2
@@ -143,11 +164,44 @@ func (p *PollLoop) Run(ctx context.Context) {
 		}
 
 		taskCopy := task
-		go p.runTask(ctx, taskCopy)
+		traceparent := ""
+		if vals := md.Get("traceparent"); len(vals) > 0 {
+			traceparent = vals[0]
+		}
+		go p.runTask(ctx, taskCopy, traceparent)
 	}
 }
 
-func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task) {
+// startTaskSpan 在调用 Handler 前恢复任务的 traceparent：
+// child 模式续接存储 span（remote parent），link 模式开新 trace 并 link 关联。
+// 无 traceparent / 无效 / 无全局 provider 时返回原 ctx 与 noop span（End 安全）。
+func (p *PollLoop) startTaskSpan(ctx context.Context, task *schemav1.Task, traceparent string) (context.Context, oteltrace.Span) {
+	sc, ok := spanContextFromTraceparent(traceparent)
+	if !ok {
+		// 返回独立的 noop span：End 无副作用，且不会误结束调用方 ctx 中的活跃 span
+		return ctx, oteltrace.SpanFromContext(context.Background())
+	}
+
+	opts := []oteltrace.SpanStartOption{
+		oteltrace.WithAttributes(
+			attribute.String(attrTaskID, task.GetId()),
+			attribute.String(attrTaskNamespace, task.GetNamespace()),
+			attribute.String(attrTaskType, task.GetTaskType()),
+			attribute.Int64(attrWorkerID, p.cfg.WorkerID),
+		),
+	}
+
+	if p.cfg.TraceMode == TraceModeLink {
+		opts = append(opts, oteltrace.WithLinks(oteltrace.Link{SpanContext: sc}))
+	} else {
+		ctx = oteltrace.ContextWithRemoteSpanContext(ctx, sc)
+	}
+
+	ctx, span := tracer().Start(ctx, "task.handle", opts...)
+	return ctx, span
+}
+
+func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent string) {
 	defer p.cfg.Semaphore.Release()
 
 	taskID := task.GetId()
@@ -158,6 +212,10 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task) {
 	p.runningIDs[taskID] = struct{}{}
 	p.cancelFuncs[taskID] = cancel
 	p.mu.Unlock()
+
+	p.cfg.Logger.Info("task started", "task_id", taskID)
+	handlerCtx, taskSpan := p.startTaskSpan(taskCtx, task, traceparent)
+	defer taskSpan.End()
 
 	defer func() {
 		p.mu.Lock()
@@ -173,14 +231,13 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task) {
 				"panic", r,
 				"stack", string(debug.Stack()),
 			)
-			_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
+			_ = p.cfg.Reporter.ReportTask(handlerCtx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
 		}
 	}()
 
-	p.cfg.Logger.Info("task started", "task_id", taskID)
-	action, payload, skipRetry := p.cfg.Handler(taskCtx, task)
+	action, payload, skipRetry := p.cfg.Handler(handlerCtx, task)
 	if taskCtx.Err() == nil {
 		p.cfg.Logger.Info("task finished", "task_id", taskID, "action", action.String())
-		_ = p.cfg.Reporter.ReportTask(ctx, p.cfg.WorkerID, task, action, payload, skipRetry)
+		_ = p.cfg.Reporter.ReportTask(handlerCtx, p.cfg.WorkerID, task, action, payload, skipRetry)
 	}
 }

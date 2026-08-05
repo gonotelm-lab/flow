@@ -70,6 +70,7 @@ func (h *HeartbeatLoop) Run(ctx context.Context) {
 			})
 			if err != nil {
 				h.logger.Error("heartbeat failed", "worker_id", h.workerID, "err", err)
+				recordFailureSpan(ctx, "worker.heartbeat", h.workerID, err)
 				continue
 			}
 

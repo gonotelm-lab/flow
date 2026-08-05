@@ -17,6 +17,7 @@ type Task struct {
 	MaxRetry    int       `gorm:"column:max_retry"`
 	AttemptNo          int   `gorm:"column:attempt_no"`
 	LastHeartbeatTime  int64 `gorm:"column:last_heartbeat_time"`
+	Traceparent        string `gorm:"column:traceparent"`
 }
 
 func (Task) TableName() string {

@@ -85,6 +85,9 @@ COMMENT ON COLUMN tasks.max_retry IS 'task max retry';
 COMMENT ON COLUMN tasks.attempt_no IS 'current attempt number';
 COMMENT ON COLUMN tasks.last_heartbeat_time IS 'task last heartbeat time from worker';
 
+ALTER TABLE tasks ADD COLUMN traceparent VARCHAR(55);
+COMMENT ON COLUMN tasks.traceparent IS 'task traceparent from submit context';
+
 CREATE TABLE task_workers (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(128),

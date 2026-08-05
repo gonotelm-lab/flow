@@ -15,8 +15,22 @@ import (
 	"github.com/gonotelm-lab/flow/server/internal/service/worker"
 
 	"golang.org/x/sync/errgroup"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/stats"
 )
+
+// workerFrequentFilter 过滤 worker 高频 RPC（poll/heartbeat）的 server span，避免 trace 量过大。
+func workerFrequentFilter() otelgrpc.Filter {
+	skip := filters.Any(
+		filters.FullMethodName(workerv1.WorkerService_Poll_FullMethodName),
+		filters.FullMethodName(workerv1.WorkerService_Heartbeat_FullMethodName),
+	)
+	return func(tag *stats.RPCTagInfo) bool {
+		return !skip(tag)
+	}
+}
 
 type ApiServer struct {
 	rootCtx context.Context
@@ -40,6 +54,7 @@ func NewApiServer(
 	}
 
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithFilter(workerFrequentFilter()))),
 		interceptor.UnaryServerInterceptor(),
 		interceptor.StreamServerInterceptor(),
 	)
