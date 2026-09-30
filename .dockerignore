@@ -1,0 +1,13 @@
+.git
+.github
+.cursor
+.impeccable
+.superpowers
+docs
+web
+client
+**/node_modules
+**/dist
+**/*.log
+server/.env
+server/.env.*

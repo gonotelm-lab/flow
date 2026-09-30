@@ -22,7 +22,7 @@ func main() {
 	config.MustInit(*confPath)
 	initTelemetry(rootCtx)
 
-	repository.MustInit(config.Conf.DB.Driver, config.Conf.DB.Config)
+	repository.MustInit(config.Conf.DB.Driver, config.Conf.DB.Config, config.Conf.DB.AutoInit)
 
 	repo := repository.Repo()
 	defer repository.Close()

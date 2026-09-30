@@ -1,5 +1,6 @@
 [db]
 driver = "${FLOW_DB_DRIVER:-pgsql}"
+autoInit = ${FLOW_DB_AUTO_INIT:-true}
 
 [db.config]
 host = "${FLOW_DB_HOST:-127.0.0.1}"
