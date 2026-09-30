@@ -3,6 +3,8 @@ package postgres
 import (
 	"testing"
 
+	"github.com/gonotelm-lab/flow/server/migration"
+	"github.com/gonotelm-lab/flow/server/pkg/sql"
 	"github.com/gonotelm-lab/flow/server/pkg/sql/testsuite"
 	"gorm.io/gorm"
 )
@@ -19,15 +21,19 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	const migrationFilePath = "../../../../../migration/pgsql18.sql"
-
 	testdb, err := testsuite.NewTestGormDBFromEnv("pgsql")
 	if err != nil {
 		panic(err)
 	}
-	if err := testdb.Setup(migrationFilePath); err != nil {
+
+	fsys, ok := migration.FSFor(sql.DriverPgsql)
+	if !ok {
+		panic("no migration fs registered for pgsql")
+	}
+	if err := testdb.Setup(fsys); err != nil {
 		panic(err)
 	}
+
 	gTestDB = testdb.GetDB()
 	gTestInstanceStore = &InstanceStoreImpl{db: gTestDB}
 	gTestNamespaceStore = &NamespaceStoreImpl{db: gTestDB}
