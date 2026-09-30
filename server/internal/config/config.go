@@ -27,8 +27,9 @@ type Config struct {
 }
 
 type DBConfig struct {
-	Driver sql.Driver  `toml:"driver"`
-	Config *sql.Config `toml:"config"`
+	Driver   sql.Driver  `toml:"driver"`
+	AutoInit bool        `toml:"autoInit"`
+	Config   *sql.Config `toml:"config"`
 }
 
 type RegistryConfig struct {
