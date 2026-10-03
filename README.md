@@ -152,7 +152,8 @@ ALTER TABLE tasks DROP COLUMN IF EXISTS priority;
 
 - 镜像由 GitHub Actions 在**发布 Release 时**构建并推送（`release: published`）。
 - 产物：`ghcr.io/gonotelm-lab/flow/server`、`ghcr.io/gonotelm-lab/flow/web`，多架构（`linux/amd64`、`linux/arm64`）。
-- 镜像 tag 由 Release tag 派生：`vX.Y.Z`、`X.Y.Z`、`sha-<short>`、`latest`。
+- 镜像 tag 由 Release tag 派生：`X.Y.Z`（规范化版本号）、`sha-<short>`、`latest`。
+- 只有 `vX.Y.Z` 形式的应用级 Release 会构建镜像；其他 tag（如 `server/vX.Y.Z`）即使发布 Release，流水线也会整体跳过。
 - 发布流程：
 
   ```bash
