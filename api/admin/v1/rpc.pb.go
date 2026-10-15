@@ -13,6 +13,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -901,11 +902,1068 @@ func (x *GetWorkerRequest) GetId() int64 {
 	return 0
 }
 
+type CreateScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Schedule      *v1.Schedule           `protobuf:"bytes,1,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateScheduleRequest) Reset() {
+	*x = CreateScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateScheduleRequest) ProtoMessage() {}
+
+func (x *CreateScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateScheduleRequest.ProtoReflect.Descriptor instead.
+func (*CreateScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CreateScheduleRequest) GetSchedule() *v1.Schedule {
+	if x != nil {
+		return x.Schedule
+	}
+	return nil
+}
+
+type GetScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetScheduleRequest) Reset() {
+	*x = GetScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetScheduleRequest) ProtoMessage() {}
+
+func (x *GetScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetScheduleRequest.ProtoReflect.Descriptor instead.
+func (*GetScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetScheduleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListSchedulesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	ScheduleType  v1.ScheduleType        `protobuf:"varint,3,opt,name=schedule_type,json=scheduleType,proto3,enum=api.schema.v1.ScheduleType" json:"schedule_type,omitempty"`
+	State         v1.ScheduleState       `protobuf:"varint,4,opt,name=state,proto3,enum=api.schema.v1.ScheduleState" json:"state,omitempty"`
+	Id            string                 `protobuf:"bytes,5,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSchedulesRequest) Reset() {
+	*x = ListSchedulesRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSchedulesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSchedulesRequest) ProtoMessage() {}
+
+func (x *ListSchedulesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSchedulesRequest.ProtoReflect.Descriptor instead.
+func (*ListSchedulesRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ListSchedulesRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListSchedulesRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ListSchedulesRequest) GetScheduleType() v1.ScheduleType {
+	if x != nil {
+		return x.ScheduleType
+	}
+	return v1.ScheduleType(0)
+}
+
+func (x *ListSchedulesRequest) GetState() v1.ScheduleState {
+	if x != nil {
+		return x.State
+	}
+	return v1.ScheduleState(0)
+}
+
+func (x *ListSchedulesRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListSchedulesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Schedules     []*v1.Schedule         `protobuf:"bytes,2,rep,name=schedules,proto3" json:"schedules,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSchedulesResponse) Reset() {
+	*x = ListSchedulesResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSchedulesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSchedulesResponse) ProtoMessage() {}
+
+func (x *ListSchedulesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSchedulesResponse.ProtoReflect.Descriptor instead.
+func (*ListSchedulesResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ListSchedulesResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListSchedulesResponse) GetSchedules() []*v1.Schedule {
+	if x != nil {
+		return x.Schedules
+	}
+	return nil
+}
+
+type UpdateScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Schedule      *v1.Schedule           `protobuf:"bytes,2,opt,name=schedule,proto3" json:"schedule,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateScheduleRequest) Reset() {
+	*x = UpdateScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateScheduleRequest) ProtoMessage() {}
+
+func (x *UpdateScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateScheduleRequest.ProtoReflect.Descriptor instead.
+func (*UpdateScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *UpdateScheduleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateScheduleRequest) GetSchedule() *v1.Schedule {
+	if x != nil {
+		return x.Schedule
+	}
+	return nil
+}
+
+type PauseScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PauseScheduleRequest) Reset() {
+	*x = PauseScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PauseScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PauseScheduleRequest) ProtoMessage() {}
+
+func (x *PauseScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PauseScheduleRequest.ProtoReflect.Descriptor instead.
+func (*PauseScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *PauseScheduleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ResumeScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeScheduleRequest) Reset() {
+	*x = ResumeScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeScheduleRequest) ProtoMessage() {}
+
+func (x *ResumeScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeScheduleRequest.ProtoReflect.Descriptor instead.
+func (*ResumeScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ResumeScheduleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteScheduleRequest) Reset() {
+	*x = DeleteScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteScheduleRequest) ProtoMessage() {}
+
+func (x *DeleteScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteScheduleRequest.ProtoReflect.Descriptor instead.
+func (*DeleteScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *DeleteScheduleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// 立即投递一次。生成独立的 fire_id，不推进 next_fire_at。
+type TriggerScheduleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TriggerScheduleRequest) Reset() {
+	*x = TriggerScheduleRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TriggerScheduleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TriggerScheduleRequest) ProtoMessage() {}
+
+func (x *TriggerScheduleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TriggerScheduleRequest.ProtoReflect.Descriptor instead.
+func (*TriggerScheduleRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *TriggerScheduleRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ScheduleDeadLetter struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ScheduleId     string                 `protobuf:"bytes,2,opt,name=schedule_id,json=scheduleId,proto3" json:"schedule_id,omitempty"`
+	Namespace      string                 `protobuf:"bytes,3,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	FireId         string                 `protobuf:"bytes,4,opt,name=fire_id,json=fireId,proto3" json:"fire_id,omitempty"`
+	ScheduledTime  int64                  `protobuf:"varint,5,opt,name=scheduled_time,json=scheduledTime,proto3" json:"scheduled_time,omitempty"`
+	AttemptCount   int32                  `protobuf:"varint,6,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	State          v1.DeadLetterState     `protobuf:"varint,7,opt,name=state,proto3,enum=api.schema.v1.DeadLetterState" json:"state,omitempty"`
+	NextAttemptAt  int64                  `protobuf:"varint,8,opt,name=next_attempt_at,json=nextAttemptAt,proto3" json:"next_attempt_at,omitempty"`
+	LastHttpStatus int32                  `protobuf:"varint,9,opt,name=last_http_status,json=lastHttpStatus,proto3" json:"last_http_status,omitempty"`
+	LastError      string                 `protobuf:"bytes,10,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	CreateTime     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime     *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ScheduleDeadLetter) Reset() {
+	*x = ScheduleDeadLetter{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScheduleDeadLetter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScheduleDeadLetter) ProtoMessage() {}
+
+func (x *ScheduleDeadLetter) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScheduleDeadLetter.ProtoReflect.Descriptor instead.
+func (*ScheduleDeadLetter) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ScheduleDeadLetter) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ScheduleDeadLetter) GetScheduleId() string {
+	if x != nil {
+		return x.ScheduleId
+	}
+	return ""
+}
+
+func (x *ScheduleDeadLetter) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ScheduleDeadLetter) GetFireId() string {
+	if x != nil {
+		return x.FireId
+	}
+	return ""
+}
+
+func (x *ScheduleDeadLetter) GetScheduledTime() int64 {
+	if x != nil {
+		return x.ScheduledTime
+	}
+	return 0
+}
+
+func (x *ScheduleDeadLetter) GetAttemptCount() int32 {
+	if x != nil {
+		return x.AttemptCount
+	}
+	return 0
+}
+
+func (x *ScheduleDeadLetter) GetState() v1.DeadLetterState {
+	if x != nil {
+		return x.State
+	}
+	return v1.DeadLetterState(0)
+}
+
+func (x *ScheduleDeadLetter) GetNextAttemptAt() int64 {
+	if x != nil {
+		return x.NextAttemptAt
+	}
+	return 0
+}
+
+func (x *ScheduleDeadLetter) GetLastHttpStatus() int32 {
+	if x != nil {
+		return x.LastHttpStatus
+	}
+	return 0
+}
+
+func (x *ScheduleDeadLetter) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *ScheduleDeadLetter) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *ScheduleDeadLetter) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+type ListScheduleDeadLettersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Namespace     string                 `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	ScheduleId    string                 `protobuf:"bytes,3,opt,name=schedule_id,json=scheduleId,proto3" json:"schedule_id,omitempty"`
+	State         v1.DeadLetterState     `protobuf:"varint,4,opt,name=state,proto3,enum=api.schema.v1.DeadLetterState" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListScheduleDeadLettersRequest) Reset() {
+	*x = ListScheduleDeadLettersRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListScheduleDeadLettersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListScheduleDeadLettersRequest) ProtoMessage() {}
+
+func (x *ListScheduleDeadLettersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListScheduleDeadLettersRequest.ProtoReflect.Descriptor instead.
+func (*ListScheduleDeadLettersRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ListScheduleDeadLettersRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListScheduleDeadLettersRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *ListScheduleDeadLettersRequest) GetScheduleId() string {
+	if x != nil {
+		return x.ScheduleId
+	}
+	return ""
+}
+
+func (x *ListScheduleDeadLettersRequest) GetState() v1.DeadLetterState {
+	if x != nil {
+		return x.State
+	}
+	return v1.DeadLetterState(0)
+}
+
+type ListScheduleDeadLettersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	DeadLetters   []*ScheduleDeadLetter  `protobuf:"bytes,2,rep,name=dead_letters,json=deadLetters,proto3" json:"dead_letters,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListScheduleDeadLettersResponse) Reset() {
+	*x = ListScheduleDeadLettersResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListScheduleDeadLettersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListScheduleDeadLettersResponse) ProtoMessage() {}
+
+func (x *ListScheduleDeadLettersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListScheduleDeadLettersResponse.ProtoReflect.Descriptor instead.
+func (*ListScheduleDeadLettersResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListScheduleDeadLettersResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListScheduleDeadLettersResponse) GetDeadLetters() []*ScheduleDeadLetter {
+	if x != nil {
+		return x.DeadLetters
+	}
+	return nil
+}
+
+type ReplayScheduleDeadLetterRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplayScheduleDeadLetterRequest) Reset() {
+	*x = ReplayScheduleDeadLetterRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplayScheduleDeadLetterRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplayScheduleDeadLetterRequest) ProtoMessage() {}
+
+func (x *ReplayScheduleDeadLetterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplayScheduleDeadLetterRequest.ProtoReflect.Descriptor instead.
+func (*ReplayScheduleDeadLetterRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ReplayScheduleDeadLetterRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DiscardScheduleDeadLetterRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DiscardScheduleDeadLetterRequest) Reset() {
+	*x = DiscardScheduleDeadLetterRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DiscardScheduleDeadLetterRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DiscardScheduleDeadLetterRequest) ProtoMessage() {}
+
+func (x *DiscardScheduleDeadLetterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DiscardScheduleDeadLetterRequest.ProtoReflect.Descriptor instead.
+func (*DiscardScheduleDeadLetterRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *DiscardScheduleDeadLetterRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type AdminAuditLog struct {
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Id         string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Action     string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	TargetType string                 `protobuf:"bytes,3,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	TargetId   string                 `protobuf:"bytes,4,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Namespace  string                 `protobuf:"bytes,5,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// 保留字段：当前无用户体系，恒为空，待接入后填 user id。
+	Operator  string `protobuf:"bytes,6,opt,name=operator,proto3" json:"operator,omitempty"`
+	SourceIp  string `protobuf:"bytes,7,opt,name=source_ip,json=sourceIp,proto3" json:"source_ip,omitempty"`
+	UserAgent string `protobuf:"bytes,8,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	// ADMIN_HTTP（当前仅此来源）
+	Source string `protobuf:"bytes,9,opt,name=source,proto3" json:"source,omitempty"`
+	// 变更前/删除前关键字段的 JSON 快照
+	Snapshot string `protobuf:"bytes,10,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	// OK | ERROR
+	Result        string                 `protobuf:"bytes,11,opt,name=result,proto3" json:"result,omitempty"`
+	ErrorMessage  string                 `protobuf:"bytes,12,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AdminAuditLog) Reset() {
+	*x = AdminAuditLog{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdminAuditLog) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdminAuditLog) ProtoMessage() {}
+
+func (x *AdminAuditLog) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdminAuditLog.ProtoReflect.Descriptor instead.
+func (*AdminAuditLog) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *AdminAuditLog) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetOperator() string {
+	if x != nil {
+		return x.Operator
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetSourceIp() string {
+	if x != nil {
+		return x.SourceIp
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *AdminAuditLog) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+type ListAdminAuditLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageRequest           `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	TargetType    string                 `protobuf:"bytes,2,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	TargetId      string                 `protobuf:"bytes,3,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	Action        string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	Namespace     string                 `protobuf:"bytes,5,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAdminAuditLogsRequest) Reset() {
+	*x = ListAdminAuditLogsRequest{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAdminAuditLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAdminAuditLogsRequest) ProtoMessage() {}
+
+func (x *ListAdminAuditLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAdminAuditLogsRequest.ProtoReflect.Descriptor instead.
+func (*ListAdminAuditLogsRequest) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ListAdminAuditLogsRequest) GetPage() *PageRequest {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListAdminAuditLogsRequest) GetTargetType() string {
+	if x != nil {
+		return x.TargetType
+	}
+	return ""
+}
+
+func (x *ListAdminAuditLogsRequest) GetTargetId() string {
+	if x != nil {
+		return x.TargetId
+	}
+	return ""
+}
+
+func (x *ListAdminAuditLogsRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ListAdminAuditLogsRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+type ListAdminAuditLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          *PageResponse          `protobuf:"bytes,1,opt,name=page,proto3" json:"page,omitempty"`
+	Logs          []*AdminAuditLog       `protobuf:"bytes,2,rep,name=logs,proto3" json:"logs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAdminAuditLogsResponse) Reset() {
+	*x = ListAdminAuditLogsResponse{}
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAdminAuditLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAdminAuditLogsResponse) ProtoMessage() {}
+
+func (x *ListAdminAuditLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_admin_v1_rpc_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAdminAuditLogsResponse.ProtoReflect.Descriptor instead.
+func (*ListAdminAuditLogsResponse) Descriptor() ([]byte, []int) {
+	return file_api_admin_v1_rpc_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ListAdminAuditLogsResponse) GetPage() *PageResponse {
+	if x != nil {
+		return x.Page
+	}
+	return nil
+}
+
+func (x *ListAdminAuditLogsResponse) GetLogs() []*AdminAuditLog {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
 var File_api_admin_v1_rpc_proto protoreflect.FileDescriptor
 
 const file_api_admin_v1_rpc_proto_rawDesc = "" +
 	"\n" +
-	"\x16api/admin/v1/rpc.proto\x12\fapi.admin.v1\x1a\x1dapi/schema/v1/namespace.proto\x1a\x18api/schema/v1/task.proto\x1a\x1dapi/schema/v1/taskevent.proto\x1a\x1aapi/schema/v1/worker.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\"U\n" +
+	"\x16api/admin/v1/rpc.proto\x12\fapi.admin.v1\x1a\x1dapi/schema/v1/namespace.proto\x1a\x1capi/schema/v1/schedule.proto\x1a\x18api/schema/v1/task.proto\x1a\x1dapi/schema/v1/taskevent.proto\x1a\x1aapi/schema/v1/worker.proto\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"U\n" +
 	"\x16CreateNamespaceRequest\x12;\n" +
 	"\tnamespace\x18\x01 \x01(\v2\x18.api.schema.v1.NamespaceB\x03\xe0A\x02R\tnamespace\"4\n" +
 	"\x13GetNamespaceRequest\x12\x1d\n" +
@@ -958,8 +2016,90 @@ const file_api_admin_v1_rpc_proto_rawDesc = "" +
 	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x12/\n" +
 	"\aworkers\x18\x02 \x03(\v2\x15.api.schema.v1.WorkerR\aworkers\"+\n" +
 	"\x10GetWorkerRequest\x12\x17\n" +
-	"\x02id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\x02id2\x88\n" +
+	"\x02id\x18\x01 \x01(\x03B\a\xbaH\x04\"\x02(\x01R\x02id\"Q\n" +
+	"\x15CreateScheduleRequest\x128\n" +
+	"\bschedule\x18\x01 \x01(\v2\x17.api.schema.v1.ScheduleB\x03\xe0A\x02R\bschedule\"1\n" +
+	"\x12GetScheduleRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"\xe9\x01\n" +
+	"\x14ListSchedulesRequest\x12-\n" +
+	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12@\n" +
+	"\rschedule_type\x18\x03 \x01(\x0e2\x1b.api.schema.v1.ScheduleTypeR\fscheduleType\x122\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x1c.api.schema.v1.ScheduleStateR\x05state\x12\x0e\n" +
+	"\x02id\x18\x05 \x01(\tR\x02id\"~\n" +
+	"\x15ListSchedulesResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x125\n" +
+	"\tschedules\x18\x02 \x03(\v2\x17.api.schema.v1.ScheduleR\tschedules\"i\n" +
+	"\x15UpdateScheduleRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\x123\n" +
+	"\bschedule\x18\x02 \x01(\v2\x17.api.schema.v1.ScheduleR\bschedule\"3\n" +
+	"\x14PauseScheduleRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"4\n" +
+	"\x15ResumeScheduleRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"4\n" +
+	"\x15DeleteScheduleRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"5\n" +
+	"\x16TriggerScheduleRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"\xa5\x04\n" +
+	"\x12ScheduleDeadLetter\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\bR\x02id\x12$\n" +
+	"\vschedule_id\x18\x02 \x01(\tB\x03\xe0A\x03R\n" +
+	"scheduleId\x12!\n" +
+	"\tnamespace\x18\x03 \x01(\tB\x03\xe0A\x03R\tnamespace\x12\x1c\n" +
+	"\afire_id\x18\x04 \x01(\tB\x03\xe0A\x03R\x06fireId\x12*\n" +
+	"\x0escheduled_time\x18\x05 \x01(\x03B\x03\xe0A\x03R\rscheduledTime\x12(\n" +
+	"\rattempt_count\x18\x06 \x01(\x05B\x03\xe0A\x03R\fattemptCount\x129\n" +
+	"\x05state\x18\a \x01(\x0e2\x1e.api.schema.v1.DeadLetterStateB\x03\xe0A\x03R\x05state\x12+\n" +
+	"\x0fnext_attempt_at\x18\b \x01(\x03B\x03\xe0A\x03R\rnextAttemptAt\x12-\n" +
+	"\x10last_http_status\x18\t \x01(\x05B\x03\xe0A\x03R\x0elastHttpStatus\x12\"\n" +
 	"\n" +
+	"last_error\x18\n" +
+	" \x01(\tB\x03\xe0A\x03R\tlastError\x12@\n" +
+	"\vcreate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\x12@\n" +
+	"\vupdate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"updateTime\"\xc4\x01\n" +
+	"\x1eListScheduleDeadLettersRequest\x12-\n" +
+	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\x12\x1c\n" +
+	"\tnamespace\x18\x02 \x01(\tR\tnamespace\x12\x1f\n" +
+	"\vschedule_id\x18\x03 \x01(\tR\n" +
+	"scheduleId\x124\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x1e.api.schema.v1.DeadLetterStateR\x05state\"\x96\x01\n" +
+	"\x1fListScheduleDeadLettersResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x12C\n" +
+	"\fdead_letters\x18\x02 \x03(\v2 .api.admin.v1.ScheduleDeadLetterR\vdeadLetters\">\n" +
+	"\x1fReplayScheduleDeadLetterRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"?\n" +
+	" DiscardScheduleDeadLetterRequest\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\"\xda\x03\n" +
+	"\rAdminAuditLog\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\bR\x02id\x12\x1b\n" +
+	"\x06action\x18\x02 \x01(\tB\x03\xe0A\x03R\x06action\x12$\n" +
+	"\vtarget_type\x18\x03 \x01(\tB\x03\xe0A\x03R\n" +
+	"targetType\x12 \n" +
+	"\ttarget_id\x18\x04 \x01(\tB\x03\xe0A\x03R\btargetId\x12!\n" +
+	"\tnamespace\x18\x05 \x01(\tB\x03\xe0A\x03R\tnamespace\x12\x1f\n" +
+	"\boperator\x18\x06 \x01(\tB\x03\xe0A\x03R\boperator\x12 \n" +
+	"\tsource_ip\x18\a \x01(\tB\x03\xe0A\x03R\bsourceIp\x12\"\n" +
+	"\n" +
+	"user_agent\x18\b \x01(\tB\x03\xe0A\x03R\tuserAgent\x12\x1b\n" +
+	"\x06source\x18\t \x01(\tB\x03\xe0A\x03R\x06source\x12\x1f\n" +
+	"\bsnapshot\x18\n" +
+	" \x01(\tB\x03\xe0A\x03R\bsnapshot\x12\x1b\n" +
+	"\x06result\x18\v \x01(\tB\x03\xe0A\x03R\x06result\x12(\n" +
+	"\rerror_message\x18\f \x01(\tB\x03\xe0A\x03R\ferrorMessage\x12@\n" +
+	"\vcreate_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"createTime\"\xbe\x01\n" +
+	"\x19ListAdminAuditLogsRequest\x12-\n" +
+	"\x04page\x18\x01 \x01(\v2\x19.api.admin.v1.PageRequestR\x04page\x12\x1f\n" +
+	"\vtarget_type\x18\x02 \x01(\tR\n" +
+	"targetType\x12\x1b\n" +
+	"\ttarget_id\x18\x03 \x01(\tR\btargetId\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\x12\x1c\n" +
+	"\tnamespace\x18\x05 \x01(\tR\tnamespace\"}\n" +
+	"\x1aListAdminAuditLogsResponse\x12.\n" +
+	"\x04page\x18\x01 \x01(\v2\x1a.api.admin.v1.PageResponseR\x04page\x12/\n" +
+	"\x04logs\x18\x02 \x03(\v2\x1b.api.admin.v1.AdminAuditLogR\x04logs2\xcb\x16\n" +
 	"\fAdminService\x12v\n" +
 	"\x0fCreateNamespace\x12$.api.admin.v1.CreateNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/admin/v1/namespaces\x12t\n" +
 	"\fGetNamespace\x12!.api.admin.v1.GetNamespaceRequest\x1a\x18.api.schema.v1.Namespace\"'\x82\xd3\xe4\x93\x02!\x12\x1f/api/admin/v1/namespaces/{name}\x12}\n" +
@@ -973,7 +2113,19 @@ const file_api_admin_v1_rpc_proto_rawDesc = "" +
 	"DeleteTask\x12\x1f.api.admin.v1.DeleteTaskRequest\x1a\x16.google.protobuf.Empty\" \x82\xd3\xe4\x93\x02\x1a*\x18/api/admin/v1/tasks/{id}\x12\x89\x01\n" +
 	"\x0eListTaskEvents\x12#.api.admin.v1.ListTaskEventsRequest\x1a$.api.admin.v1.ListTaskEventsResponse\",\x82\xd3\xe4\x93\x02&\x12$/api/admin/v1/tasks/{task_id}/events\x12q\n" +
 	"\vListWorkers\x12 .api.admin.v1.ListWorkersRequest\x1a!.api.admin.v1.ListWorkersResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/admin/v1/workers\x12f\n" +
-	"\tGetWorker\x12\x1e.api.admin.v1.GetWorkerRequest\x1a\x15.api.schema.v1.Worker\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/admin/v1/workers/{id}B\x99\x01\n" +
+	"\tGetWorker\x12\x1e.api.admin.v1.GetWorkerRequest\x1a\x15.api.schema.v1.Worker\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/api/admin/v1/workers/{id}\x12r\n" +
+	"\x0eCreateSchedule\x12#.api.admin.v1.CreateScheduleRequest\x1a\x17.api.schema.v1.Schedule\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/admin/v1/schedules\x12n\n" +
+	"\vGetSchedule\x12 .api.admin.v1.GetScheduleRequest\x1a\x17.api.schema.v1.Schedule\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/admin/v1/schedules/{id}\x12y\n" +
+	"\rListSchedules\x12\".api.admin.v1.ListSchedulesRequest\x1a#.api.admin.v1.ListSchedulesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/admin/v1/schedules\x12w\n" +
+	"\x0eUpdateSchedule\x12#.api.admin.v1.UpdateScheduleRequest\x1a\x17.api.schema.v1.Schedule\"'\x82\xd3\xe4\x93\x02!:\x01*\x1a\x1c/api/admin/v1/schedules/{id}\x12{\n" +
+	"\rPauseSchedule\x12\".api.admin.v1.PauseScheduleRequest\x1a\x17.api.schema.v1.Schedule\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/admin/v1/schedules/{id}/pause\x12~\n" +
+	"\x0eResumeSchedule\x12#.api.admin.v1.ResumeScheduleRequest\x1a\x17.api.schema.v1.Schedule\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/admin/v1/schedules/{id}/resume\x12s\n" +
+	"\x0eDeleteSchedule\x12#.api.admin.v1.DeleteScheduleRequest\x1a\x16.google.protobuf.Empty\"$\x82\xd3\xe4\x93\x02\x1e*\x1c/api/admin/v1/schedules/{id}\x12\x81\x01\n" +
+	"\x0fTriggerSchedule\x12$.api.admin.v1.TriggerScheduleRequest\x1a\x17.api.schema.v1.Schedule\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/admin/v1/schedules/{id}/trigger\x12\xa3\x01\n" +
+	"\x17ListScheduleDeadLetters\x12,.api.admin.v1.ListScheduleDeadLettersRequest\x1a-.api.admin.v1.ListScheduleDeadLettersResponse\"+\x82\xd3\xe4\x93\x02%\x12#/api/admin/v1/schedule-dead-letters\x12\x9d\x01\n" +
+	"\x18ReplayScheduleDeadLetter\x12-.api.admin.v1.ReplayScheduleDeadLetterRequest\x1a\x16.google.protobuf.Empty\":\x82\xd3\xe4\x93\x024:\x01*\"//api/admin/v1/schedule-dead-letters/{id}/replay\x12\xa0\x01\n" +
+	"\x19DiscardScheduleDeadLetter\x12..api.admin.v1.DiscardScheduleDeadLetterRequest\x1a\x16.google.protobuf.Empty\";\x82\xd3\xe4\x93\x025:\x01*\"0/api/admin/v1/schedule-dead-letters/{id}/discard\x12\x89\x01\n" +
+	"\x12ListAdminAuditLogs\x12'.api.admin.v1.ListAdminAuditLogsRequest\x1a(.api.admin.v1.ListAdminAuditLogsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/admin/v1/audit-logsB\x99\x01\n" +
 	"\x10com.api.admin.v1B\bRpcProtoP\x01Z)github.com/gonotelm-lab/flow/api/admin/v1\xa2\x02\x03AAX\xaa\x02\fApi.Admin.V1\xca\x02\fApi\\Admin\\V1\xe2\x02\x18Api\\Admin\\V1\\GPBMetadata\xea\x02\x0eApi::Admin::V1b\x06proto3"
 
 var (
@@ -988,74 +2140,138 @@ func file_api_admin_v1_rpc_proto_rawDescGZIP() []byte {
 	return file_api_admin_v1_rpc_proto_rawDescData
 }
 
-var file_api_admin_v1_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_api_admin_v1_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_api_admin_v1_rpc_proto_goTypes = []any{
-	(*CreateNamespaceRequest)(nil), // 0: api.admin.v1.CreateNamespaceRequest
-	(*GetNamespaceRequest)(nil),    // 1: api.admin.v1.GetNamespaceRequest
-	(*PageRequest)(nil),            // 2: api.admin.v1.PageRequest
-	(*PageResponse)(nil),           // 3: api.admin.v1.PageResponse
-	(*ListNamespacesRequest)(nil),  // 4: api.admin.v1.ListNamespacesRequest
-	(*ListNamespacesResponse)(nil), // 5: api.admin.v1.ListNamespacesResponse
-	(*UpdateNamespaceRequest)(nil), // 6: api.admin.v1.UpdateNamespaceRequest
-	(*ListTasksRequest)(nil),       // 7: api.admin.v1.ListTasksRequest
-	(*ListTasksResponse)(nil),      // 8: api.admin.v1.ListTasksResponse
-	(*GetTaskRequest)(nil),         // 9: api.admin.v1.GetTaskRequest
-	(*CancelTaskRequest)(nil),      // 10: api.admin.v1.CancelTaskRequest
-	(*DeleteTaskRequest)(nil),      // 11: api.admin.v1.DeleteTaskRequest
-	(*ListTaskEventsRequest)(nil),  // 12: api.admin.v1.ListTaskEventsRequest
-	(*ListTaskEventsResponse)(nil), // 13: api.admin.v1.ListTaskEventsResponse
-	(*ListWorkersRequest)(nil),     // 14: api.admin.v1.ListWorkersRequest
-	(*ListWorkersResponse)(nil),    // 15: api.admin.v1.ListWorkersResponse
-	(*GetWorkerRequest)(nil),       // 16: api.admin.v1.GetWorkerRequest
-	(*v1.Namespace)(nil),           // 17: api.schema.v1.Namespace
-	(v1.TaskState)(0),              // 18: api.schema.v1.TaskState
-	(*v1.Task)(nil),                // 19: api.schema.v1.Task
-	(*v1.TaskEvent)(nil),           // 20: api.schema.v1.TaskEvent
-	(*v1.Worker)(nil),              // 21: api.schema.v1.Worker
-	(*emptypb.Empty)(nil),          // 22: google.protobuf.Empty
+	(*CreateNamespaceRequest)(nil),           // 0: api.admin.v1.CreateNamespaceRequest
+	(*GetNamespaceRequest)(nil),              // 1: api.admin.v1.GetNamespaceRequest
+	(*PageRequest)(nil),                      // 2: api.admin.v1.PageRequest
+	(*PageResponse)(nil),                     // 3: api.admin.v1.PageResponse
+	(*ListNamespacesRequest)(nil),            // 4: api.admin.v1.ListNamespacesRequest
+	(*ListNamespacesResponse)(nil),           // 5: api.admin.v1.ListNamespacesResponse
+	(*UpdateNamespaceRequest)(nil),           // 6: api.admin.v1.UpdateNamespaceRequest
+	(*ListTasksRequest)(nil),                 // 7: api.admin.v1.ListTasksRequest
+	(*ListTasksResponse)(nil),                // 8: api.admin.v1.ListTasksResponse
+	(*GetTaskRequest)(nil),                   // 9: api.admin.v1.GetTaskRequest
+	(*CancelTaskRequest)(nil),                // 10: api.admin.v1.CancelTaskRequest
+	(*DeleteTaskRequest)(nil),                // 11: api.admin.v1.DeleteTaskRequest
+	(*ListTaskEventsRequest)(nil),            // 12: api.admin.v1.ListTaskEventsRequest
+	(*ListTaskEventsResponse)(nil),           // 13: api.admin.v1.ListTaskEventsResponse
+	(*ListWorkersRequest)(nil),               // 14: api.admin.v1.ListWorkersRequest
+	(*ListWorkersResponse)(nil),              // 15: api.admin.v1.ListWorkersResponse
+	(*GetWorkerRequest)(nil),                 // 16: api.admin.v1.GetWorkerRequest
+	(*CreateScheduleRequest)(nil),            // 17: api.admin.v1.CreateScheduleRequest
+	(*GetScheduleRequest)(nil),               // 18: api.admin.v1.GetScheduleRequest
+	(*ListSchedulesRequest)(nil),             // 19: api.admin.v1.ListSchedulesRequest
+	(*ListSchedulesResponse)(nil),            // 20: api.admin.v1.ListSchedulesResponse
+	(*UpdateScheduleRequest)(nil),            // 21: api.admin.v1.UpdateScheduleRequest
+	(*PauseScheduleRequest)(nil),             // 22: api.admin.v1.PauseScheduleRequest
+	(*ResumeScheduleRequest)(nil),            // 23: api.admin.v1.ResumeScheduleRequest
+	(*DeleteScheduleRequest)(nil),            // 24: api.admin.v1.DeleteScheduleRequest
+	(*TriggerScheduleRequest)(nil),           // 25: api.admin.v1.TriggerScheduleRequest
+	(*ScheduleDeadLetter)(nil),               // 26: api.admin.v1.ScheduleDeadLetter
+	(*ListScheduleDeadLettersRequest)(nil),   // 27: api.admin.v1.ListScheduleDeadLettersRequest
+	(*ListScheduleDeadLettersResponse)(nil),  // 28: api.admin.v1.ListScheduleDeadLettersResponse
+	(*ReplayScheduleDeadLetterRequest)(nil),  // 29: api.admin.v1.ReplayScheduleDeadLetterRequest
+	(*DiscardScheduleDeadLetterRequest)(nil), // 30: api.admin.v1.DiscardScheduleDeadLetterRequest
+	(*AdminAuditLog)(nil),                    // 31: api.admin.v1.AdminAuditLog
+	(*ListAdminAuditLogsRequest)(nil),        // 32: api.admin.v1.ListAdminAuditLogsRequest
+	(*ListAdminAuditLogsResponse)(nil),       // 33: api.admin.v1.ListAdminAuditLogsResponse
+	(*v1.Namespace)(nil),                     // 34: api.schema.v1.Namespace
+	(v1.TaskState)(0),                        // 35: api.schema.v1.TaskState
+	(*v1.Task)(nil),                          // 36: api.schema.v1.Task
+	(*v1.TaskEvent)(nil),                     // 37: api.schema.v1.TaskEvent
+	(*v1.Worker)(nil),                        // 38: api.schema.v1.Worker
+	(*v1.Schedule)(nil),                      // 39: api.schema.v1.Schedule
+	(v1.ScheduleType)(0),                     // 40: api.schema.v1.ScheduleType
+	(v1.ScheduleState)(0),                    // 41: api.schema.v1.ScheduleState
+	(v1.DeadLetterState)(0),                  // 42: api.schema.v1.DeadLetterState
+	(*timestamppb.Timestamp)(nil),            // 43: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                    // 44: google.protobuf.Empty
 }
 var file_api_admin_v1_rpc_proto_depIdxs = []int32{
-	17, // 0: api.admin.v1.CreateNamespaceRequest.namespace:type_name -> api.schema.v1.Namespace
+	34, // 0: api.admin.v1.CreateNamespaceRequest.namespace:type_name -> api.schema.v1.Namespace
 	2,  // 1: api.admin.v1.ListNamespacesRequest.page:type_name -> api.admin.v1.PageRequest
 	3,  // 2: api.admin.v1.ListNamespacesResponse.page:type_name -> api.admin.v1.PageResponse
-	17, // 3: api.admin.v1.ListNamespacesResponse.namespaces:type_name -> api.schema.v1.Namespace
+	34, // 3: api.admin.v1.ListNamespacesResponse.namespaces:type_name -> api.schema.v1.Namespace
 	2,  // 4: api.admin.v1.ListTasksRequest.page:type_name -> api.admin.v1.PageRequest
-	18, // 5: api.admin.v1.ListTasksRequest.state:type_name -> api.schema.v1.TaskState
+	35, // 5: api.admin.v1.ListTasksRequest.state:type_name -> api.schema.v1.TaskState
 	3,  // 6: api.admin.v1.ListTasksResponse.page:type_name -> api.admin.v1.PageResponse
-	19, // 7: api.admin.v1.ListTasksResponse.tasks:type_name -> api.schema.v1.Task
+	36, // 7: api.admin.v1.ListTasksResponse.tasks:type_name -> api.schema.v1.Task
 	2,  // 8: api.admin.v1.ListTaskEventsRequest.page:type_name -> api.admin.v1.PageRequest
 	3,  // 9: api.admin.v1.ListTaskEventsResponse.page:type_name -> api.admin.v1.PageResponse
-	20, // 10: api.admin.v1.ListTaskEventsResponse.events:type_name -> api.schema.v1.TaskEvent
+	37, // 10: api.admin.v1.ListTaskEventsResponse.events:type_name -> api.schema.v1.TaskEvent
 	2,  // 11: api.admin.v1.ListWorkersRequest.page:type_name -> api.admin.v1.PageRequest
 	3,  // 12: api.admin.v1.ListWorkersResponse.page:type_name -> api.admin.v1.PageResponse
-	21, // 13: api.admin.v1.ListWorkersResponse.workers:type_name -> api.schema.v1.Worker
-	0,  // 14: api.admin.v1.AdminService.CreateNamespace:input_type -> api.admin.v1.CreateNamespaceRequest
-	1,  // 15: api.admin.v1.AdminService.GetNamespace:input_type -> api.admin.v1.GetNamespaceRequest
-	4,  // 16: api.admin.v1.AdminService.ListNamespaces:input_type -> api.admin.v1.ListNamespacesRequest
-	6,  // 17: api.admin.v1.AdminService.UpdateNamespace:input_type -> api.admin.v1.UpdateNamespaceRequest
-	7,  // 18: api.admin.v1.AdminService.ListTasks:input_type -> api.admin.v1.ListTasksRequest
-	9,  // 19: api.admin.v1.AdminService.GetTask:input_type -> api.admin.v1.GetTaskRequest
-	10, // 20: api.admin.v1.AdminService.CancelTask:input_type -> api.admin.v1.CancelTaskRequest
-	11, // 21: api.admin.v1.AdminService.DeleteTask:input_type -> api.admin.v1.DeleteTaskRequest
-	12, // 22: api.admin.v1.AdminService.ListTaskEvents:input_type -> api.admin.v1.ListTaskEventsRequest
-	14, // 23: api.admin.v1.AdminService.ListWorkers:input_type -> api.admin.v1.ListWorkersRequest
-	16, // 24: api.admin.v1.AdminService.GetWorker:input_type -> api.admin.v1.GetWorkerRequest
-	17, // 25: api.admin.v1.AdminService.CreateNamespace:output_type -> api.schema.v1.Namespace
-	17, // 26: api.admin.v1.AdminService.GetNamespace:output_type -> api.schema.v1.Namespace
-	5,  // 27: api.admin.v1.AdminService.ListNamespaces:output_type -> api.admin.v1.ListNamespacesResponse
-	17, // 28: api.admin.v1.AdminService.UpdateNamespace:output_type -> api.schema.v1.Namespace
-	8,  // 29: api.admin.v1.AdminService.ListTasks:output_type -> api.admin.v1.ListTasksResponse
-	19, // 30: api.admin.v1.AdminService.GetTask:output_type -> api.schema.v1.Task
-	22, // 31: api.admin.v1.AdminService.CancelTask:output_type -> google.protobuf.Empty
-	22, // 32: api.admin.v1.AdminService.DeleteTask:output_type -> google.protobuf.Empty
-	13, // 33: api.admin.v1.AdminService.ListTaskEvents:output_type -> api.admin.v1.ListTaskEventsResponse
-	15, // 34: api.admin.v1.AdminService.ListWorkers:output_type -> api.admin.v1.ListWorkersResponse
-	21, // 35: api.admin.v1.AdminService.GetWorker:output_type -> api.schema.v1.Worker
-	25, // [25:36] is the sub-list for method output_type
-	14, // [14:25] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	38, // 13: api.admin.v1.ListWorkersResponse.workers:type_name -> api.schema.v1.Worker
+	39, // 14: api.admin.v1.CreateScheduleRequest.schedule:type_name -> api.schema.v1.Schedule
+	2,  // 15: api.admin.v1.ListSchedulesRequest.page:type_name -> api.admin.v1.PageRequest
+	40, // 16: api.admin.v1.ListSchedulesRequest.schedule_type:type_name -> api.schema.v1.ScheduleType
+	41, // 17: api.admin.v1.ListSchedulesRequest.state:type_name -> api.schema.v1.ScheduleState
+	3,  // 18: api.admin.v1.ListSchedulesResponse.page:type_name -> api.admin.v1.PageResponse
+	39, // 19: api.admin.v1.ListSchedulesResponse.schedules:type_name -> api.schema.v1.Schedule
+	39, // 20: api.admin.v1.UpdateScheduleRequest.schedule:type_name -> api.schema.v1.Schedule
+	42, // 21: api.admin.v1.ScheduleDeadLetter.state:type_name -> api.schema.v1.DeadLetterState
+	43, // 22: api.admin.v1.ScheduleDeadLetter.create_time:type_name -> google.protobuf.Timestamp
+	43, // 23: api.admin.v1.ScheduleDeadLetter.update_time:type_name -> google.protobuf.Timestamp
+	2,  // 24: api.admin.v1.ListScheduleDeadLettersRequest.page:type_name -> api.admin.v1.PageRequest
+	42, // 25: api.admin.v1.ListScheduleDeadLettersRequest.state:type_name -> api.schema.v1.DeadLetterState
+	3,  // 26: api.admin.v1.ListScheduleDeadLettersResponse.page:type_name -> api.admin.v1.PageResponse
+	26, // 27: api.admin.v1.ListScheduleDeadLettersResponse.dead_letters:type_name -> api.admin.v1.ScheduleDeadLetter
+	43, // 28: api.admin.v1.AdminAuditLog.create_time:type_name -> google.protobuf.Timestamp
+	2,  // 29: api.admin.v1.ListAdminAuditLogsRequest.page:type_name -> api.admin.v1.PageRequest
+	3,  // 30: api.admin.v1.ListAdminAuditLogsResponse.page:type_name -> api.admin.v1.PageResponse
+	31, // 31: api.admin.v1.ListAdminAuditLogsResponse.logs:type_name -> api.admin.v1.AdminAuditLog
+	0,  // 32: api.admin.v1.AdminService.CreateNamespace:input_type -> api.admin.v1.CreateNamespaceRequest
+	1,  // 33: api.admin.v1.AdminService.GetNamespace:input_type -> api.admin.v1.GetNamespaceRequest
+	4,  // 34: api.admin.v1.AdminService.ListNamespaces:input_type -> api.admin.v1.ListNamespacesRequest
+	6,  // 35: api.admin.v1.AdminService.UpdateNamespace:input_type -> api.admin.v1.UpdateNamespaceRequest
+	7,  // 36: api.admin.v1.AdminService.ListTasks:input_type -> api.admin.v1.ListTasksRequest
+	9,  // 37: api.admin.v1.AdminService.GetTask:input_type -> api.admin.v1.GetTaskRequest
+	10, // 38: api.admin.v1.AdminService.CancelTask:input_type -> api.admin.v1.CancelTaskRequest
+	11, // 39: api.admin.v1.AdminService.DeleteTask:input_type -> api.admin.v1.DeleteTaskRequest
+	12, // 40: api.admin.v1.AdminService.ListTaskEvents:input_type -> api.admin.v1.ListTaskEventsRequest
+	14, // 41: api.admin.v1.AdminService.ListWorkers:input_type -> api.admin.v1.ListWorkersRequest
+	16, // 42: api.admin.v1.AdminService.GetWorker:input_type -> api.admin.v1.GetWorkerRequest
+	17, // 43: api.admin.v1.AdminService.CreateSchedule:input_type -> api.admin.v1.CreateScheduleRequest
+	18, // 44: api.admin.v1.AdminService.GetSchedule:input_type -> api.admin.v1.GetScheduleRequest
+	19, // 45: api.admin.v1.AdminService.ListSchedules:input_type -> api.admin.v1.ListSchedulesRequest
+	21, // 46: api.admin.v1.AdminService.UpdateSchedule:input_type -> api.admin.v1.UpdateScheduleRequest
+	22, // 47: api.admin.v1.AdminService.PauseSchedule:input_type -> api.admin.v1.PauseScheduleRequest
+	23, // 48: api.admin.v1.AdminService.ResumeSchedule:input_type -> api.admin.v1.ResumeScheduleRequest
+	24, // 49: api.admin.v1.AdminService.DeleteSchedule:input_type -> api.admin.v1.DeleteScheduleRequest
+	25, // 50: api.admin.v1.AdminService.TriggerSchedule:input_type -> api.admin.v1.TriggerScheduleRequest
+	27, // 51: api.admin.v1.AdminService.ListScheduleDeadLetters:input_type -> api.admin.v1.ListScheduleDeadLettersRequest
+	29, // 52: api.admin.v1.AdminService.ReplayScheduleDeadLetter:input_type -> api.admin.v1.ReplayScheduleDeadLetterRequest
+	30, // 53: api.admin.v1.AdminService.DiscardScheduleDeadLetter:input_type -> api.admin.v1.DiscardScheduleDeadLetterRequest
+	32, // 54: api.admin.v1.AdminService.ListAdminAuditLogs:input_type -> api.admin.v1.ListAdminAuditLogsRequest
+	34, // 55: api.admin.v1.AdminService.CreateNamespace:output_type -> api.schema.v1.Namespace
+	34, // 56: api.admin.v1.AdminService.GetNamespace:output_type -> api.schema.v1.Namespace
+	5,  // 57: api.admin.v1.AdminService.ListNamespaces:output_type -> api.admin.v1.ListNamespacesResponse
+	34, // 58: api.admin.v1.AdminService.UpdateNamespace:output_type -> api.schema.v1.Namespace
+	8,  // 59: api.admin.v1.AdminService.ListTasks:output_type -> api.admin.v1.ListTasksResponse
+	36, // 60: api.admin.v1.AdminService.GetTask:output_type -> api.schema.v1.Task
+	44, // 61: api.admin.v1.AdminService.CancelTask:output_type -> google.protobuf.Empty
+	44, // 62: api.admin.v1.AdminService.DeleteTask:output_type -> google.protobuf.Empty
+	13, // 63: api.admin.v1.AdminService.ListTaskEvents:output_type -> api.admin.v1.ListTaskEventsResponse
+	15, // 64: api.admin.v1.AdminService.ListWorkers:output_type -> api.admin.v1.ListWorkersResponse
+	38, // 65: api.admin.v1.AdminService.GetWorker:output_type -> api.schema.v1.Worker
+	39, // 66: api.admin.v1.AdminService.CreateSchedule:output_type -> api.schema.v1.Schedule
+	39, // 67: api.admin.v1.AdminService.GetSchedule:output_type -> api.schema.v1.Schedule
+	20, // 68: api.admin.v1.AdminService.ListSchedules:output_type -> api.admin.v1.ListSchedulesResponse
+	39, // 69: api.admin.v1.AdminService.UpdateSchedule:output_type -> api.schema.v1.Schedule
+	39, // 70: api.admin.v1.AdminService.PauseSchedule:output_type -> api.schema.v1.Schedule
+	39, // 71: api.admin.v1.AdminService.ResumeSchedule:output_type -> api.schema.v1.Schedule
+	44, // 72: api.admin.v1.AdminService.DeleteSchedule:output_type -> google.protobuf.Empty
+	39, // 73: api.admin.v1.AdminService.TriggerSchedule:output_type -> api.schema.v1.Schedule
+	28, // 74: api.admin.v1.AdminService.ListScheduleDeadLetters:output_type -> api.admin.v1.ListScheduleDeadLettersResponse
+	44, // 75: api.admin.v1.AdminService.ReplayScheduleDeadLetter:output_type -> google.protobuf.Empty
+	44, // 76: api.admin.v1.AdminService.DiscardScheduleDeadLetter:output_type -> google.protobuf.Empty
+	33, // 77: api.admin.v1.AdminService.ListAdminAuditLogs:output_type -> api.admin.v1.ListAdminAuditLogsResponse
+	55, // [55:78] is the sub-list for method output_type
+	32, // [32:55] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_api_admin_v1_rpc_proto_init() }
@@ -1069,7 +2285,7 @@ func file_api_admin_v1_rpc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_admin_v1_rpc_proto_rawDesc), len(file_api_admin_v1_rpc_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

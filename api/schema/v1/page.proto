@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package api.schema.v1;
+
+import "buf/validate/validate.proto";
+
+option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
+
+// 共享分页请求。
+//
+// 说明：api.admin.v1 里已有一份等价的 PageRequest/PageResponse。此处新增独立定义
+// 而不是把 admin 的那份搬过来，是因为删除 admin/v1 中的 message 属于 breaking change
+// （buf.yaml 的 breaking.use = FILE），而本特性不该顺带破坏已发布的 api module 契约。
+// admin 侧迁到这份共享定义可作为后续的独立清理。
+message PageRequest {
+  int32 page = 1 [(buf.validate.field).int32.gte = 1];
+  int32 page_size = 2 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 100
+  }];
+}
+
+message PageResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total_count = 3;
+}

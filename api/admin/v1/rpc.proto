@@ -3,6 +3,7 @@ syntax = "proto3";
 package api.admin.v1;
 
 import "api/schema/v1/namespace.proto";
+import "api/schema/v1/schedule.proto";
 import "api/schema/v1/task.proto";
 import "api/schema/v1/taskevent.proto";
 import "api/schema/v1/worker.proto";
@@ -10,6 +11,7 @@ import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/gonotelm-lab/flow/api/admin/v1";
 
@@ -118,6 +120,152 @@ message GetWorkerRequest {
   int64 id = 1 [(buf.validate.field).int64.gte = 1];
 }
 
+// ============================================================
+// 定时任务（Schedule）运维面
+//
+// 客户端面是 api.schedule.v1.ScheduleService（仅 gRPC）。本处额外提供运维面
+// 才有的能力：TriggerNow、死信处理、审计日志。
+// ============================================================
+
+message CreateScheduleRequest {
+  api.schema.v1.Schedule schedule = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetScheduleRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message ListSchedulesRequest {
+  PageRequest page = 1;
+  string namespace = 2;
+  api.schema.v1.ScheduleType schedule_type = 3;
+  api.schema.v1.ScheduleState state = 4;
+  string id = 5;
+}
+
+message ListSchedulesResponse {
+  PageResponse page = 1;
+  repeated api.schema.v1.Schedule schedules = 2;
+}
+
+message UpdateScheduleRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+  api.schema.v1.Schedule schedule = 2;
+}
+
+message PauseScheduleRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message ResumeScheduleRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message DeleteScheduleRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+// 立即投递一次。生成独立的 fire_id，不推进 next_fire_at。
+message TriggerScheduleRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+// ---- 死信 ----
+
+message ScheduleDeadLetter {
+  string id = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string schedule_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string namespace = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string fire_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 scheduled_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 attempt_count = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  api.schema.v1.DeadLetterState state = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 next_attempt_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 last_http_status = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string last_error = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListScheduleDeadLettersRequest {
+  PageRequest page = 1;
+  string namespace = 2;
+  string schedule_id = 3;
+  api.schema.v1.DeadLetterState state = 4;
+}
+
+message ListScheduleDeadLettersResponse {
+  PageResponse page = 1;
+  repeated ScheduleDeadLetter dead_letters = 2;
+}
+
+message ReplayScheduleDeadLetterRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message DiscardScheduleDeadLetterRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+// ---- 审计日志 ----
+
+message AdminAuditLog {
+  string id = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string action = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string target_type = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string target_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string namespace = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // 保留字段：当前无用户体系，恒为空，待接入后填 user id。
+  string operator = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string source_ip = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string user_agent = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // ADMIN_HTTP（当前仅此来源）
+  string source = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // 变更前/删除前关键字段的 JSON 快照
+  string snapshot = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // OK | ERROR
+  string result = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string error_message = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp create_time = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+message ListAdminAuditLogsRequest {
+  PageRequest page = 1;
+  string target_type = 2;
+  string target_id = 3;
+  string action = 4;
+  string namespace = 5;
+}
+
+message ListAdminAuditLogsResponse {
+  PageResponse page = 1;
+  repeated AdminAuditLog logs = 2;
+}
+
 service AdminService {
   rpc CreateNamespace(CreateNamespaceRequest) returns (api.schema.v1.Namespace) {
     option (google.api.http) = {
@@ -170,5 +318,79 @@ service AdminService {
 
   rpc GetWorker(GetWorkerRequest) returns (api.schema.v1.Worker) {
     option (google.api.http) = {get: "/api/admin/v1/workers/{id}"};
+  }
+
+  rpc CreateSchedule(CreateScheduleRequest) returns (api.schema.v1.Schedule) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/schedules"
+      body: "*"
+    };
+  }
+
+  rpc GetSchedule(GetScheduleRequest) returns (api.schema.v1.Schedule) {
+    option (google.api.http) = {get: "/api/admin/v1/schedules/{id}"};
+  }
+
+  rpc ListSchedules(ListSchedulesRequest) returns (ListSchedulesResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/schedules"};
+  }
+
+  rpc UpdateSchedule(UpdateScheduleRequest) returns (api.schema.v1.Schedule) {
+    option (google.api.http) = {
+      put: "/api/admin/v1/schedules/{id}"
+      body: "*"
+    };
+  }
+
+  rpc PauseSchedule(PauseScheduleRequest) returns (api.schema.v1.Schedule) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/schedules/{id}/pause"
+      body: "*"
+    };
+  }
+
+  rpc ResumeSchedule(ResumeScheduleRequest) returns (api.schema.v1.Schedule) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/schedules/{id}/resume"
+      body: "*"
+    };
+  }
+
+  rpc DeleteSchedule(DeleteScheduleRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/admin/v1/schedules/{id}"};
+  }
+
+  // 立即投递一次，不推进 next_fire_at。仅运维面。
+  rpc TriggerSchedule(TriggerScheduleRequest) returns (api.schema.v1.Schedule) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/schedules/{id}/trigger"
+      body: "*"
+    };
+  }
+
+  // ---- 死信：仅运维面，不暴露给客户端 ----
+
+  rpc ListScheduleDeadLetters(ListScheduleDeadLettersRequest) returns (ListScheduleDeadLettersResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/schedule-dead-letters"};
+  }
+
+  rpc ReplayScheduleDeadLetter(ReplayScheduleDeadLetterRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/schedule-dead-letters/{id}/replay"
+      body: "*"
+    };
+  }
+
+  rpc DiscardScheduleDeadLetter(DiscardScheduleDeadLetterRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/api/admin/v1/schedule-dead-letters/{id}/discard"
+      body: "*"
+    };
+  }
+
+  // ---- 审计日志：仅运维面 ----
+
+  rpc ListAdminAuditLogs(ListAdminAuditLogsRequest) returns (ListAdminAuditLogsResponse) {
+    option (google.api.http) = {get: "/api/admin/v1/audit-logs"};
   }
 }

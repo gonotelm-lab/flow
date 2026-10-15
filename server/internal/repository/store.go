@@ -16,6 +16,11 @@ type Store struct {
 	Task           store.Task
 	TaskWorker     store.TaskWorker
 	TaskEvent      store.TaskEvent
+
+	Schedule               store.Schedule
+	ScheduleDeadLetter     store.ScheduleDeadLetter
+	ScheduleAttemptFailure store.ScheduleAttemptFailure
+	AdminAuditLog          store.AdminAuditLog
 }
 
 func newStore(driver sql.Driver, db *gorm.DB) (*Store, error) {
@@ -52,13 +57,37 @@ func newStore(driver sql.Driver, db *gorm.DB) (*Store, error) {
 		return nil, err
 	}
 
+	schedule, err := impl.NewScheduleStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
+	scheduleDeadLetter, err := impl.NewScheduleDeadLetterStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
+	scheduleAttemptFailure, err := impl.NewScheduleAttemptFailureStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
+	adminAuditLog, err := impl.NewAdminAuditLogStore(driver, db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Store{
-		Instance:       instance,
-		InstanceEvent:  instanceEvent,
-		GlobalRevision: globalRevision,
-		Namespace:      namespace,
-		Task:           task,
-		TaskWorker:     taskWorker,
-		TaskEvent:      taskEvent,
+		Instance:               instance,
+		InstanceEvent:          instanceEvent,
+		GlobalRevision:         globalRevision,
+		Namespace:              namespace,
+		Task:                   task,
+		TaskWorker:             taskWorker,
+		TaskEvent:              taskEvent,
+		Schedule:               schedule,
+		ScheduleDeadLetter:     scheduleDeadLetter,
+		ScheduleAttemptFailure: scheduleAttemptFailure,
+		AdminAuditLog:          adminAuditLog,
 	}, nil
 }

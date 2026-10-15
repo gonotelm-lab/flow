@@ -29,12 +29,14 @@ func (s *InstanceStoreImpl) Create(
 	return instance, nil
 }
 
-func (s *InstanceStoreImpl) Delete(ctx context.Context, id int64) error {
+func (s *InstanceStoreImpl) Delete(ctx context.Context, id int64) (bool, error) {
 	db := util.GetDB(ctx, s.db)
-	if err := db.Delete(&schema.Instance{}, id).Error; err != nil {
-		return sql.WrapError(err)
+	res := db.Delete(&schema.Instance{}, id)
+	if err := res.Error; err != nil {
+		return false, sql.WrapError(err)
 	}
-	return nil
+
+	return res.RowsAffected > 0, nil
 }
 
 func (s *InstanceStoreImpl) Get(

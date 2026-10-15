@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Boxes,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   Cpu,
   Home,
   ListTodo,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -19,8 +21,10 @@ import {
 const NAV_ITEMS = [
   { to: "/", icon: Home, label: "首页" },
   { to: "/tasks", icon: ListTodo, label: "任务" },
+  { to: "/schedules", icon: CalendarClock, label: "定时任务" },
   { to: "/workers", icon: Cpu, label: "工作节点" },
   { to: "/namespaces", icon: Boxes, label: "命名空间" },
+  { to: "/audit", icon: ShieldCheck, label: "审计日志" },
 ] as const;
 
 const STORAGE_KEY = "flow-sidebar-collapsed";

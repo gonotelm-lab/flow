@@ -29,7 +29,7 @@ func testTxContext() context.Context {
 
 type fakeInstanceStore struct {
 	createFn     func(ctx context.Context, instance *schema.Instance) (*schema.Instance, error)
-	deleteFn     func(ctx context.Context, id int64) error
+	deleteFn     func(ctx context.Context, id int64) (bool, error)
 	getFn        func(ctx context.Context, id int64) (*schema.Instance, error)
 	listActiveFn func(ctx context.Context, aliveAfterMs int64) ([]*schema.Instance, error)
 
@@ -48,11 +48,11 @@ func (f *fakeInstanceStore) Create(
 	return instance, nil
 }
 
-func (f *fakeInstanceStore) Delete(ctx context.Context, id int64) error {
+func (f *fakeInstanceStore) Delete(ctx context.Context, id int64) (bool, error) {
 	if f.deleteFn != nil {
 		return f.deleteFn(ctx, id)
 	}
-	return nil
+	return true, nil
 }
 
 func (f *fakeInstanceStore) Get(ctx context.Context, id int64) (*schema.Instance, error) {

@@ -27,6 +27,22 @@ retryScanInterval = "${FLOW_WORKER_RETRY_SCAN_INTERVAL:-10s}"
 retryScanBatch = ${FLOW_WORKER_RETRY_SCAN_BATCH:-100}
 staleScanBatch = ${FLOW_WORKER_STALE_SCAN_BATCH:-100}
 
+[scheduler]
+# 到期判定粒度。一次性任务要求秒级精度，因此 tick 必须先于或等于最细粒度。
+tickInterval = "${FLOW_SCHEDULER_TICK_INTERVAL:-1s}"
+scanBatch = ${FLOW_SCHEDULER_SCAN_BATCH:-100}
+deliverConcurrency = ${FLOW_SCHEDULER_DELIVER_CONCURRENCY:-64}
+httpTimeout = "${FLOW_SCHEDULER_HTTP_TIMEOUT:-10s}"
+# 必须显著大于 httpTimeout，否则正常投递会被自己的租约过期判成可接管，制造重复投递。
+leaseDuration = "${FLOW_SCHEDULER_LEASE_DURATION:-30s}"
+# 迟到容差：超过它视为「停机期间错过」，不触发而是跳过并重算。
+latenessTolerance = "${FLOW_SCHEDULER_LATENESS_TOLERANCE:-30s}"
+retryJitterRatio = ${FLOW_SCHEDULER_RETRY_JITTER_RATIO:-0.2}
+# 逗号分隔的快速重试间隔（含首次共 len+1 次尝试）
+fastRetryIntervals = "${FLOW_SCHEDULER_FAST_RETRY_INTERVALS:-1s,2s,4s,8s,16s}"
+# 逗号分隔的死信慢重试间隔
+deadLetterIntervals = "${FLOW_SCHEDULER_DEAD_LETTER_INTERVALS:-1m,5m,30m}"
+
 [apiServer]
 [apiServer.http]
 listen = "${FLOW_API_SERVER_HTTP_LISTEN:-0.0.0.0}"

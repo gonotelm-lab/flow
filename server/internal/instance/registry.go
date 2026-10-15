@@ -82,7 +82,7 @@ func NewRegistry(
 
 func (r *Registry) registerOnce(
 	ctx context.Context,
-	group , value string,
+	group, value string,
 ) (*Instance, error) {
 	nowMs := nowUnixMilli()
 	zero := zeroRevision()
@@ -227,9 +227,18 @@ func (r *Registry) Unregister(
 		revision := curRev.CurrentRevision + 1
 
 		// 1. delete instance
-		err = r.store.Instance.Delete(ctx, instance.id)
+		// 只有真正删掉行才写 DELETE 事件：sweeper 可能已经先一步清理了同一个过期实例，
+		// 否则会为同一个 key 重复写入 DELETE 事件，并平白推高全局 revision。
+		deleted, err := r.store.Instance.Delete(ctx, instance.id)
 		if err != nil {
 			return errors.WithMessage(err, "delete instance failed")
+		}
+		if !deleted {
+			slog.WarnContext(ctx, "unregister instance skipped, instance already deleted",
+				slog.Int64("instance_id", instance.id),
+				slog.String("instance_key", instance.key),
+			)
+			return nil
 		}
 
 		// 2. put event
@@ -383,12 +392,23 @@ func (r *Registry) tryAutoReRegister(ctx context.Context, instance *Instance) er
 		return nil
 	}
 
+	oldId := instance.GetId()
 	newInst, err := r.registerOnce(ctx, instance.group, instance.value)
 	if err != nil {
 		return errors.WithMessage(err, "register replacement instance failed")
 	}
 
 	instance.Replace(newInst)
+
+	// Replace 之后 instance.id 已变成新实例的 id，locals 的键必须同步搬迁，
+	// 否则后续 Unregister/Close 按新 id 查不到该实例，既不会删行也不会写 DELETE，
+	// 留下的行只能等 sweeper 过期清理，同时 locals 还会残留旧 id 的条目。
+	r.mu.Lock()
+	if cInst, ok := r.locals[oldId]; ok {
+		delete(r.locals, oldId)
+		r.locals[newInst.id] = cInst
+	}
+	r.mu.Unlock()
 
 	return nil
 }

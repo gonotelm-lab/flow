@@ -105,11 +105,14 @@ func newDiscoveryInMemoryStore(
 				state.instances[copied.Id] = &copied
 				return &copied, nil
 			},
-			deleteFn: func(_ context.Context, id int64) error {
+			deleteFn: func(_ context.Context, id int64) (bool, error) {
 				state.mu.Lock()
 				defer state.mu.Unlock()
+				if _, ok := state.instances[id]; !ok {
+					return false, nil
+				}
 				delete(state.instances, id)
-				return nil
+				return true, nil
 			},
 			updateExpireTimeFn: func(
 				_ context.Context,

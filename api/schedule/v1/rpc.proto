@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package api.schedule.v1;
+
+import "api/schema/v1/page.proto";
+import "api/schema/v1/schedule.proto";
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/gonotelm-lab/flow/api/schedule/v1";
+
+// 客户端面 ScheduleService。
+//
+// 与 TaskService / WorkerService 一致：本服务只有 gRPC（7091），不挂
+// google.api.http annotation，因此不会生成 grpc-gateway 代码。
+// 运维面（含 TriggerNow、死信处理、审计）挂在 api.admin.v1.AdminService 上。
+message RegisterRequest {
+  api.schema.v1.Schedule schedule = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message GetRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message ListRequest {
+  api.schema.v1.PageRequest page = 1;
+  string namespace = 2;
+  api.schema.v1.ScheduleType schedule_type = 3;
+  api.schema.v1.ScheduleState state = 4;
+  string id = 5;
+}
+
+message ListResponse {
+  api.schema.v1.PageResponse page = 1;
+  repeated api.schema.v1.Schedule schedules = 2;
+}
+
+// 仅 name / callback_url / content_type / payload / trigger 可通过本接口修改；
+// 运行态字段由调度器维护，提交时被忽略。
+message UpdateRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+  api.schema.v1.Schedule schedule = 2;
+}
+
+message PauseRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message ResumeRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+message DeleteRequest {
+  string id = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.uuid = true
+  ];
+}
+
+service ScheduleService {
+  rpc Register(RegisterRequest) returns (api.schema.v1.Schedule);
+  rpc Get(GetRequest) returns (api.schema.v1.Schedule);
+  rpc List(ListRequest) returns (ListResponse);
+  rpc Update(UpdateRequest) returns (api.schema.v1.Schedule);
+  rpc Pause(PauseRequest) returns (api.schema.v1.Schedule);
+  rpc Resume(ResumeRequest) returns (api.schema.v1.Schedule);
+  rpc Delete(DeleteRequest) returns (google.protobuf.Empty);
+}

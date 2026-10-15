@@ -6,7 +6,9 @@ import (
 
 	adminv1 "github.com/gonotelm-lab/flow/api/admin/v1"
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
+	"github.com/gonotelm-lab/flow/server/internal/audit"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
+	schedulesvc "github.com/gonotelm-lab/flow/server/internal/service/schedule"
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 
 	"github.com/pkg/errors"
@@ -17,13 +19,23 @@ type Service struct {
 	adminv1.UnimplementedAdminServiceServer
 
 	store *repository.Store
+
+	// scheduleCore 与客户端面 ScheduleService 共用同一套业务逻辑，
+	// 区别只在运维面会额外写审计日志。
+	scheduleCore *schedulesvc.Core
+
+	// audit 为 nil 时不写审计（便于测试）。
+	audit *audit.Recorder
 }
 
 func NewService(
 	store *repository.Store,
+	auditRec *audit.Recorder,
 ) adminv1.AdminServiceServer {
 	return &Service{
-		store: store,
+		store:        store,
+		scheduleCore: schedulesvc.NewCore(store),
+		audit:        auditRec,
 	}
 }
 
