@@ -26,6 +26,10 @@ staleScanInterval = "${FLOW_WORKER_STALE_SCAN_INTERVAL:-10s}"
 retryScanInterval = "${FLOW_WORKER_RETRY_SCAN_INTERVAL:-10s}"
 retryScanBatch = ${FLOW_WORKER_RETRY_SCAN_BATCH:-100}
 staleScanBatch = ${FLOW_WORKER_STALE_SCAN_BATCH:-100}
+workerTtl = "${FLOW_WORKER_TTL:-60s}"
+workerRetention = "${FLOW_WORKER_RETENTION:-168h}"
+workerReapInterval = "${FLOW_WORKER_REAP_INTERVAL:-1h}"
+workerReapBatch = ${FLOW_WORKER_REAP_BATCH:-500}
 
 [scheduler]
 # 到期判定粒度。一次性任务要求秒级精度，因此 tick 必须先于或等于最细粒度。

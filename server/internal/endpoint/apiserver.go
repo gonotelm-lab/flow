@@ -48,6 +48,7 @@ type ApiServer struct {
 func NewApiServer(
 	ctx context.Context,
 	cfg *config.ApiServer,
+	workerCfg *config.WorkerConfig,
 	repoStore *repository.Store,
 	auditRec *audit.Recorder,
 ) (*ApiServer, error) {
@@ -63,7 +64,7 @@ func NewApiServer(
 		interceptor.StreamServerInterceptor(),
 	)
 
-	adminServer, err := NewAdminServer(ctx, cfg, repoStore, auditRec)
+	adminServer, err := NewAdminServer(ctx, cfg, workerCfg, repoStore, auditRec)
 	if err != nil {
 		return nil, err
 	}

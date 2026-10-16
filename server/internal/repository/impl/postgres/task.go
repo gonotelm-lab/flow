@@ -274,3 +274,43 @@ func (s *TaskStoreImpl) List(
 
 	return tasks, total, nil
 }
+
+func (s *TaskStoreImpl) StatsByWorkerIDs(
+	ctx context.Context,
+	workerIds []int64,
+) (map[int64]*store.WorkerDealtStats, error) {
+	result := make(map[int64]*store.WorkerDealtStats, len(workerIds))
+	if len(workerIds) == 0 {
+		return result, nil
+	}
+
+	db := util.GetDB(ctx, s.db)
+
+	var rows []struct {
+		WorkerId      int64
+		Total         int64
+		Success       int64
+		LastDealtTime int64
+	}
+	err := db.Model(&schema.Task{}).
+		Select("worker_id, COUNT(*) AS total, "+
+			"COUNT(*) FILTER (WHERE state = 'DONE') AS success, "+
+			"COALESCE(MAX(update_time), 0) AS last_dealt_time").
+		Where("worker_id IN ?", workerIds).
+		Where("state IN ?", []string{"DONE", "FAILED", "CANCELLED"}).
+		Group("worker_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, sql.WrapError(err)
+	}
+
+	for _, row := range rows {
+		result[row.WorkerId] = &store.WorkerDealtStats{
+			Total:         row.Total,
+			Success:       row.Success,
+			LastDealtTime: row.LastDealtTime,
+		}
+	}
+
+	return result, nil
+}

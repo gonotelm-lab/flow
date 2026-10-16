@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"strings"
+	"time"
 
 	adminv1 "github.com/gonotelm-lab/flow/api/admin/v1"
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
@@ -26,16 +27,24 @@ type Service struct {
 
 	// audit 为 nil 时不写审计（便于测试）。
 	audit *audit.Recorder
+
+	workerTTL time.Duration
+}
+
+type ServiceConfig struct {
+	WorkerTTL time.Duration
 }
 
 func NewService(
 	store *repository.Store,
 	auditRec *audit.Recorder,
+	cfg ServiceConfig,
 ) adminv1.AdminServiceServer {
 	return &Service{
 		store:        store,
 		scheduleCore: schedulesvc.NewCore(store),
 		audit:        auditRec,
+		workerTTL:    cfg.WorkerTTL,
 	}
 }
 

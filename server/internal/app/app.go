@@ -40,6 +40,7 @@ type App struct {
 
 	retryMender   *taskmender.RetryMender
 	staleDetector *taskmender.StaleDetector
+	workerReaper  *taskmender.WorkerReaper
 
 	// dispatcher 为 nil 时不启动定时回调调度（config.Conf.Scheduler 为空）。
 	dispatcher *scheduler.Dispatcher
@@ -92,6 +93,7 @@ func New(repo *repository.Impl, rootCtx context.Context) (*App, error) {
 	apiServer, err := endpoint.NewApiServer(
 		a.rootCtx,
 		config.Conf.ApiServer,
+		config.Conf.Worker,
 		repo.Store(),
 		auditRec,
 	)
@@ -114,6 +116,9 @@ func (a *App) bootstrap() error {
 
 		a.staleDetector = taskmender.NewStaleDetector(a.store, config.Conf.Worker)
 		go a.staleDetector.Run(a.rootCtx)
+
+		a.workerReaper = taskmender.NewWorkerReaper(a.store, config.Conf.Worker)
+		a.workerReaper.Start(a.rootCtx)
 	}
 
 	regValue := fmt.Sprintf("%s:%d", config.Conf.ApiServer.Grpc.Listen, config.Conf.ApiServer.Grpc.Port)
@@ -212,6 +217,9 @@ func (a *App) close() {
 	}
 	if a.staleDetector != nil {
 		a.staleDetector.Close()
+	}
+	if a.workerReaper != nil {
+		a.workerReaper.Close()
 	}
 	if a.dispatcher != nil {
 		a.dispatcher.Close()

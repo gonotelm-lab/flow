@@ -37,6 +37,12 @@ type TaskListParams struct {
 	Limit     int
 }
 
+type WorkerDealtStats struct {
+	Total         int64
+	Success       int64
+	LastDealtTime int64
+}
+
 type Task interface {
 	Create(ctx context.Context, task *schema.Task) (*schema.Task, error)
 	Get(ctx context.Context, id uuid.UUID) (*schema.Task, error)
@@ -44,10 +50,12 @@ type Task interface {
 
 	List(ctx context.Context, params *TaskListParams) ([]*schema.Task, int64, error)
 
-	// 获取下一个可执行的任务
+	StatsByWorkerIDs(ctx context.Context, workerIds []int64) (map[int64]*WorkerDealtStats, error)
+
+	// 取下一个可执行的任务
 	Claim(ctx context.Context, namespace, taskType string, states []string) (*schema.Task, error)
 
-	// 和Claim配合使用 用来抢占任务
+	// 和 Claim 配合使用，用来抢占任务
 	ClaimUpdate(ctx context.Context, id uuid.UUID, oldState string, params *TaskClaimUpdateParams) (bool, error)
 
 	Update(ctx context.Context, task *schema.Task) (bool, error)

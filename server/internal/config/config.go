@@ -54,6 +54,11 @@ type WorkerConfig struct {
 	RetryScanInterval time.Duration `toml:"retryScanInterval"`
 	RetryScanBatch    int           `toml:"retryScanBatch"`
 	StaleScanBatch    int           `toml:"staleScanBatch"`
+
+	WorkerTTL          time.Duration `toml:"workerTtl"`
+	WorkerRetention    time.Duration `toml:"workerRetention"`
+	WorkerReapInterval time.Duration `toml:"workerReapInterval"`
+	WorkerReapBatch    int           `toml:"workerReapBatch"`
 }
 
 func Init(path string) error {
@@ -219,6 +224,18 @@ func (cfg *WorkerConfig) Validate() error {
 	if cfg.StaleScanBatch <= 0 {
 		return fmt.Errorf("worker.staleScanBatch must be positive")
 	}
+	if cfg.WorkerTTL <= 0 {
+		return fmt.Errorf("worker.workerTtl must be positive")
+	}
+	if cfg.WorkerRetention <= cfg.WorkerTTL {
+		return fmt.Errorf("worker.workerRetention must be greater than worker.workerTtl")
+	}
+	if cfg.WorkerReapInterval <= 0 {
+		return fmt.Errorf("worker.workerReapInterval must be positive")
+	}
+	if cfg.WorkerReapBatch <= 0 {
+		return fmt.Errorf("worker.workerReapBatch must be positive")
+	}
 
 	return nil
 }
@@ -275,8 +292,8 @@ type SchedulerConfig struct {
 	HTTPTimeout time.Duration `toml:"httpTimeout"`
 	// LeaseDuration 认领后的租约时长
 	LeaseDuration time.Duration `toml:"leaseDuration"`
-	// LatenessTolerance 迟到容差：now - next_fire_at 超过它即视为「停机期间错过」，
-	// 不触发而是跳过并重算 next_fire_at
+	// LatenessTolerance 迟到容差：now - next_fire_at 超过它，就当成是停机期间错过的，
+	// 不触发，直接跳过并重算 next_fire_at
 	LatenessTolerance time.Duration `toml:"latenessTolerance"`
 	// RetryJitterRatio 重试间隔的抖动比例，避免同点 schedule 同时打对方
 	RetryJitterRatio float64 `toml:"retryJitterRatio"`
@@ -330,7 +347,7 @@ func (cfg *SchedulerConfig) Validate() error {
 		return fmt.Errorf("scheduler.leaseDuration must be positive")
 	}
 	// 最关键的一条：租约若不长于 HTTP 超时，正常投递会先被自己的租约过期判成
-	// 「可接管」，于是另一个实例重投——这是本可避免的重复投递。
+	// 可接管，于是另一个实例重投，这种重复投递本来可以避免。
 	if cfg.LeaseDuration <= cfg.HTTPTimeout {
 		return fmt.Errorf(
 			"scheduler.leaseDuration (%s) must be greater than scheduler.httpTimeout (%s)",

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	adminv1 "github.com/gonotelm-lab/flow/api/admin/v1"
 	"github.com/gonotelm-lab/flow/server/internal/audit"
@@ -38,6 +39,7 @@ type AdminServer struct {
 func NewAdminServer(
 	ctx context.Context,
 	cfg *config.ApiServer,
+	workerCfg *config.WorkerConfig,
 	repoStore *repository.Store,
 	auditRec *audit.Recorder,
 ) (*AdminServer, error) {
@@ -45,7 +47,7 @@ func NewAdminServer(
 		rootCtx: ctx,
 		cfg:     cfg,
 	}
-	if err := s.init(repoStore, auditRec); err != nil {
+	if err := s.init(workerCfg, repoStore, auditRec); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -79,7 +81,11 @@ func (s *AdminServer) Stop() {
 	slog.Info("admin server stopped")
 }
 
-func (s *AdminServer) init(repoStore *repository.Store, auditRec *audit.Recorder) error {
+func (s *AdminServer) init(
+	workerCfg *config.WorkerConfig,
+	repoStore *repository.Store,
+	auditRec *audit.Recorder,
+) error {
 	const unixSocketPath = "/tmp/flow-admin.sock"
 	os.Remove(unixSocketPath)
 	var err error
@@ -93,7 +99,11 @@ func (s *AdminServer) init(repoStore *repository.Store, auditRec *audit.Recorder
 		interceptor.UnaryServerInterceptor(),
 	)
 
-	adminService := admin.NewService(repoStore, auditRec)
+	var workerTTL time.Duration
+	if workerCfg != nil {
+		workerTTL = workerCfg.WorkerTTL
+	}
+	adminService := admin.NewService(repoStore, auditRec, admin.ServiceConfig{WorkerTTL: workerTTL})
 	adminv1.RegisterAdminServiceServer(s.adminGrpcServer, adminService)
 
 	conn, err := grpc.NewClient(
@@ -109,7 +119,7 @@ func (s *AdminServer) init(repoStore *repository.Store, auditRec *audit.Recorder
 	// 透传调用方 IP / UA，供审计日志记录。
 	//
 	// Operator 字段按设计留空（当前没有用户体系），所以 source_ip 与 user_agent 是审计
-	// 记录里唯一非自填的痕迹——grpc-gateway 默认只映射一小撮固定头，X-Forwarded-For
+	// 记录里唯一非自填的痕迹。grpc-gateway 默认只映射一小撮固定头，X-Forwarded-For
 	// 不在其中，必须显式放行。
 	mux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
