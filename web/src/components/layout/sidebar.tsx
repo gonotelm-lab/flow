@@ -10,6 +10,7 @@ import {
   ListTodo,
   ShieldCheck,
 } from "lucide-react";
+import { FlowMark } from "@/components/layout/flow-mark";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNamespace } from "@/lib/namespace-context";
@@ -63,9 +64,7 @@ export function Sidebar() {
         )}
       >
         <div className="flex min-w-0 items-center">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-foreground text-[11px] font-bold text-background">
-            F
-          </div>
+          <FlowMark className="h-7 w-7 text-foreground" />
           {!collapsed && (
             <span className="ml-2.5 truncate text-sm font-semibold tracking-tight text-foreground">
               Flow
