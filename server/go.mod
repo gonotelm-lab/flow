@@ -8,7 +8,7 @@ require (
 	buf.build/go/protovalidate v1.2.0
 	github.com/BurntSushi/toml v1.6.0
 	github.com/a8m/envsubst v1.4.3
-	github.com/gonotelm-lab/flow/api v0.0.0-00010101000000-000000000000
+	github.com/gonotelm-lab/flow/api v0.4.0-beta.1
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
