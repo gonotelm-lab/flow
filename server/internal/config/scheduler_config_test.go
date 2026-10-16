@@ -22,8 +22,8 @@ func TestDefaultSchedulerConfig_IsValid(t *testing.T) {
 	}, cfg.DeadLetterIntervals)
 }
 
-// 这是配置层最重要的一条校验：租约若不长于 HTTP 超时，正常投递会先被自己的租约
-// 过期判成「可接管」，另一个实例就会重投——凭空制造重复投递。
+// 这是配置层最重要的一条校验：租约若不长于 HTTP 超时，正常投递会先被自己的租约过期
+// 判成可接管，另一个实例就会重投，凭空制造重复投递。
 func TestSchedulerConfig_LeaseMustExceedHTTPTimeout(t *testing.T) {
 	cfg := DefaultSchedulerConfig()
 
@@ -85,7 +85,7 @@ func TestParseDurationList(t *testing.T) {
 	require.Error(t, err)
 }
 
-// 通过真实模板加载，顺带验证 conf.toml.tpl 的 [scheduler] 段语法与默认值。
+// 用真实模板加载，顺带验证 conf.toml.tpl 的 [scheduler] 段语法与默认值。
 func TestLoad_SchedulerSectionDefaults(t *testing.T) {
 	for _, key := range []string{
 		"FLOW_SCHEDULER_TICK_INTERVAL",
@@ -140,7 +140,7 @@ func TestLoad_SchedulerSectionEnvOverride(t *testing.T) {
 	assert.Equal(t, []time.Duration{10 * time.Second}, cfg.Scheduler.DeadLetterIntervals)
 }
 
-// 环境变量把租约配得比超时还短时，Load 必须直接失败而不是带着隐患启动。
+// 环境变量把租约配得比超时还短时，Load 必须直接失败，不能照常启动。
 func TestLoad_SchedulerRejectsLeaseNotExceedingTimeout(t *testing.T) {
 	t.Setenv("FLOW_SCHEDULER_HTTP_TIMEOUT", "10s")
 	t.Setenv("FLOW_SCHEDULER_LEASE_DURATION", "5s")

@@ -30,7 +30,7 @@ var (
 )
 
 // Init 初始化 server 自身的 OpenTelemetry SDK 并设置全局 provider，只执行一次。
-// 显式配置优先（[otel] TOML 段），未配置项回落到 OTEL_* 环境变量标准。
+// 显式配置（[otel] TOML 段）优先，没配的项按标准回落到 OTEL_* 环境变量。
 func Init(ctx context.Context, cfg *config.OtelConfig) error {
 	initOnce.Do(func() { initErr = initProvider(ctx, cfg) })
 	return initErr

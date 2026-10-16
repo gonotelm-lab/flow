@@ -8,10 +8,10 @@ const (
 	ScheduleTypeCron    = "CRON"
 )
 
-// schedule 生命周期状态。
+// schedule 生命周期状态。ACTIVE 之外都是终态：只读、可删，不会再触发。
 const (
 	ScheduleStateActive   = "ACTIVE"
-	ScheduleStatePaused   = "PAUSED"
+	ScheduleStateStopped  = "STOPPED"
 	ScheduleStateFinished = "FINISHED"
 	ScheduleStateFailed   = "FAILED"
 )
@@ -23,12 +23,13 @@ const (
 	FireStateDeadLetter = "DEAD_LETTER"
 )
 
-// 死信状态。RETRYING 阻塞 schedule 的新触发；EXHAUSTED 不阻塞，等待人工处理。
+// 死信状态。RETRYING 阻塞 schedule 的新触发；EXHAUSTED 不阻塞，等人工重投；
+// REPLAYED 是人工重投过；STOPPED 是所属 schedule 被停掉时写入的终态。
 const (
 	DeadLetterStateRetrying  = "RETRYING"
 	DeadLetterStateExhausted = "EXHAUSTED"
 	DeadLetterStateReplayed  = "REPLAYED"
-	DeadLetterStateDiscarded = "DISCARDED"
+	DeadLetterStateStopped   = "STOPPED"
 )
 
 // 投递尝试阶段。

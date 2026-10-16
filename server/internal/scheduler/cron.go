@@ -18,8 +18,8 @@ const DefaultContentType = "application/octet-stream"
 // cronParser 只接受标准 5 字段（分 时 日 月 周）。
 //
 // 不传 cron.Descriptor，@daily / @every 这类描述符会被库直接拒绝；不传 cron.Second，
-// 6 字段表达式会报 "expected exactly 5 fields, found 6"。「拒绝 6 字段」「拒绝描述符」
-// 因此由库在解析层强制，不需要我们自己写校验。
+// 6 字段表达式会报 "expected exactly 5 fields, found 6"。这两条拒绝规则都由库在
+// 解析层强制，不需要我们自己写校验。
 var cronParser = cron.NewParser(
 	cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow,
 )
@@ -28,9 +28,9 @@ var cronParser = cron.NewParser(
 //
 // expr 为标准 5 字段；tz 为 IANA 时区名，空表示 UTC。
 //
-// 时区必须由我们注入 CRON_TZ 前缀：robfig/cron/v3 的 Parser.Parse(spec string) 没有
-// location 参数，内部写死 loc = time.Local。不注入的话「缺省 UTC」会静默变成服务器
-// 本地时区——这是一个不会报错、只会算错触发时刻的坑。
+// 时区得靠我们注入 CRON_TZ 前缀。robfig/cron/v3 的 Parser.Parse(spec string) 没有
+// location 参数，内部写死 loc = time.Local。不注入的话「缺省 UTC」会悄悄变成服务器
+// 本地时区，不报错，只是触发时刻算错。
 func Parse(expr, tz string) (cron.Schedule, error) {
 	expr = strings.TrimSpace(expr)
 	if expr == "" {
@@ -77,7 +77,7 @@ func Next(sched cron.Schedule, after time.Time) time.Time {
 
 // NextMillis 按毫秒时间戳计算下一次触发时刻；无解时返回 0。
 //
-// 只做「解析 + 试算一次 Next」的封装，供服务层校验表达式时使用。
+// 只封装了解析和一次 Next 试算，供服务层校验表达式时使用。
 func NextMillis(expr, tz string, afterMillis int64) (int64, error) {
 	sched, err := Parse(expr, tz)
 	if err != nil {
@@ -102,8 +102,8 @@ func CountMissedMillis(expr, tz string, afterMillis, untilMillis int64, max int)
 
 // CountMissed 统计 (after, until] 区间内错过的触发次数，最多数 max 次。
 //
-// 用途：一次多日停机后逐个回放会很久，所以跳过时直接对齐到 Next(until)，而计数用
-// 这个有界循环给出（封顶 max），既保证准确到上限内、又不让一次调用跑很久。
+// 一次多日停机后逐个回放会很久，所以跳过时直接对齐到 Next(until)，计数则由这个
+// 有界循环给出，封顶 max：上限内是准的，一次调用也不会跑太久。
 func CountMissed(sched cron.Schedule, after, until time.Time, max int) int {
 	if max <= 0 {
 		return 0

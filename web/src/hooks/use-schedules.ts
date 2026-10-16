@@ -2,15 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createSchedule,
   deleteSchedule,
-  discardScheduleDeadLetter,
   getSchedule,
   listScheduleDeadLetters,
   listSchedules,
-  pauseSchedule,
   replayScheduleDeadLetter,
-  resumeSchedule,
+  stopSchedule,
   triggerSchedule,
-  updateSchedule,
   type DeadLetterFilters,
   type ScheduleFilters,
 } from "@/api/schedules";
@@ -84,27 +81,10 @@ export function useCreateSchedule() {
   });
 }
 
-export function useUpdateSchedule() {
+export function useStopSchedule() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, schedule }: { id: string; schedule: Schedule }) =>
-      updateSchedule(id, schedule),
-    onSuccess: () => invalidateSchedules(qc),
-  });
-}
-
-export function usePauseSchedule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => pauseSchedule(id),
-    onSuccess: () => invalidateSchedules(qc),
-  });
-}
-
-export function useResumeSchedule() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => resumeSchedule(id),
+    mutationFn: (id: string) => stopSchedule(id),
     onSuccess: () => invalidateSchedules(qc),
   });
 }
@@ -131,14 +111,6 @@ export function useReplayDeadLetter() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => replayScheduleDeadLetter(id),
-    onSuccess: () => invalidateSchedules(qc),
-  });
-}
-
-export function useDiscardDeadLetter() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => discardScheduleDeadLetter(id),
     onSuccess: () => invalidateSchedules(qc),
   });
 }

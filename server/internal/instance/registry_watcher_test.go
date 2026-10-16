@@ -383,7 +383,7 @@ func TestRegistryWatcher_BurstEventsWithSmallBatch(t *testing.T) {
 
 	watcher := NewWatcher(&store, WatcherConfig{
 		Interval:        time.Millisecond,
-		BatchSize:       1, // 极端场景：最小批次，强制分页轮询。
+		BatchSize:       1, // 极端场景：批次设成最小，强制分页轮询。
 		MaxRetryBackoff: 10 * time.Millisecond,
 	})
 

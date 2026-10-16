@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/reporter.go
 package runtime
 
 import (

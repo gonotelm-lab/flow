@@ -5,10 +5,11 @@ import (
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// 数据库里存的是短字符串（ACTIVE / PAUSED / ...），proto 枚举值带枚举名前缀
+// 数据库里存的是短字符串（ACTIVE / STOPPED / ...），proto 枚举值带枚举名前缀
 // （proto3 的枚举值在包级可见，不带前缀会和同包的 TaskState 撞名）。两边都需要显式映射。
 
 var scheduleTypeToProto = map[string]schemav1.ScheduleType{
@@ -23,14 +24,14 @@ var scheduleTypeFromProto = map[schemav1.ScheduleType]string{
 
 var scheduleStateToProto = map[string]schemav1.ScheduleState{
 	schema.ScheduleStateActive:   schemav1.ScheduleState_SCHEDULE_STATE_ACTIVE,
-	schema.ScheduleStatePaused:   schemav1.ScheduleState_SCHEDULE_STATE_PAUSED,
+	schema.ScheduleStateStopped:  schemav1.ScheduleState_SCHEDULE_STATE_STOPPED,
 	schema.ScheduleStateFinished: schemav1.ScheduleState_SCHEDULE_STATE_FINISHED,
 	schema.ScheduleStateFailed:   schemav1.ScheduleState_SCHEDULE_STATE_FAILED,
 }
 
 var scheduleStateFromProto = map[schemav1.ScheduleState]string{
 	schemav1.ScheduleState_SCHEDULE_STATE_ACTIVE:   schema.ScheduleStateActive,
-	schemav1.ScheduleState_SCHEDULE_STATE_PAUSED:   schema.ScheduleStatePaused,
+	schemav1.ScheduleState_SCHEDULE_STATE_STOPPED:  schema.ScheduleStateStopped,
 	schemav1.ScheduleState_SCHEDULE_STATE_FINISHED: schema.ScheduleStateFinished,
 	schemav1.ScheduleState_SCHEDULE_STATE_FAILED:   schema.ScheduleStateFailed,
 }
@@ -45,14 +46,14 @@ var deadLetterStateToProto = map[string]schemav1.DeadLetterState{
 	schema.DeadLetterStateRetrying:  schemav1.DeadLetterState_DEAD_LETTER_STATE_RETRYING,
 	schema.DeadLetterStateExhausted: schemav1.DeadLetterState_DEAD_LETTER_STATE_EXHAUSTED,
 	schema.DeadLetterStateReplayed:  schemav1.DeadLetterState_DEAD_LETTER_STATE_REPLAYED,
-	schema.DeadLetterStateDiscarded: schemav1.DeadLetterState_DEAD_LETTER_STATE_DISCARDED,
+	schema.DeadLetterStateStopped:   schemav1.DeadLetterState_DEAD_LETTER_STATE_STOPPED,
 }
 
 var deadLetterStateFromProto = map[schemav1.DeadLetterState]string{
 	schemav1.DeadLetterState_DEAD_LETTER_STATE_RETRYING:  schema.DeadLetterStateRetrying,
 	schemav1.DeadLetterState_DEAD_LETTER_STATE_EXHAUSTED: schema.DeadLetterStateExhausted,
 	schemav1.DeadLetterState_DEAD_LETTER_STATE_REPLAYED:  schema.DeadLetterStateReplayed,
-	schemav1.DeadLetterState_DEAD_LETTER_STATE_DISCARDED: schema.DeadLetterStateDiscarded,
+	schemav1.DeadLetterState_DEAD_LETTER_STATE_STOPPED:   schema.DeadLetterStateStopped,
 }
 
 func ts(millis int64) *timestamppb.Timestamp {
@@ -148,18 +149,42 @@ func FromProtoSchedule(p *schemav1.Schedule) *schema.Schedule {
 }
 
 // 供运维面（service/admin）复用，避免两边各写一份枚举映射导致漂移。
-func ScheduleTypeFromProto(t schemav1.ScheduleType) string {
-	return scheduleTypeFromProto[t]
+//
+// 三个 FromProto 都是「UNSPECIFIED 翻成空串表示不筛选，其余未知值报错」。不能靠查表
+// 失败返回空串兜底：空串在下游就是「不筛选」，拼错或未来版本的枚举值会被当成查全部。
+func ScheduleTypeFromProto(t schemav1.ScheduleType) (string, error) {
+	if t == schemav1.ScheduleType_SCHEDULE_TYPE_UNSPECIFIED {
+		return "", nil
+	}
+	v, ok := scheduleTypeFromProto[t]
+	if !ok {
+		return "", pkgerr.InvalidArgument.WithDetail("unknown schedule type: " + t.String())
+	}
+	return v, nil
 }
 
-func ScheduleStateFromProto(s schemav1.ScheduleState) string {
-	return scheduleStateFromProto[s]
+func ScheduleStateFromProto(s schemav1.ScheduleState) (string, error) {
+	if s == schemav1.ScheduleState_SCHEDULE_STATE_UNSPECIFIED {
+		return "", nil
+	}
+	v, ok := scheduleStateFromProto[s]
+	if !ok {
+		return "", pkgerr.InvalidArgument.WithDetail("unknown schedule state: " + s.String())
+	}
+	return v, nil
 }
 
 func DeadLetterStateToProto(state string) schemav1.DeadLetterState {
 	return deadLetterStateToProto[state]
 }
 
-func DeadLetterStateFromProto(s schemav1.DeadLetterState) string {
-	return deadLetterStateFromProto[s]
+func DeadLetterStateFromProto(s schemav1.DeadLetterState) (string, error) {
+	if s == schemav1.DeadLetterState_DEAD_LETTER_STATE_UNSPECIFIED {
+		return "", nil
+	}
+	v, ok := deadLetterStateFromProto[s]
+	if !ok {
+		return "", pkgerr.InvalidArgument.WithDetail("unknown dead letter state: " + s.String())
+	}
+	return v, nil
 }

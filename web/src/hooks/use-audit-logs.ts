@@ -5,7 +5,7 @@ import {
 } from "@/api/schedules";
 
 /**
- * 审计日志只读，且不会自动刷新：它是历史记录，写入由操作触发。
+ * 审计日志只读，不自动刷新。它是历史记录，写入由操作触发。
  * 页面上的操作会在各自的 mutation 里 invalidate 这个 key。
  */
 export function useAuditLogs(filters: AuditLogFilters) {

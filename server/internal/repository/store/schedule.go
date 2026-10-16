@@ -81,7 +81,7 @@ type Schedule interface {
 	// ClaimRetry 认领需要继续投递的 fire：快重试、死信慢重试，以及租约过期后的接管。
 	ClaimRetry(ctx context.Context, p *ScheduleClaimParams) ([]*schema.Schedule, error)
 
-	// ClaimByID 为 TriggerNow 与死信 Replay 占用槽位（要求当前空闲）。
+	// ClaimByID 为 TriggerNow 与死信重投占用槽位（要求当前空闲）。
 	ClaimByID(ctx context.Context, id uuid.UUID, p *ClaimByIDParams) (bool, error)
 
 	// SkipDue 丢弃一个迟到的 occurrence：释放槽位、推进 next_fire_at、累加 skipped_count。
@@ -90,13 +90,12 @@ type Schedule interface {
 	// ApplyOutcome 落地一次投递尝试的结果（成功 / 继续重试 / 进入死信 / 死信耗尽）。
 	ApplyOutcome(ctx context.Context, id, fireId uuid.UUID, p *AttemptOutcome) (bool, error)
 
-	// UpdateDefinition 修改定义字段（name / callback_url / content_type / payload /
-	// trigger / next_fire_at）。运行态字段由调度器维护，不在此处。
-	UpdateDefinition(ctx context.Context, s *schema.Schedule) (bool, error)
-
-	// SetState 做 ACTIVE <-> PAUSED 的条件切换；nextFireAt > 0 时同时推进
-	// next_fire_at（Resume 需要按当前时间重算，不能沿用暂停前的时刻）。
-	SetState(ctx context.Context, id uuid.UUID, from, to string, nextFireAt, now int64) (bool, error)
+	// Stop 单向终止一条 schedule：ACTIVE → STOPPED，同一事务里清空触发计划、释放
+	// fire 槽位、作废未执行的重试（RETRYING 死信转 STOPPED）。
+	//
+	// 返回 false 表示当时不处于 ACTIVE：可能已被别的实例停掉，也可能刚进入终态。
+	// 调用方读回当前状态再决定怎么回应。
+	Stop(ctx context.Context, id uuid.UUID, now int64) (bool, error)
 
 	// DeleteCascade 硬删 schedule，并在同一个事务里级联删除它的失败尝试记录与死信。
 	//

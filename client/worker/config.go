@@ -7,7 +7,7 @@ import (
 	"github.com/gonotelm-lab/flow/client/worker/internal/runtime"
 )
 
-// TraceMode 及其常量由 runtime 包定义，此处类型别名导出为 worker 对外 API。
+// TraceMode 和它的常量定义在 runtime 包，这里用类型别名导出，作为 worker 的对外 API。
 type TraceMode = runtime.TraceMode
 
 const (

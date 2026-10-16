@@ -567,9 +567,9 @@ func local_request_AdminService_ListSchedules_0(ctx context.Context, marshaler r
 	return msg, metadata, err
 }
 
-func request_AdminService_UpdateSchedule_0(ctx context.Context, marshaler runtime.Marshaler, client AdminServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_AdminService_StopSchedule_0(ctx context.Context, marshaler runtime.Marshaler, client AdminServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq UpdateScheduleRequest
+		protoReq StopScheduleRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -587,13 +587,13 @@ func request_AdminService_UpdateSchedule_0(ctx context.Context, marshaler runtim
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
 	}
-	msg, err := client.UpdateSchedule(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.StopSchedule(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
 
-func local_request_AdminService_UpdateSchedule_0(ctx context.Context, marshaler runtime.Marshaler, server AdminServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_AdminService_StopSchedule_0(ctx context.Context, marshaler runtime.Marshaler, server AdminServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
-		protoReq UpdateScheduleRequest
+		protoReq StopScheduleRequest
 		metadata runtime.ServerMetadata
 		err      error
 	)
@@ -608,97 +608,7 @@ func local_request_AdminService_UpdateSchedule_0(ctx context.Context, marshaler 
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
 	}
-	msg, err := server.UpdateSchedule(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_AdminService_PauseSchedule_0(ctx context.Context, marshaler runtime.Marshaler, client AdminServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq PauseScheduleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := client.PauseSchedule(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_AdminService_PauseSchedule_0(ctx context.Context, marshaler runtime.Marshaler, server AdminServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq PauseScheduleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := server.PauseSchedule(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_AdminService_ResumeSchedule_0(ctx context.Context, marshaler runtime.Marshaler, client AdminServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq ResumeScheduleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := client.ResumeSchedule(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_AdminService_ResumeSchedule_0(ctx context.Context, marshaler runtime.Marshaler, server AdminServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq ResumeScheduleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := server.ResumeSchedule(ctx, &protoReq)
+	msg, err := server.StopSchedule(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -863,51 +773,6 @@ func local_request_AdminService_ReplayScheduleDeadLetter_0(ctx context.Context, 
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
 	}
 	msg, err := server.ReplayScheduleDeadLetter(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_AdminService_DiscardScheduleDeadLetter_0(ctx context.Context, marshaler runtime.Marshaler, client AdminServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq DiscardScheduleDeadLetterRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if req.Body != nil {
-		_, _ = io.Copy(io.Discard, req.Body)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := client.DiscardScheduleDeadLetter(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_AdminService_DiscardScheduleDeadLetter_0(ctx context.Context, marshaler runtime.Marshaler, server AdminServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq DiscardScheduleDeadLetterRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	if err := marshaler.NewDecoder(req.Body).Decode(&protoReq); err != nil && !errors.Is(err, io.EOF) {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	val, ok := pathParams["id"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
-	}
-	protoReq.Id, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-	msg, err := server.DiscardScheduleDeadLetter(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -1232,65 +1097,25 @@ func RegisterAdminServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 		}
 		forward_AdminService_ListSchedules_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_AdminService_UpdateSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_AdminService_StopSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.admin.v1.AdminService/UpdateSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.admin.v1.AdminService/StopSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}/stop"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_AdminService_UpdateSchedule_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_AdminService_StopSchedule_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_AdminService_UpdateSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodPost, pattern_AdminService_PauseSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.admin.v1.AdminService/PauseSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}/pause"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_AdminService_PauseSchedule_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_AdminService_PauseSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodPost, pattern_AdminService_ResumeSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.admin.v1.AdminService/ResumeSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}/resume"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_AdminService_ResumeSchedule_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_AdminService_ResumeSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_AdminService_StopSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodDelete, pattern_AdminService_DeleteSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -1371,26 +1196,6 @@ func RegisterAdminServiceHandlerServer(ctx context.Context, mux *runtime.ServeMu
 			return
 		}
 		forward_AdminService_ReplayScheduleDeadLetter_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodPost, pattern_AdminService_DiscardScheduleDeadLetter_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/api.admin.v1.AdminService/DiscardScheduleDeadLetter", runtime.WithHTTPPathPattern("/api/admin/v1/schedule-dead-letters/{id}/discard"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_AdminService_DiscardScheduleDeadLetter_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_AdminService_DiscardScheduleDeadLetter_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_AdminService_ListAdminAuditLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -1690,56 +1495,22 @@ func RegisterAdminServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		}
 		forward_AdminService_ListSchedules_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPut, pattern_AdminService_UpdateSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPost, pattern_AdminService_StopSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.admin.v1.AdminService/UpdateSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.admin.v1.AdminService/StopSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}/stop"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_AdminService_UpdateSchedule_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_AdminService_StopSchedule_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_AdminService_UpdateSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodPost, pattern_AdminService_PauseSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.admin.v1.AdminService/PauseSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}/pause"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_AdminService_PauseSchedule_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_AdminService_PauseSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodPost, pattern_AdminService_ResumeSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.admin.v1.AdminService/ResumeSchedule", runtime.WithHTTPPathPattern("/api/admin/v1/schedules/{id}/resume"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_AdminService_ResumeSchedule_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_AdminService_ResumeSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_AdminService_StopSchedule_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodDelete, pattern_AdminService_DeleteSchedule_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -1809,23 +1580,6 @@ func RegisterAdminServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 		}
 		forward_AdminService_ReplayScheduleDeadLetter_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPost, pattern_AdminService_DiscardScheduleDeadLetter_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/api.admin.v1.AdminService/DiscardScheduleDeadLetter", runtime.WithHTTPPathPattern("/api/admin/v1/schedule-dead-letters/{id}/discard"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_AdminService_DiscardScheduleDeadLetter_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_AdminService_DiscardScheduleDeadLetter_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodGet, pattern_AdminService_ListAdminAuditLogs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1847,53 +1601,47 @@ func RegisterAdminServiceHandlerClient(ctx context.Context, mux *runtime.ServeMu
 }
 
 var (
-	pattern_AdminService_CreateNamespace_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "namespaces"}, ""))
-	pattern_AdminService_GetNamespace_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "namespaces", "name"}, ""))
-	pattern_AdminService_ListNamespaces_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "namespaces"}, ""))
-	pattern_AdminService_UpdateNamespace_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "namespaces", "name"}, ""))
-	pattern_AdminService_ListTasks_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "tasks"}, ""))
-	pattern_AdminService_GetTask_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "tasks", "id"}, ""))
-	pattern_AdminService_CancelTask_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "tasks", "id", "cancel"}, ""))
-	pattern_AdminService_DeleteTask_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "tasks", "id"}, ""))
-	pattern_AdminService_ListTaskEvents_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "tasks", "task_id", "events"}, ""))
-	pattern_AdminService_ListWorkers_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "workers"}, ""))
-	pattern_AdminService_GetWorker_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "workers", "id"}, ""))
-	pattern_AdminService_CreateSchedule_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "schedules"}, ""))
-	pattern_AdminService_GetSchedule_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "schedules", "id"}, ""))
-	pattern_AdminService_ListSchedules_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "schedules"}, ""))
-	pattern_AdminService_UpdateSchedule_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "schedules", "id"}, ""))
-	pattern_AdminService_PauseSchedule_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedules", "id", "pause"}, ""))
-	pattern_AdminService_ResumeSchedule_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedules", "id", "resume"}, ""))
-	pattern_AdminService_DeleteSchedule_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "schedules", "id"}, ""))
-	pattern_AdminService_TriggerSchedule_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedules", "id", "trigger"}, ""))
-	pattern_AdminService_ListScheduleDeadLetters_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "schedule-dead-letters"}, ""))
-	pattern_AdminService_ReplayScheduleDeadLetter_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedule-dead-letters", "id", "replay"}, ""))
-	pattern_AdminService_DiscardScheduleDeadLetter_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedule-dead-letters", "id", "discard"}, ""))
-	pattern_AdminService_ListAdminAuditLogs_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "audit-logs"}, ""))
+	pattern_AdminService_CreateNamespace_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "namespaces"}, ""))
+	pattern_AdminService_GetNamespace_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "namespaces", "name"}, ""))
+	pattern_AdminService_ListNamespaces_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "namespaces"}, ""))
+	pattern_AdminService_UpdateNamespace_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "namespaces", "name"}, ""))
+	pattern_AdminService_ListTasks_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "tasks"}, ""))
+	pattern_AdminService_GetTask_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "tasks", "id"}, ""))
+	pattern_AdminService_CancelTask_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "tasks", "id", "cancel"}, ""))
+	pattern_AdminService_DeleteTask_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "tasks", "id"}, ""))
+	pattern_AdminService_ListTaskEvents_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "tasks", "task_id", "events"}, ""))
+	pattern_AdminService_ListWorkers_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "workers"}, ""))
+	pattern_AdminService_GetWorker_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "workers", "id"}, ""))
+	pattern_AdminService_CreateSchedule_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "schedules"}, ""))
+	pattern_AdminService_GetSchedule_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "schedules", "id"}, ""))
+	pattern_AdminService_ListSchedules_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "schedules"}, ""))
+	pattern_AdminService_StopSchedule_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedules", "id", "stop"}, ""))
+	pattern_AdminService_DeleteSchedule_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "admin", "v1", "schedules", "id"}, ""))
+	pattern_AdminService_TriggerSchedule_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedules", "id", "trigger"}, ""))
+	pattern_AdminService_ListScheduleDeadLetters_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "schedule-dead-letters"}, ""))
+	pattern_AdminService_ReplayScheduleDeadLetter_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"api", "admin", "v1", "schedule-dead-letters", "id", "replay"}, ""))
+	pattern_AdminService_ListAdminAuditLogs_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "admin", "v1", "audit-logs"}, ""))
 )
 
 var (
-	forward_AdminService_CreateNamespace_0           = runtime.ForwardResponseMessage
-	forward_AdminService_GetNamespace_0              = runtime.ForwardResponseMessage
-	forward_AdminService_ListNamespaces_0            = runtime.ForwardResponseMessage
-	forward_AdminService_UpdateNamespace_0           = runtime.ForwardResponseMessage
-	forward_AdminService_ListTasks_0                 = runtime.ForwardResponseMessage
-	forward_AdminService_GetTask_0                   = runtime.ForwardResponseMessage
-	forward_AdminService_CancelTask_0                = runtime.ForwardResponseMessage
-	forward_AdminService_DeleteTask_0                = runtime.ForwardResponseMessage
-	forward_AdminService_ListTaskEvents_0            = runtime.ForwardResponseMessage
-	forward_AdminService_ListWorkers_0               = runtime.ForwardResponseMessage
-	forward_AdminService_GetWorker_0                 = runtime.ForwardResponseMessage
-	forward_AdminService_CreateSchedule_0            = runtime.ForwardResponseMessage
-	forward_AdminService_GetSchedule_0               = runtime.ForwardResponseMessage
-	forward_AdminService_ListSchedules_0             = runtime.ForwardResponseMessage
-	forward_AdminService_UpdateSchedule_0            = runtime.ForwardResponseMessage
-	forward_AdminService_PauseSchedule_0             = runtime.ForwardResponseMessage
-	forward_AdminService_ResumeSchedule_0            = runtime.ForwardResponseMessage
-	forward_AdminService_DeleteSchedule_0            = runtime.ForwardResponseMessage
-	forward_AdminService_TriggerSchedule_0           = runtime.ForwardResponseMessage
-	forward_AdminService_ListScheduleDeadLetters_0   = runtime.ForwardResponseMessage
-	forward_AdminService_ReplayScheduleDeadLetter_0  = runtime.ForwardResponseMessage
-	forward_AdminService_DiscardScheduleDeadLetter_0 = runtime.ForwardResponseMessage
-	forward_AdminService_ListAdminAuditLogs_0        = runtime.ForwardResponseMessage
+	forward_AdminService_CreateNamespace_0          = runtime.ForwardResponseMessage
+	forward_AdminService_GetNamespace_0             = runtime.ForwardResponseMessage
+	forward_AdminService_ListNamespaces_0           = runtime.ForwardResponseMessage
+	forward_AdminService_UpdateNamespace_0          = runtime.ForwardResponseMessage
+	forward_AdminService_ListTasks_0                = runtime.ForwardResponseMessage
+	forward_AdminService_GetTask_0                  = runtime.ForwardResponseMessage
+	forward_AdminService_CancelTask_0               = runtime.ForwardResponseMessage
+	forward_AdminService_DeleteTask_0               = runtime.ForwardResponseMessage
+	forward_AdminService_ListTaskEvents_0           = runtime.ForwardResponseMessage
+	forward_AdminService_ListWorkers_0              = runtime.ForwardResponseMessage
+	forward_AdminService_GetWorker_0                = runtime.ForwardResponseMessage
+	forward_AdminService_CreateSchedule_0           = runtime.ForwardResponseMessage
+	forward_AdminService_GetSchedule_0              = runtime.ForwardResponseMessage
+	forward_AdminService_ListSchedules_0            = runtime.ForwardResponseMessage
+	forward_AdminService_StopSchedule_0             = runtime.ForwardResponseMessage
+	forward_AdminService_DeleteSchedule_0           = runtime.ForwardResponseMessage
+	forward_AdminService_TriggerSchedule_0          = runtime.ForwardResponseMessage
+	forward_AdminService_ListScheduleDeadLetters_0  = runtime.ForwardResponseMessage
+	forward_AdminService_ReplayScheduleDeadLetter_0 = runtime.ForwardResponseMessage
+	forward_AdminService_ListAdminAuditLogs_0       = runtime.ForwardResponseMessage
 )

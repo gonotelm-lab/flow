@@ -2,7 +2,7 @@ package schema
 
 import "github.com/google/uuid"
 
-// ScheduleAttemptFailure 记录每一次「失败的」投递尝试。成功不落记录，只更新
+// ScheduleAttemptFailure 记录每一次失败的投递尝试。成功不落记录，只更新
 // schedules 行上的 last_success_at 与聚合计数。
 type ScheduleAttemptFailure struct {
 	Id         int64     `gorm:"column:id;primaryKey;autoIncrement"`

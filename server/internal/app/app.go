@@ -130,7 +130,7 @@ func (a *App) bootstrap() error {
 	a.ready.Store(true)
 
 	// 审计写入循环：与业务生命周期同进退，close 时会 flush 剩余条目。
-	go a.auditRec.Run(a.rootCtx)
+	a.auditRec.Start(a.rootCtx)
 
 	// 调度器必须在 updateShard 之后启动：它读的就是这里刚算出来的分片区间。
 	// 之后每次实例变更，watcher 都会刷新 a.selfShard，dispatcher 每 tick 现读，

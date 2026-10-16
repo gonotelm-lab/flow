@@ -141,98 +141,44 @@ func (c *Core) List(ctx context.Context, p ListParams) ([]*schema.Schedule, int6
 	return list, total, nil
 }
 
-// Update 修改定义字段。运行态（next_fire_at / fire 槽位 / 统计）由调度器维护，
-// 这里不接受，也不受影响。
-func (c *Core) Update(ctx context.Context, id uuid.UUID, patch *schema.Schedule) (*schema.Schedule, error) {
-	cur, err := c.mustGet(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	now, err := c.now(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	cur.Name = patch.Name
-	cur.CallbackUrl = patch.CallbackUrl
-	cur.ContentType = patch.ContentType
-	cur.Payload = patch.Payload
-	cur.ScheduleType = patch.ScheduleType
-	cur.CronExpr = patch.CronExpr
-	cur.Timezone = patch.Timezone
-	cur.FireAt = patch.FireAt
-	cur.UpdateTime = now
-
-	// 用当前时间重算 next_fire_at：改 cron 表达式或时区后，旧的计划时刻已经没有意义。
-	if err := c.applyTrigger(cur, now); err != nil {
-		return nil, err
-	}
-
-	ok, err := c.store.Schedule.UpdateDefinition(ctx, cur)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to update schedule")
-	}
-	if !ok {
-		return nil, srverr.ScheduleNotFound
-	}
-
-	return cur, nil
-}
-
-// Pause 只停未来的 occurrence。幂等：已经是 PAUSED 直接返回。
-func (c *Core) Pause(ctx context.Context, id uuid.UUID) (*schema.Schedule, error) {
+// Stop 单向停止一条 schedule：清空触发计划与未完成的投递链路，此后永不触发。
+// 没有回头路，要再触发只能重新注册一条。
+//
+// 只停还没触发的部分：未到点的 occurrence、未执行的快重试与死信慢重试（RETRYING
+// 的死信转 STOPPED）。已经在飞行中的 HTTP 撤不回来，其结果也不再记账，槽位已清，
+// ApplyOutcome 落不到案。
+//
+// 幂等：已经是 STOPPED 直接返回；FINISHED / FAILED 不可 stop，返回 ScheduleEnded。
+func (c *Core) Stop(ctx context.Context, id uuid.UUID) (*schema.Schedule, error) {
 	cur, err := c.mustGet(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
 	switch cur.State {
-	case schema.ScheduleStatePaused:
+	case schema.ScheduleStateStopped:
 		return cur, nil
 	case schema.ScheduleStateActive:
 		now, err := c.now(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if _, err := c.store.Schedule.SetState(
-			ctx, id, schema.ScheduleStateActive, schema.ScheduleStatePaused, 0, now,
-		); err != nil {
-			return nil, errors.WithMessage(err, "failed to pause schedule")
+
+		ok, err := c.store.Schedule.Stop(ctx, id, now)
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed to stop schedule")
 		}
-		return c.mustGet(ctx, id)
-	default:
-		return nil, srverr.ScheduleEnded.WithDetail("schedule state: " + cur.State)
-	}
-}
 
-// Resume 恢复触发。恢复后按当前时间重算 next_fire_at，不补发暂停期间错过的 occurrence。
-func (c *Core) Resume(ctx context.Context, id uuid.UUID) (*schema.Schedule, error) {
-	cur, err := c.mustGet(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	switch cur.State {
-	case schema.ScheduleStateActive:
-		return cur, nil
-	case schema.ScheduleStatePaused:
-		now, err := c.now(ctx)
+		fresh, err := c.mustGet(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-
-		next, err := c.nextFireAt(cur, now)
-		if err != nil {
-			return nil, err
+		// CAS 落空：读回时已经不是 STOPPED，说明并发里有别人抢先把它推进了终态
+		// （例如一次性任务刚好投递成功）。这时 stop 的诉求已经不可能满足，如实报错。
+		if !ok && fresh.State != schema.ScheduleStateStopped {
+			return nil, srverr.ScheduleEnded.WithDetail("schedule state: " + fresh.State)
 		}
-
-		if _, err := c.store.Schedule.SetState(
-			ctx, id, schema.ScheduleStatePaused, schema.ScheduleStateActive, next, now,
-		); err != nil {
-			return nil, errors.WithMessage(err, "failed to resume schedule")
-		}
-		return c.mustGet(ctx, id)
+		return fresh, nil
 	default:
 		return nil, srverr.ScheduleEnded.WithDetail("schedule state: " + cur.State)
 	}
@@ -258,16 +204,17 @@ func (c *Core) Delete(ctx context.Context, id uuid.UUID) error {
 
 // TriggerNow 立即投递一次。
 //
-// - 生成独立的 fire id，不影响 cron 的自然节奏；
-// - fire_scheduled_time 置 0 作为「手动触发」标记，投递结束后调度器不会推进 next_fire_at；
-// - PAUSED 状态下依然可用（Temporal 语义：pause 只作用于未来的 action）。
+//   - 生成独立的 fire id，不影响 cron 的自然节奏；
+//   - fire_scheduled_time 置 0 作为「手动触发」标记，投递结束后调度器不会推进 next_fire_at；
+//   - 只有 ACTIVE 的 schedule 能手动触发：终态（STOPPED / FINISHED / FAILED）一律拒绝，
+//     否则「停止」就不再意味着不会再触发。
 func (c *Core) TriggerNow(ctx context.Context, id uuid.UUID) (*schema.Schedule, error) {
 	cur, err := c.mustGet(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if cur.State == schema.ScheduleStateFinished || cur.State == schema.ScheduleStateFailed {
+	if cur.State != schema.ScheduleStateActive {
 		return nil, srverr.ScheduleEnded.WithDetail("schedule state: " + cur.State)
 	}
 	if cur.Busy() {
@@ -330,10 +277,12 @@ func (c *Core) GetDeadLetter(ctx context.Context, id uuid.UUID) (*schema.Schedul
 	return dl, nil
 }
 
-// ReplayDeadLetter 人工重投一次。
+// ReplayDeadLetter 人工重投一次：EXHAUSTED -> REPLAYED。
 //
-// 关键：**沿用原 fire_id**。接收方靠 Fire-Id 做幂等去重，如果重投生成新的 fire_id，
-// 去重契约就断了，对方会把补投当成一次全新事件。
+// 这是死信唯一的收尾动作。关键：**沿用原 fire_id**。接收方靠 Fire-Id 做幂等去重，如果
+// 重投生成新的 fire_id，去重契约就断了，对方会把补投当成一次全新事件。
+// 重投只是把这次 fire 交回投递流程，它成功还是失败记在 schedule 上；再失败会照常重试并
+// 生成新的死信。
 func (c *Core) ReplayDeadLetter(ctx context.Context, dlId uuid.UUID) error {
 	dl, err := c.GetDeadLetter(ctx, dlId)
 	if err != nil {
@@ -346,6 +295,11 @@ func (c *Core) ReplayDeadLetter(ctx context.Context, dlId uuid.UUID) error {
 	cur, err := c.mustGet(ctx, dl.ScheduleId)
 	if err != nil {
 		return err
+	}
+	// 重投就是再触发一次，终态的 schedule 不接受。这条闸门与 stop 的
+	// 「只清掉还没触发的」是同一件事的两面：已经停掉的 schedule，其死信也不可能再投。
+	if cur.State != schema.ScheduleStateActive {
+		return srverr.ScheduleEnded.WithDetail("schedule state: " + cur.State)
 	}
 	if cur.Busy() {
 		return srverr.ScheduleBusy.WithDetail("a fire is already in flight")
@@ -373,29 +327,6 @@ func (c *Core) ReplayDeadLetter(ctx context.Context, dlId uuid.UUID) error {
 		ctx, dlId, schema.DeadLetterStateExhausted, schema.DeadLetterStateReplayed, now,
 	); err != nil {
 		return errors.WithMessage(err, "failed to mark dead letter replayed")
-	}
-
-	return nil
-}
-
-func (c *Core) DiscardDeadLetter(ctx context.Context, dlId uuid.UUID) error {
-	dl, err := c.GetDeadLetter(ctx, dlId)
-	if err != nil {
-		return err
-	}
-	if dl.State != schema.DeadLetterStateExhausted {
-		return srverr.ScheduleDeadLetterNotReplayable.WithDetail("dead letter state: " + dl.State)
-	}
-
-	now, err := c.now(ctx)
-	if err != nil {
-		return err
-	}
-
-	if _, err := c.store.ScheduleDeadLetter.SetState(
-		ctx, dlId, schema.DeadLetterStateExhausted, schema.DeadLetterStateDiscarded, now,
-	); err != nil {
-		return errors.WithMessage(err, "failed to discard dead letter")
 	}
 
 	return nil

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -29,20 +28,17 @@ import type { AdminAuditLog } from "@/api/types";
 
 const ACTION_LABEL: Record<string, string> = {
   CREATE_SCHEDULE: "创建定时任务",
-  UPDATE_SCHEDULE: "修改定时任务",
-  PAUSE_SCHEDULE: "暂停定时任务",
-  RESUME_SCHEDULE: "恢复定时任务",
+  STOP_SCHEDULE: "停止定时任务",
   DELETE_SCHEDULE: "删除定时任务",
   TRIGGER_SCHEDULE: "手动触发",
   REPLAY_DEAD_LETTER: "重投死信",
-  DISCARD_DEAD_LETTER: "放弃死信",
 };
 
 /**
  * 审计日志页。
  *
- * 只覆盖 admin 管理接口的操作：客户端走 gRPC 注册/修改/暂停不会留下记录。
- * operator 字段当前恒为空（没有用户体系），所以身份这一栏只能靠来源 IP 与 UA。
+ * 只覆盖 admin 管理接口的操作，客户端走 gRPC 注册/修改/暂停不会留下记录。
+ * operator 字段目前恒为空（没有用户体系），所以身份这一栏只能看来源 IP 和 UA。
  */
 export function AuditTable() {
   const { namespace } = useNamespace();
@@ -135,7 +131,7 @@ export function AuditTable() {
                 <EmptyState
                   icon={ShieldCheck}
                   title="暂无审计记录"
-                  description="在管理接口上创建、修改、删除定时任务后会出现在这里"
+
                 />
               </TableCell>
             </TableRow>
@@ -215,12 +211,12 @@ export function AuditTable() {
       </div>
 
       <Dialog open={!!snapshot} onOpenChange={(open) => !open && setSnapshot(null)}>
-        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        <DialogContent
+          aria-describedby={undefined}
+          className="max-h-[85vh] max-w-2xl overflow-y-auto"
+        >
           <DialogHeader>
             <DialogTitle>操作快照</DialogTitle>
-            <DialogDescription>
-              删除是硬删且级联清理失败记录与死信，这份快照是事后唯一能回答「删了什么」的依据。
-            </DialogDescription>
           </DialogHeader>
 
           {snapshot?.errorMessage && (

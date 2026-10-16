@@ -46,7 +46,7 @@ func TestGetOrInitForUpdate_ExistingRow(t *testing.T) {
 	err = gTestGlobalRevisionStore.IncrRevision(ctx, "instance_events", nowMs())
 	require.NoError(t, err)
 
-	// 再次调用，冲突路径下 DO UPDATE 空操作加锁 + RETURNING 返回真实值
+	// 再调一次，走冲突分支：DO UPDATE 空操作拿行锁，RETURNING 返回真实值
 	got, err := gTestGlobalRevisionStore.GetOrInitForUpdate(ctx, zero)
 	require.NoError(t, err)
 	assert.Equal(t, "instance_events", got.Name)

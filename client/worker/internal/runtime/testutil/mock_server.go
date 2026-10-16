@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/testutil/mock_server.go
 package testutil
 
 import (

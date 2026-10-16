@@ -126,7 +126,7 @@ func TestInstanceStore_Delete(t *testing.T) {
 	_, err = gTestInstanceStore.Get(ctx, created.Id)
 	assert.ErrorIs(t, err, pkgerr.NoRecord)
 
-	// 重复删除同一行不应再报告"已删除"。
+	// 同一行重复删除，第二次不应再报告已删除。
 	deleted, err = gTestInstanceStore.Delete(ctx, created.Id)
 	require.NoError(t, err)
 	assert.False(t, deleted)

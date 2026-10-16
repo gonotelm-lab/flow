@@ -143,11 +143,11 @@ func TestScheduleStore_ClaimDue_FiltersByShardStateAndTime(t *testing.T) {
 
 	due := newTestSchedule("ns-claim", schema.ScheduleTypeCron, schema.ScheduleStateActive, now-1000)
 	future := newTestSchedule("ns-claim", schema.ScheduleTypeCron, schema.ScheduleStateActive, now+60_000)
-	paused := newTestSchedule("ns-claim", schema.ScheduleTypeCron, schema.ScheduleStatePaused, now-1000)
+	stopped := newTestSchedule("ns-claim", schema.ScheduleTypeCron, schema.ScheduleStateStopped, now-1000)
 	otherShard := newTestSchedule("ns-claim", schema.ScheduleTypeCron, schema.ScheduleStateActive, now-1000)
 	otherShard.Shard = 999
 
-	for _, s := range []*schema.Schedule{due, future, paused, otherShard} {
+	for _, s := range []*schema.Schedule{due, future, stopped, otherShard} {
 		_, err := gTestScheduleStore.Create(ctx, s)
 		require.NoError(t, err)
 	}
@@ -410,6 +410,32 @@ func TestScheduleStore_SkipDue_ReleasesAndCounts(t *testing.T) {
 	assert.False(t, got.Busy())
 }
 
+// ClaimByID 是 TriggerNow 与死信重投的入口，它必须认 ACTIVE：终态的 schedule
+// 槽位再空也不能被占用，否则「停止之后不会再触发」在 DB 层就没有兜底。
+func TestScheduleStore_ClaimByID_SkipsStopped(t *testing.T) {
+	cleanSchedules(t)
+	ctx := context.Background()
+	now := nowMs()
+
+	stopped := newTestSchedule("ns-byid-state", schema.ScheduleTypeCron, schema.ScheduleStateStopped, 0)
+	_, err := gTestScheduleStore.Create(ctx, stopped)
+	require.NoError(t, err)
+
+	fireId, _ := uuid.NewV7()
+	ok, err := gTestScheduleStore.ClaimByID(ctx, stopped.Id, &store.ClaimByIDParams{
+		FireId:            fireId,
+		FireState:         schema.FireStatePending,
+		FireScheduledTime: 0,
+		Now:               now,
+	})
+	require.NoError(t, err)
+	assert.False(t, ok, "STOPPED 的行不能被认领")
+
+	got, err := gTestScheduleStore.Get(ctx, stopped.Id)
+	require.NoError(t, err)
+	assert.Nil(t, got.FireState, "被拒绝时不能留下任何槽位痕迹")
+}
+
 func TestScheduleStore_ClaimByID_RejectsBusySlot(t *testing.T) {
 	cleanSchedules(t)
 	ctx := context.Background()
@@ -485,31 +511,113 @@ func TestScheduleStore_DeleteCascade(t *testing.T) {
 	assert.Empty(t, failures, "失败记录必须被级联删除")
 }
 
-func TestScheduleStore_SetState_WithNextFireAt(t *testing.T) {
+// stop 是单向的，并且要停掉所有「还没触发」的东西：触发计划、fire 槽位、租约，
+// 以及慢重试中的死信。已经打完的重试（EXHAUSTED）留档不动。
+func TestScheduleStore_Stop_ClearsSlotAndStopsRetryingDeadLetter(t *testing.T) {
 	cleanSchedules(t)
 	ctx := context.Background()
 	now := nowMs()
 
-	sched := newTestSchedule("ns-state", schema.ScheduleTypeCron, schema.ScheduleStateActive, now+60_000)
+	sched := newTestSchedule("ns-stop", schema.ScheduleTypeCron, schema.ScheduleStateActive, now+60_000)
+	key := "idem-stop"
+	sched.IdempotencyKey = &key
+	fireId, _ := uuid.NewV7()
+	deadLetter := schema.FireStateDeadLetter
+	sched.FireId = &fireId
+	sched.FireState = &deadLetter
+	sched.FireScheduledTime = now + 60_000
+	sched.NextAttemptAt = now + 60_000
+	sched.LeaseOwner = "instance-1"
+	sched.LeaseUntil = now + 90_000
 	_, err := gTestScheduleStore.Create(ctx, sched)
 	require.NoError(t, err)
 
-	next := now + 120_000
-	ok, err := gTestScheduleStore.SetState(
-		ctx, sched.Id, schema.ScheduleStateActive, schema.ScheduleStatePaused, next, now)
+	retryingId, _ := uuid.NewV7()
+	_, err = gTestScheduleDeadLetterStore.Create(ctx, &schema.ScheduleDeadLetter{
+		Id:            retryingId,
+		ScheduleId:    sched.Id,
+		Namespace:     sched.Namespace,
+		FireId:        fireId,
+		State:         schema.DeadLetterStateRetrying,
+		NextAttemptAt: now + 60_000,
+		CreateTime:    now,
+		UpdateTime:    now,
+	})
+	require.NoError(t, err)
+
+	exhaustedId, _ := uuid.NewV7()
+	_, err = gTestScheduleDeadLetterStore.Create(ctx, &schema.ScheduleDeadLetter{
+		Id:         exhaustedId,
+		ScheduleId: sched.Id,
+		Namespace:  sched.Namespace,
+		FireId:     fireId,
+		State:      schema.DeadLetterStateExhausted,
+		CreateTime: now,
+		UpdateTime: now,
+	})
+	require.NoError(t, err)
+
+	ok, err := gTestScheduleStore.Stop(ctx, sched.Id, now)
 	require.NoError(t, err)
 	require.True(t, ok)
 
 	got, err := gTestScheduleStore.Get(ctx, sched.Id)
 	require.NoError(t, err)
-	assert.Equal(t, schema.ScheduleStatePaused, got.State)
-	assert.Equal(t, next, got.NextFireAt, "暂停时也允许同时重算 next_fire_at")
+	assert.Equal(t, schema.ScheduleStateStopped, got.State)
+	assert.Zero(t, got.NextFireAt, "停止后不该再留下计划触发时刻")
+	assert.Nil(t, got.FireState, "槽位必须释放")
+	assert.Nil(t, got.FireId)
+	assert.Zero(t, got.NextAttemptAt, "还没执行的重试排期必须清掉")
+	assert.Zero(t, got.LeaseUntil)
+	assert.Nil(t, got.IdempotencyKey, "幂等键随 stop 释放，同键再注册应当新建一条")
 
-	// 状态不匹配时条件更新应当不生效
-	ok, err = gTestScheduleStore.SetState(
-		ctx, sched.Id, schema.ScheduleStateActive, schema.ScheduleStatePaused, 0, now)
+	retrying, err := gTestScheduleDeadLetterStore.Get(ctx, retryingId)
+	require.NoError(t, err)
+	assert.Equal(t, schema.DeadLetterStateStopped, retrying.State, "还没跑完的慢重试就此作废")
+
+	exhausted, err := gTestScheduleDeadLetterStore.Get(ctx, exhaustedId)
+	require.NoError(t, err)
+	assert.Equal(t, schema.DeadLetterStateExhausted, exhausted.State, "已经打完的重试留档，不动它")
+
+	// 幂等：再停一次返回 false，表示这次没有从 ACTIVE 转过来
+	ok, err = gTestScheduleStore.Stop(ctx, sched.Id, now)
 	require.NoError(t, err)
 	assert.False(t, ok)
+
+	// 自动终态不可 stop
+	finished := newTestSchedule("ns-stop", schema.ScheduleTypeOneShot, schema.ScheduleStateFinished, 0)
+	_, err = gTestScheduleStore.Create(ctx, finished)
+	require.NoError(t, err)
+	ok, err = gTestScheduleStore.Stop(ctx, finished.Id, now)
+	require.NoError(t, err)
+	assert.False(t, ok)
+}
+
+// ClaimRetry 只续投 ACTIVE 的行。stop 已经把槽位清干净，这条 state 过滤是第二道防线：
+// 只要哪一行残留着 fire_state，缺了它就会被继续 POST 回调。
+func TestScheduleStore_ClaimRetry_SkipsStopped(t *testing.T) {
+	cleanSchedules(t)
+	ctx := context.Background()
+	now := nowMs()
+
+	// 两行形状完全一样：都占着槽位、租约都已过期，唯一区别是 state
+	active := newTestSchedule("ns-retry-state", schema.ScheduleTypeCron, schema.ScheduleStateActive, now)
+	stopped := newTestSchedule("ns-retry-state", schema.ScheduleTypeCron, schema.ScheduleStateStopped, now)
+	for _, s := range []*schema.Schedule{active, stopped} {
+		fireId, _ := uuid.NewV7()
+		state := schema.FireStateDelivering
+		s.FireId = &fireId
+		s.FireState = &state
+		s.NextAttemptAt = now - 1000
+		s.LeaseUntil = now - 1000
+		_, err := gTestScheduleStore.Create(ctx, s)
+		require.NoError(t, err)
+	}
+
+	claimed, err := gTestScheduleStore.ClaimRetry(ctx, claimParams(now, 100))
+	require.NoError(t, err)
+	require.Len(t, claimed, 1)
+	assert.Equal(t, active.Id, claimed[0].Id, "STOPPED 的行不能再被续投认领")
 }
 
 // Now() 是集群的统一时钟源：到期判定与「fire_at 必须晚于当前时间」都以它为准。
@@ -594,7 +702,7 @@ func TestScheduleDeadLetterStore_SetState(t *testing.T) {
 
 	// 已经处理过的死信不能再次处理
 	ok, err = gTestScheduleDeadLetterStore.SetState(
-		ctx, dlId, schema.DeadLetterStateExhausted, schema.DeadLetterStateDiscarded, now)
+		ctx, dlId, schema.DeadLetterStateExhausted, schema.DeadLetterStateStopped, now)
 	require.NoError(t, err)
 	assert.False(t, ok)
 }
@@ -665,10 +773,10 @@ func TestAdminAuditLogStore_FillsMissingIDInBatch(t *testing.T) {
 	now := nowMs()
 
 	logs := []*schema.AdminAuditLog{
-		{Action: schema.AuditActionPauseSchedule, TargetType: schema.AuditTargetSchedule,
+		{Action: schema.AuditActionStopSchedule, TargetType: schema.AuditTargetSchedule,
 			Namespace: "ns-audit-batch", Source: schema.AuditSourceAdminHTTP,
 			Result: schema.AuditResultOk, CreateTime: now},
-		{Action: schema.AuditActionResumeSchedule, TargetType: schema.AuditTargetSchedule,
+		{Action: schema.AuditActionCreateSchedule, TargetType: schema.AuditTargetSchedule,
 			Namespace: "ns-audit-batch", Source: schema.AuditSourceAdminHTTP,
 			Result: schema.AuditResultOk, CreateTime: now + 1},
 	}

@@ -1,10 +1,14 @@
 <a id="readme-top"></a>
 
-# Flow
+<h1 align="center">
+  <img src="web/public/brand/flow-lockup.svg" alt="Flow" height="34" />
+</h1>
 
-[![Release](https://img.shields.io/github/v/release/gonotelm-lab/flow)](https://github.com/gonotelm-lab/flow/releases)
-[![Publish](https://github.com/gonotelm-lab/flow/actions/workflows/publish.yml/badge.svg)](https://github.com/gonotelm-lab/flow/actions/workflows/publish.yml)
-[![License](https://img.shields.io/github/license/gonotelm-lab/flow)](LICENSE)
+<p align="center">
+  <a href="https://github.com/gonotelm-lab/flow/releases"><img src="https://img.shields.io/github/v/release/gonotelm-lab/flow" alt="Release"></a>
+  <a href="https://github.com/gonotelm-lab/flow/actions/workflows/publish.yml"><img src="https://github.com/gonotelm-lab/flow/actions/workflows/publish.yml/badge.svg" alt="Publish"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/gonotelm-lab/flow" alt="License"></a>
+</p>
 
 Flow 是一个分布式的**任务队列 / 工作流引擎**。它由三部分组成：
 
@@ -19,7 +23,7 @@ Flow 用 namespace 隔离任务，用 worker 心跳感知节点健康，并通�
 - **命名空间隔离** — 每个 namespace 独立管理任务与 worker，携带独立 API Key。
 - **任务生命周期** — `INITED → RUNNING → DONE / FAILED`，支持延迟执行（`next_run_time`）、最大重试次数、取消与删除。
 - **定时回调** — 与 Task 完全独立的 Schedule 资源：注册回调 URL 与 payload，支持一次性（绝对时刻）与 cron（标准 5 字段）两类触发，到期由 server 主动 POST。内置有界重试、死信与管理员审计日志。
-- **Worker 注册与心跳** — worker 上报心跳与统计，server 侧检测过期/卡住任务并重新调度。
+- **Worker 注册与心跳** — worker 上报心跳，server 侧检测过期/卡住任务并重新调度；节点处理量由 server 按 `tasks.worker_id` 聚合（只看 `DONE` / `FAILED` / `CANCELLED`），节点清理分两段：心跳超过 `workerTtl` 从列表隐藏，超过 `workerRetention` 硬删除。
 - **多实例与分片** — 服务实例注册到注册表，通过分片计算分配工作，支撑水平扩展。
 - **可观测性** — 内建 OpenTelemetry tracing（gRPC / HTTP / GORM），可对接 OTLP collector。
 - **版本化 Schema 迁移** — 基于 [goose](https://github.com/pressly/goose) 的迁移内嵌进二进制，启动时可自动建表。
@@ -109,7 +113,7 @@ docker run --rm -p 7090:7090 -p 7091:7091 \
 | `FLOW_DB_AUTO_INIT` | `true` | 启动时自动建库（缺失时）并执行迁移 |
 | `FLOW_API_SERVER_HTTP_PORT` | `7090` | Admin HTTP API 端口 |
 | `FLOW_API_SERVER_GRPC_PORT` | `7091` | gRPC 端口 |
-| `FLOW_WORKER_*` | — | 轮询、过期扫描、重试扫描等 worker 参数 |
+| `FLOW_WORKER_*` | — | 轮询、过期扫描、重试扫描、节点清理（`FLOW_WORKER_TTL` / `FLOW_WORKER_RETENTION` / `FLOW_WORKER_REAP_INTERVAL` / `FLOW_WORKER_REAP_BATCH`）等 worker 参数 |
 | `FLOW_SCHEDULER_*` | — | 定时回调调度器参数，见下方「定时回调」；删除整个 `[scheduler]` 段则不启动调度器 |
 | `FLOW_OTEL_ENABLED` | `false` | 是否开启 OpenTelemetry |
 | `FLOW_OTEL_ENDPOINT` / `FLOW_OTEL_PROTOCOL` | — | OTLP collector 地址 / 协议 |
@@ -152,18 +156,27 @@ Schedule 是与 Task **完全独立**的一类资源：不共用表、不经过 
 ```go
 import scheduleclient "github.com/gonotelm-lab/flow/client/schedule"
 
-c, _ := scheduleclient.New("localhost:7091")
+// 一个 client 对应一个 namespace
+c, _ := scheduleclient.New("localhost:7091", scheduleclient.Config{Namespace: "demo"})
 defer c.Close()
 
 // 一次性：绝对时刻
 c.Register(ctx, scheduleclient.OneShot(time.Now().Add(10*time.Minute),
     "https://example.com/hook", []byte(`{"id":1}`)))
 
-// 重复：标准 5 字段 cron
+// 重复：标准 5 字段 cron；给了幂等键，重复注册拿回同一条
 c.Register(ctx, scheduleclient.Cron("*/5 * * * *", "Asia/Shanghai",
     "https://example.com/hook", []byte(`{"id":1}`),
     scheduleclient.WithIdempotencyKey("nightly-report")))
 ```
+
+SDK 只收发自己的类型，调用方不需要引入 proto：注册提交的是 `Spec`（只有定义字段，
+namespace 在 `Config` 里、运行态字段不在里面），服务端返回的是 `Schedule`（定义 + namespace
++ 运行态）。**定义注册后不可修改**（两端都没有 Update 接口），要改就用同一个幂等键重新注册
+一条。时间字段都是 `time.Time`，零值表示「没有这个时刻」。
+
+幂等键没显式设置时，SDK 会自动生成一个随机键，这样 RPC 层的重试不会建出两条；要跨调用去重
+（超时后自己重发、进程重启后重放）就显式给一个稳定的键。
 
 - **一次性**：`fire_at` 为 unix 毫秒，必须严格晚于当前时间（服务端用**数据库时间**判定，避免多 pod 时钟偏移），过期注册被拒绝。
 - **重复**：标准 5 字段 `分 时 日 月 周`，最小粒度 1 分钟。每条 schedule 带独立 IANA 时区，缺省 `UTC`。
@@ -182,14 +195,97 @@ X-Flow-Schedule-Id: <schedule id>
 X-Flow-Fire-Id: <本次 fire 的 id，重试与接管之间不变>
 X-Flow-Scheduled-Time: <本次触发计划时刻，unix 毫秒>
 X-Flow-Timestamp: <unix 秒>
-X-Flow-Signature: sha256=<hex>
+X-Flow-Namespace: <该 schedule 所属 namespace>
+X-Flow-Signature: FLOW-HMAC-SHA256 Scope=<YYYYMMDD>/<namespace>/flow_request, \
+                  Signed=content-type;x-flow-fire-id;..., Signature=<hex>
 
 <body = 注册时传入的 payload 原样字节>
 ```
 
 - **成功判定**：HTTP 2xx。3xx（不跟随重定向）、4xx、5xx、超时（默认 10s）与连接失败都算失败。
-- **签名**：HMAC-SHA256，密钥为 namespace 的 `api_key`，签名串 `timestamp + "." + rawBody`。
-  接收方应校验 `X-Flow-Timestamp` 的新鲜度以防重放。
+
+#### 签名（FLOW-HMAC-SHA256）
+
+密钥是 namespace 的 `api_key`，但**不直接拿它做 HMAC**，而是先按日期与 namespace 派生：
+
+```
+signingKey = HMAC(HMAC(HMAC("FLOW" + api_key, YYYYMMDD), namespace), "flow_request")
+```
+
+请求本身先规范化，再对规范化结果签名（下面是逐字节的规则，手写接收方照这个来）：
+
+```
+canonicalRequest = "POST" + "\n"
+                 + 路径 + "\n"                    # URL.EscapedPath()，空则 "/"
+                 + 规范化查询串 + "\n"              # RFC3986 编码，按编码后的名、再按值排序，& 连接
+                 + 规范化头块                      # 每个头一行："小写名:值\n"
+                 + "\n"                           # 头块本身以 \n 结尾，所以这里有一个空行
+                 + Signed 清单 + "\n"              # 分号连接，固定六项，升序
+                 + hex(sha256(body))
+stringToSign     = "FLOW-HMAC-SHA256" + "\n"
+                 + 时刻 + "\n"                     # ISO8601 basic，UTC：YYYYMMDDTHHMMSSZ
+                 + Scope + "\n"                    # <YYYYMMDD>/<namespace>/flow_request
+                 + hex(sha256(canonicalRequest))
+Signature        = hex(HMAC(signingKey, stringToSign))
+```
+
+- 分隔符是 `\n`；**拼接时不要给任何一行加尾随空格**，也别忘了头块后面那个空行。
+- 规范化头的值：去掉首尾空白、连续空白折成一个空格；同名多头用逗号连接。
+- 规范化查询串：先解码再按 RFC3986 编码（空格是 `%20` 不是 `+`），同名参数按值升序，空值保留 `=`。
+
+参与签名的头是固定的六个：`content-type`、`x-flow-fire-id`、`x-flow-namespace`、
+`x-flow-schedule-id`、`x-flow-scheduled-time`、`x-flow-timestamp`。**清单是闭合的**：验签方
+要求它们全部出现，否则签名方可以「少签 timestamp」再重放而不被察觉。
+
+几点取舍：
+
+- **不签 host**：反向代理普遍会改写 Host（nginx 默认 `proxy_set_header Host $proxy_host`），
+  签了它就得让所有接收方改代理配置；而路径、查询串与 schedule id 已足以约束请求归属。
+- **scope 里的日期取自 `X-Flow-Timestamp`**：用另一个日期的派生密钥重放，会在验签阶段被判不一致。
+- **namespace 在 scope 里编码、在派生密钥里不编码**：`signingKey` 用的是 `X-Flow-Namespace`
+  的原始值；只有写进 `Scope=` 的那一份按 RFC3986 编码（namespace 只校验非空，可能带逗号或空格，
+  不编码会撑破签名头「逗号分参数」的语法）。常见名字（`demo` 之类）编码后原样不变。
+  Scope 必须写成这个规范形式，非规范写法（例如把空格原样写进去）会被拒。
+- `X-Flow-Signature` 的参数不允许重复：同名参数出现两次会被拒。
+- 时间戳本身参与签名，接收方**必须**校验它的新鲜度，否则旧回调可被原样重放。
+
+接收方直接用 SDK，一行完成「复算签名 + 判时间戳新鲜度」：
+
+```go
+import (
+    "net/http"
+    scheduleclient "github.com/gonotelm-lab/flow/client/schedule"
+)
+
+// 接收方只用验签：地址留空即可（gRPC 懒连接，不调接口就不会建连）。
+// 带上 Namespace 就会顺带核对 X-Flow-Namespace，不配则跳过这项。
+var verify, _ = scheduleclient.New("", scheduleclient.Config{
+    Namespace: namespace,
+    APIKey:    apiKey,
+})
+
+func hook(w http.ResponseWriter, r *http.Request) {
+    // 读完 body 会还原回 r.Body；默认容差前后各 5 分钟，默认最多读 10 MiB
+    if err := verify.VerifyRequest(r); err != nil {
+        http.Error(w, "unauthorized", http.StatusUnauthorized)
+        return
+    }
+    // 到这里签名与时效都已确认，body 仍可正常读；
+    // X-Flow-Fire-Id 去重仍然必须自己做
+    w.WriteHeader(http.StatusOK)
+}
+```
+
+- 容差与 body 上限：`WithTolerance`（传 0 关闭新鲜度校验）、`WithMaxBodySize`。
+- 失败原因用 `errors.Is` 分类：`ErrStaleTimestamp`、`ErrBodyTooLarge`、`ErrNoAPIKey`、
+  `signature.ErrMismatch`、`signature.ErrMissingHeader`、`signature.ErrMalformedSignature`、
+  `signature.ErrScopeMismatch`（`Config.Namespace` 与回调头不一致时返回它）、
+  `signature.ErrUnsupportedAlgorithm`。
+- 调用方已经自己读过 body 时用 `VerifyRequestWithBody`（不会碰 `r.Body`）。
+- 可运行示例：`client/example/schedule-receiver`（含验签 + Fire-Id 去重骨架）。
+
+> **破坏性变更**：早期的一行式签名 `X-Flow-Signature: sha256=<hex>`（`HMAC(api_key, timestamp + "." + body)`）
+> 已被本方案取代，旧格式会被明确拒绝（`signature.ErrMalformedSignature`）。升级时两侧必须同时更新。
 
 ### 投递是 at-least-once
 
@@ -205,7 +301,9 @@ X-Flow-Signature: sha256=<hex>
 | 死信慢重试 | 3 次 | `1m / 5m / 30m` |
 
 全部是服务端全局配置，客户端无法指定。慢重试也全部失败后，死信转 `EXHAUSTED` 等待人工
-「重投」或「放弃」——重投会**沿用原 `X-Flow-Fire-Id`**，接收方据此判断这是补投而非新事件。
+「重投」——重投会**沿用原 `X-Flow-Fire-Id`**，接收方据此判断这是补投而非新事件，成功后死信
+记为 `REPLAYED`。没有「放弃」这个操作：不想再投就把 schedule 停掉，它的 `RETRYING` 死信会
+一并变成 `STOPPED`。
 
 ### 重叠与漏触发（Temporal 语义）
 
@@ -214,9 +312,25 @@ X-Flow-Signature: sha256=<hex>
 - 分片有一段时间没人扫（pod 挂掉）导致 occurrence 迟到超过容差（默认 30s）时，**丢弃并重算
   下次触发，不补发**；一次性任务在停机期间到期则在恢复后补打一次。
 - 因此 `TriggerNow`（仅运维面）与死信「重投」在槽位被占用时会返回 `FailedPrecondition`。
-- `Pause` 只停未来的 occurrence；已发出的 HTTP 与快速重试会跑完，死信慢重试继续；
-  恢复后按当前时间重算下次触发。**删除是硬删**，定义、失败记录与死信一并消失，服务端会把
-  快照写进审计日志。
+
+### 状态与停止
+
+`state` 只有 `ACTIVE` 会触发回调，其余三个都是终态，进去之后只能读和删除：
+
+| 状态 | 含义 |
+|---|---|
+| `ACTIVE` | 正常触发 |
+| `STOPPED` | 人为单向停止，`Stop` / `StopSchedule` 进入 |
+| `FINISHED` | 一次性任务投递成功 |
+| `FAILED` | 一次性任务死信重试耗尽 |
+
+- **cron 没有自动终态**，只会停在 `STOPPED`（人为）或随整条记录被删除。
+- **stop 不可逆**：没有恢复接口。要再触发就用同一个幂等键重新注册一条（stop 会释放幂等键）。
+- stop 只清掉「还没触发」的部分：触发计划、fire 槽位、租约，以及慢重试中的死信（转
+  `STOPPED`）。**已经发出的 HTTP 撤不回来**，它的重试与记账到此为止。
+- 终态是墓碑：`TriggerNow`、死信「重投」在终态下都返回
+  `FailedPrecondition`（错误码 `SCHEDULE_ENDED`）。
+- **删除是硬删**，定义、失败记录与死信一并消失，服务端会把快照写进审计日志。
 
 ### 分布式执行
 
@@ -249,8 +363,8 @@ X-Flow-Signature: sha256=<hex>
 
 ### 审计日志
 
-审计**只覆盖管理接口（Admin HTTP）的操作**：创建、修改、暂停、恢复、删除、手动触发、
-死信重投与放弃。客户端走 gRPC 的注册/修改不产生记录。`operator` 字段当前恒为空（无用户
+审计**只覆盖管理接口（Admin HTTP）的操作**：创建、停止、删除、手动触发、
+死信重投。客户端走 gRPC 的注册不产生记录。`operator` 字段当前恒为空（无用户
 体系），因此现阶段它是「协作记录」而不是「安全审计」；来源 IP 与 UA 是仅有的非自填痕迹。
 
 ## 端口

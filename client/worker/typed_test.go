@@ -1,4 +1,3 @@
-// flow/client/worker/typed_test.go
 package worker
 
 import (

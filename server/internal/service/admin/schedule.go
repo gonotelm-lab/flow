@@ -73,10 +73,19 @@ func (s *Service) ListSchedules(
 
 	page, pageSize := adminPaging(req.GetPage())
 
+	scheduleType, err := schedulesvc.ScheduleTypeFromProto(req.GetScheduleType())
+	if err != nil {
+		return nil, err
+	}
+	state, err := schedulesvc.ScheduleStateFromProto(req.GetState())
+	if err != nil {
+		return nil, err
+	}
+
 	list, total, err := s.scheduleCore.List(ctx, schedulesvc.ListParams{
 		Namespace:    req.GetNamespace(),
-		ScheduleType: schedulesvc.ScheduleTypeFromProto(req.GetScheduleType()),
-		State:        schedulesvc.ScheduleStateFromProto(req.GetState()),
+		ScheduleType: scheduleType,
+		State:        state,
 		Id:           req.GetId(),
 		Page:         page,
 		PageSize:     pageSize,
@@ -100,65 +109,37 @@ func (s *Service) ListSchedules(
 	return out, nil
 }
 
-func (s *Service) UpdateSchedule(
+// StopSchedule 单向停止一条 schedule，并在停止前取一份快照写进审计。
+//
+// 快照必须在停止之前取：stop 会清掉幂等键与 fire 槽位，事后光看这条 schedule
+// 已经看不出「停之前它挂在哪个幂等键上、当时有没有 fire 在飞」。
+func (s *Service) StopSchedule(
 	ctx context.Context,
-	req *adminv1.UpdateScheduleRequest,
-) (*schemav1.Schedule, error) {
-	id, err := parseScheduleID(req.GetId())
-	if err != nil {
-		return nil, err
-	}
-	if req.GetSchedule() == nil {
-		return nil, pkgerr.InvalidArgument.WithDetail("request schedule is empty")
-	}
-
-	updated, err := s.scheduleCore.Update(ctx, id, schedulesvc.FromProtoSchedule(req.GetSchedule()))
-	if err != nil {
-		s.recordAudit(ctx, schema.AuditActionUpdateSchedule, req.GetId(), "", nil, err)
-		return nil, err
-	}
-
-	s.recordAudit(ctx, schema.AuditActionUpdateSchedule, updated.Id.String(), updated.Namespace,
-		scheduleSnapshot(updated), nil)
-	return schedulesvc.ToProtoSchedule(updated), nil
-}
-
-func (s *Service) PauseSchedule(
-	ctx context.Context,
-	req *adminv1.PauseScheduleRequest,
+	req *adminv1.StopScheduleRequest,
 ) (*schemav1.Schedule, error) {
 	id, err := parseScheduleID(req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	paused, err := s.scheduleCore.Pause(ctx, id)
+	var snapshot map[string]any
+	var namespace string
+	if existing, getErr := s.scheduleCore.Get(ctx, id); getErr == nil {
+		snapshot = scheduleSnapshot(existing)
+		namespace = existing.Namespace
+		if existing.Busy() {
+			snapshot["fire_in_flight"] = true
+		}
+	}
+
+	stopped, err := s.scheduleCore.Stop(ctx, id)
 	if err != nil {
-		s.recordAudit(ctx, schema.AuditActionPauseSchedule, req.GetId(), "", nil, err)
+		s.recordAudit(ctx, schema.AuditActionStopSchedule, req.GetId(), namespace, snapshot, err)
 		return nil, err
 	}
 
-	s.recordAudit(ctx, schema.AuditActionPauseSchedule, paused.Id.String(), paused.Namespace, nil, nil)
-	return schedulesvc.ToProtoSchedule(paused), nil
-}
-
-func (s *Service) ResumeSchedule(
-	ctx context.Context,
-	req *adminv1.ResumeScheduleRequest,
-) (*schemav1.Schedule, error) {
-	id, err := parseScheduleID(req.GetId())
-	if err != nil {
-		return nil, err
-	}
-
-	resumed, err := s.scheduleCore.Resume(ctx, id)
-	if err != nil {
-		s.recordAudit(ctx, schema.AuditActionResumeSchedule, req.GetId(), "", nil, err)
-		return nil, err
-	}
-
-	s.recordAudit(ctx, schema.AuditActionResumeSchedule, resumed.Id.String(), resumed.Namespace, nil, nil)
-	return schedulesvc.ToProtoSchedule(resumed), nil
+	s.recordAudit(ctx, schema.AuditActionStopSchedule, stopped.Id.String(), stopped.Namespace, snapshot, nil)
+	return schedulesvc.ToProtoSchedule(stopped), nil
 }
 
 // DeleteSchedule 硬删定义并级联删除失败记录与死信。
@@ -225,10 +206,15 @@ func (s *Service) ListScheduleDeadLetters(
 
 	page, pageSize := adminPaging(req.GetPage())
 
+	state, err := schedulesvc.DeadLetterStateFromProto(req.GetState())
+	if err != nil {
+		return nil, err
+	}
+
 	list, total, err := s.scheduleCore.ListDeadLetters(ctx, schedulesvc.DeadLetterListParams{
 		Namespace:  req.GetNamespace(),
 		ScheduleId: req.GetScheduleId(),
-		State:      schedulesvc.DeadLetterStateFromProto(req.GetState()),
+		State:      state,
 		Page:       page,
 		PageSize:   pageSize,
 	})
@@ -269,26 +255,6 @@ func (s *Service) ReplayScheduleDeadLetter(
 	}
 
 	s.recordDeadLetterAudit(ctx, schema.AuditActionReplayDeadLetter, id, dl, nil)
-	return &emptypb.Empty{}, nil
-}
-
-func (s *Service) DiscardScheduleDeadLetter(
-	ctx context.Context,
-	req *adminv1.DiscardScheduleDeadLetterRequest,
-) (*emptypb.Empty, error) {
-	id, err := parseScheduleID(req.GetId())
-	if err != nil {
-		return nil, err
-	}
-
-	dl, _ := s.scheduleCore.GetDeadLetter(ctx, id)
-
-	if err := s.scheduleCore.DiscardDeadLetter(ctx, id); err != nil {
-		s.recordDeadLetterAudit(ctx, schema.AuditActionDiscardDeadLetter, id, dl, err)
-		return nil, err
-	}
-
-	s.recordDeadLetterAudit(ctx, schema.AuditActionDiscardDeadLetter, id, dl, nil)
 	return &emptypb.Empty{}, nil
 }
 
@@ -410,7 +376,7 @@ func (s *Service) recordDeadLetterAudit(
 
 	if dl != nil {
 		entry.Namespace = dl.Namespace
-		// 死信上的关键信息一并留档：它可能随后被 Replay/Discard 掉状态。
+		// 死信上的关键信息一并留档：它可能随后被重投或被 stop 改掉状态。
 		if raw, err := json.Marshal(map[string]any{
 			"dead_letter_id":   dl.Id.String(),
 			"schedule_id":      dl.ScheduleId.String(),

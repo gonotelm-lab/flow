@@ -23,8 +23,9 @@ CREATE TABLE IF NOT EXISTS schedules (
   -- ONE_SHOT 专用：unix 毫秒
   fire_at BIGINT NOT NULL DEFAULT 0,
 
-  -- ACTIVE | PAUSED | FINISHED | FAILED
-  state VARCHAR(16) NOT NULL,
+  -- ACTIVE | STOPPED | FINISHED | FAILED；只有 ACTIVE 会触发回调
+  state VARCHAR(16) NOT NULL CONSTRAINT ck_schedules_state
+    CHECK (state IN ('ACTIVE', 'STOPPED', 'FINISHED', 'FAILED')),
   callback_url VARCHAR(2048) NOT NULL,
   content_type VARCHAR(128) NOT NULL DEFAULT 'application/octet-stream',
   payload BYTEA,
@@ -88,7 +89,7 @@ COMMENT ON COLUMN schedules.schedule_type IS 'ONE_SHOT | CRON';
 COMMENT ON COLUMN schedules.cron_expr IS 'standard 5-field cron expression (min hour dom month dow)';
 COMMENT ON COLUMN schedules.timezone IS 'IANA timezone name, default UTC';
 COMMENT ON COLUMN schedules.fire_at IS 'one-shot fire time, unix millis';
-COMMENT ON COLUMN schedules.state IS 'ACTIVE | PAUSED | FINISHED | FAILED';
+COMMENT ON COLUMN schedules.state IS 'ACTIVE | STOPPED | FINISHED | FAILED';
 COMMENT ON COLUMN schedules.callback_url IS 'callback URL, http/https only';
 COMMENT ON COLUMN schedules.content_type IS 'content type used when delivering the callback';
 COMMENT ON COLUMN schedules.payload IS 'raw callback body';
@@ -149,7 +150,8 @@ COMMENT ON COLUMN schedule_attempt_failures.duration_ms IS 'attempt duration in 
 COMMENT ON COLUMN schedule_attempt_failures.error IS 'error summary';
 COMMENT ON COLUMN schedule_attempt_failures.create_time IS 'create time, unix millis';
 
--- 死信：快重试耗尽后进入。RETRYING 阻塞 schedule；EXHAUSTED 不阻塞，等待人工处理。
+-- 死信：快重试耗尽后进入。RETRYING 阻塞 schedule；EXHAUSTED 不阻塞，等人工重投；
+-- 重投后是 REPLAYED，随 schedule 停掉的是 STOPPED。
 CREATE TABLE IF NOT EXISTS schedule_dead_letters (
   id UUID PRIMARY KEY DEFAULT uuidv7(),
   schedule_id UUID NOT NULL,
@@ -157,7 +159,7 @@ CREATE TABLE IF NOT EXISTS schedule_dead_letters (
   fire_id UUID NOT NULL,
   scheduled_time BIGINT NOT NULL DEFAULT 0,
   attempt_count SMALLINT NOT NULL DEFAULT 0,
-  -- RETRYING | EXHAUSTED | REPLAYED | DISCARDED
+  -- RETRYING | EXHAUSTED | REPLAYED | STOPPED
   state VARCHAR(16) NOT NULL,
   next_attempt_at BIGINT NOT NULL DEFAULT 0,
   last_http_status INT NOT NULL DEFAULT 0,
@@ -187,7 +189,7 @@ COMMENT ON COLUMN schedule_dead_letters.namespace IS 'namespace';
 COMMENT ON COLUMN schedule_dead_letters.fire_id IS 'fire id, reused by manual replay so receivers can dedupe';
 COMMENT ON COLUMN schedule_dead_letters.scheduled_time IS 'planned fire time, unix millis';
 COMMENT ON COLUMN schedule_dead_letters.attempt_count IS 'attempts made so far';
-COMMENT ON COLUMN schedule_dead_letters.state IS 'RETRYING | EXHAUSTED | REPLAYED | DISCARDED';
+COMMENT ON COLUMN schedule_dead_letters.state IS 'RETRYING | EXHAUSTED | REPLAYED | STOPPED';
 COMMENT ON COLUMN schedule_dead_letters.next_attempt_at IS 'next slow retry time, unix millis';
 COMMENT ON COLUMN schedule_dead_letters.last_http_status IS 'last HTTP status, 0 when no response';
 COMMENT ON COLUMN schedule_dead_letters.last_error IS 'last error summary';
@@ -199,8 +201,8 @@ COMMENT ON COLUMN schedule_dead_letters.update_time IS 'update time, unix millis
 -- admin 管理接口操作；task / namespace / worker 后续接入，无需改表。
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
   id UUID PRIMARY KEY DEFAULT uuidv7(),
-  -- CREATE_SCHEDULE / UPDATE_SCHEDULE / PAUSE_SCHEDULE / RESUME_SCHEDULE /
-  -- DELETE_SCHEDULE / TRIGGER_SCHEDULE / REPLAY_DEAD_LETTER / DISCARD_DEAD_LETTER
+  -- CREATE_SCHEDULE / STOP_SCHEDULE /
+  -- DELETE_SCHEDULE / TRIGGER_SCHEDULE / REPLAY_DEAD_LETTER
   action VARCHAR(64) NOT NULL,
   -- SCHEDULE（后续：TASK / NAMESPACE / WORKER）
   target_type VARCHAR(32) NOT NULL,

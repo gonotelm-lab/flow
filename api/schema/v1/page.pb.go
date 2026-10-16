@@ -24,10 +24,10 @@ const (
 
 // 共享分页请求。
 //
-// 说明：api.admin.v1 里已有一份等价的 PageRequest/PageResponse。此处新增独立定义
-// 而不是把 admin 的那份搬过来，是因为删除 admin/v1 中的 message 属于 breaking change
-// （buf.yaml 的 breaking.use = FILE），而本特性不该顺带破坏已发布的 api module 契约。
-// admin 侧迁到这份共享定义可作为后续的独立清理。
+// api.admin.v1 里已经有一份等价的 PageRequest/PageResponse。这里另起一份、没把 admin 的
+// 那份搬过来，是因为删掉 admin/v1 里的 message 算 breaking change（buf.yaml 的
+// breaking.use = FILE），这个特性不该顺带破坏已发布的 api module 契约。等以后单独
+// 清理时，再把 admin 迁到这份共享定义上。
 type PageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`

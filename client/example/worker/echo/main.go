@@ -1,6 +1,6 @@
-// Echo worker：连接 Flow server，消费 namespace/task_type 下的任务并回写大写消息。
+// Echo worker：连上 Flow server，消费 namespace/task_type 下的任务，把消息转成大写再回写。
 //
-// 运行前请确保 Flow server 已启动，且目标 namespace 已通过 Admin API 创建。
+// 跑之前要先把 Flow server 起来，目标 namespace 也得用 Admin API 建好。
 //
 //	go run ./example/echo \
 //	  -addr localhost:7091 \

@@ -45,22 +45,9 @@ export function createSchedule(schedule: Schedule) {
   });
 }
 
-export function updateSchedule(id: string, schedule: Schedule) {
-  return apiFetch<Schedule>(`/api/admin/v1/schedules/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ schedule }),
-  });
-}
-
-export function pauseSchedule(id: string) {
-  return apiFetch<Schedule>(`/api/admin/v1/schedules/${id}/pause`, {
-    method: "POST",
-    body: "{}",
-  });
-}
-
-export function resumeSchedule(id: string) {
-  return apiFetch<Schedule>(`/api/admin/v1/schedules/${id}/resume`, {
+/** 单向停止：此后永不触发，不可恢复；要再触发只能重新注册一条。 */
+export function stopSchedule(id: string) {
+  return apiFetch<Schedule>(`/api/admin/v1/schedules/${id}/stop`, {
     method: "POST",
     body: "{}",
   });
@@ -114,14 +101,6 @@ export function listScheduleDeadLetters(
  */
 export function replayScheduleDeadLetter(id: string) {
   return apiFetch<void>(`/api/admin/v1/schedule-dead-letters/${id}/replay`, {
-    method: "POST",
-    body: "{}",
-  });
-}
-
-/** 人工放弃。不给这个操作的话死信表会永久堆积。 */
-export function discardScheduleDeadLetter(id: string) {
-  return apiFetch<void>(`/api/admin/v1/schedule-dead-letters/${id}/discard`, {
     method: "POST",
     body: "{}",
   });

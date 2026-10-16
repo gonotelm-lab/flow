@@ -194,6 +194,9 @@ func (s *ScheduleStoreImpl) ClaimRetry(
 			Options:  clause.LockingOptionsSkipLocked,
 		}).
 			Where("shard BETWEEN ? AND ?", p.ShardStart, p.ShardEnd).
+			// 只续投 ACTIVE 的行。stop 会把槽位清干净，但这里仍要按 state 过滤：
+			// 一旦有残留（例如别处写坏了槽位），STOPPED 的行会继续 POST 回调。
+			Where("state = ?", schema.ScheduleStateActive).
 			Where("fire_state IS NOT NULL").
 			Where("next_attempt_at <= ?", p.Now).
 			Where("lease_until <= ?", p.Now).
@@ -246,6 +249,10 @@ func (s *ScheduleStoreImpl) ClaimRetry(
 	return claimed, nil
 }
 
+// ClaimByID 为 TriggerNow 与死信重投占用槽位。
+//
+// 与 ClaimDue / ClaimRetry 一样带 state = ACTIVE：这两个入口都是再触发一次，
+// 终态的 schedule 一律不认领。
 func (s *ScheduleStoreImpl) ClaimByID(
 	ctx context.Context,
 	id uuid.UUID,
@@ -253,7 +260,7 @@ func (s *ScheduleStoreImpl) ClaimByID(
 ) (bool, error) {
 	db := util.GetDB(ctx, s.db)
 	res := db.Model(&schema.Schedule{}).
-		Where("id = ? AND fire_state IS NULL", id).
+		Where("id = ? AND state = ? AND fire_state IS NULL", id, schema.ScheduleStateActive).
 		Updates(map[string]any{
 			"fire_id":             p.FireId,
 			"fire_scheduled_time": p.FireScheduledTime,
@@ -355,54 +362,60 @@ func (s *ScheduleStoreImpl) ApplyOutcome(
 	return res.RowsAffected > 0, nil
 }
 
-func (s *ScheduleStoreImpl) UpdateDefinition(
-	ctx context.Context,
-	sched *schema.Schedule,
-) (bool, error) {
-	db := util.GetDB(ctx, s.db)
-	res := db.Model(&schema.Schedule{}).
-		Where("id = ?", sched.Id).
-		Updates(map[string]any{
-			"name":          sched.Name,
-			"schedule_type": sched.ScheduleType,
-			"cron_expr":     sched.CronExpr,
-			"timezone":      sched.Timezone,
-			"fire_at":       sched.FireAt,
-			"callback_url":  sched.CallbackUrl,
-			"content_type":  sched.ContentType,
-			"payload":       sched.Payload,
-			"next_fire_at":  sched.NextFireAt,
-			"update_time":   sched.UpdateTime,
-		})
-	if res.Error != nil {
-		return false, sql.WrapError(res.Error)
-	}
-	return res.RowsAffected > 0, nil
-}
-
-func (s *ScheduleStoreImpl) SetState(
+// Stop 单向终止一条 schedule：ACTIVE → STOPPED，同一事务里清空触发计划、释放 fire
+// 槽位、作废还没执行的重试。
+//
+// 边界就在这里：快重试与死信慢重试的排期（fire_state / next_attempt_at / 租约）一律
+// 清掉，RETRYING 死信转 STOPPED；已经打完的重试不动，EXHAUSTED 死信保持原样留档。
+// 在飞行中的 HTTP 撤不回来，其结果也不会记账（ApplyOutcome 要求 fire_state 非空，
+// 槽位已清）。
+func (s *ScheduleStoreImpl) Stop(
 	ctx context.Context,
 	id uuid.UUID,
-	from, to string,
-	nextFireAt, now int64,
+	now int64,
 ) (bool, error) {
 	db := util.GetDB(ctx, s.db)
 
-	updates := map[string]any{
-		"state":       to,
-		"update_time": now,
-	}
-	if nextFireAt > 0 {
-		updates["next_fire_at"] = nextFireAt
-	}
+	stopped := false
+	err := db.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&schema.Schedule{}).
+			Where("id = ? AND state = ?", id, schema.ScheduleStateActive).
+			Updates(map[string]any{
+				"state":               schema.ScheduleStateStopped,
+				"next_fire_at":        0,
+				"fire_id":             nil,
+				"fire_scheduled_time": 0,
+				"fire_state":          nil,
+				"next_attempt_at":     0,
+				"lease_owner":         "",
+				"lease_until":         0,
+				// 幂等键随 stop 一起释放：同一个键再注册，应当是「新注册一条」，
+				// 而不是拿回这条再也不会触发的记录。
+				"idempotency_key": nil,
+				"update_time":     now,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return nil
+		}
+		stopped = true
 
-	res := db.Model(&schema.Schedule{}).
-		Where("id = ? AND state = ?", id, from).
-		Updates(updates)
-	if res.Error != nil {
-		return false, sql.WrapError(res.Error)
+		// 慢重试还没跑完的死信就此作废，状态必须落下来：留 RETRYING 会让它一直
+		// 显示成「重试中」，而 ClaimRetry 已经不会再看它一眼。
+		res = tx.Model(&schema.ScheduleDeadLetter{}).
+			Where("schedule_id = ? AND state = ?", id, schema.DeadLetterStateRetrying).
+			Updates(map[string]any{
+				"state":       schema.DeadLetterStateStopped,
+				"update_time": now,
+			})
+		return res.Error
+	})
+	if err != nil {
+		return false, sql.WrapError(err)
 	}
-	return res.RowsAffected > 0, nil
+	return stopped, nil
 }
 
 // DeleteCascade 硬删 schedule 并级联清理失败记录与死信，三者在同一事务内完成。

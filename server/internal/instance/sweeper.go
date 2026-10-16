@@ -17,7 +17,7 @@ import (
 const (
 	defaultSweepInterval = time.Second * 1
 	defaultSweepBatch    = 200
-	// 在基础间隔上做 ±20% 抖动，降低多实例同频扫描造成的尖峰压力。
+	// 在基础间隔上抖动 ±20%，降低多实例同频扫描造成的尖峰压力。
 	defaultSweepJitterRatio = 0.2
 )
 
@@ -97,8 +97,8 @@ func (s *Sweeper) Close() {
 	s.wg.Wait()
 }
 
-// SweepOnce 执行一批过期实例清理。
-// 返回值表示本次实际清理的实例数量。
+// SweepOnce 清理一批过期实例。
+// 返回本次实际清理的数量。
 func (s *Sweeper) SweepOnce(ctx context.Context) (int, error) {
 	nowMs := nowUnixMilli()
 	expired, err := s.store.Instance.ListExpired(ctx, nowMs, s.cfg.BatchSize)
@@ -207,7 +207,7 @@ func (s *Sweeper) nextSweepInterval() time.Duration {
 		return base
 	}
 
-	// [base-jitterRange, base+jitterRange] 区间内随机取值。
+	// 在 [base-jitterRange, base+jitterRange] 区间内随机取值。
 	delta := time.Duration(rand.Int63n(int64(jitterRange)*2+1)) - jitterRange
 	next := base + delta
 	if next <= 0 {

@@ -151,22 +151,10 @@ message ListSchedulesResponse {
   repeated api.schema.v1.Schedule schedules = 2;
 }
 
-message UpdateScheduleRequest {
-  string id = 1 [
-    (buf.validate.field).required = true,
-    (buf.validate.field).string.uuid = true
-  ];
-  api.schema.v1.Schedule schedule = 2;
-}
-
-message PauseScheduleRequest {
-  string id = 1 [
-    (buf.validate.field).required = true,
-    (buf.validate.field).string.uuid = true
-  ];
-}
-
-message ResumeScheduleRequest {
+// 单向停止 schedule：清空触发计划与未完成的投递链路，此后永不触发，不可恢复。
+//
+// 幂等：已经是 STOPPED 时直接返回当前对象。
+message StopScheduleRequest {
   string id = 1 [
     (buf.validate.field).required = true,
     (buf.validate.field).string.uuid = true
@@ -218,13 +206,6 @@ message ListScheduleDeadLettersResponse {
 }
 
 message ReplayScheduleDeadLetterRequest {
-  string id = 1 [
-    (buf.validate.field).required = true,
-    (buf.validate.field).string.uuid = true
-  ];
-}
-
-message DiscardScheduleDeadLetterRequest {
   string id = 1 [
     (buf.validate.field).required = true,
     (buf.validate.field).string.uuid = true
@@ -335,23 +316,9 @@ service AdminService {
     option (google.api.http) = {get: "/api/admin/v1/schedules"};
   }
 
-  rpc UpdateSchedule(UpdateScheduleRequest) returns (api.schema.v1.Schedule) {
+  rpc StopSchedule(StopScheduleRequest) returns (api.schema.v1.Schedule) {
     option (google.api.http) = {
-      put: "/api/admin/v1/schedules/{id}"
-      body: "*"
-    };
-  }
-
-  rpc PauseSchedule(PauseScheduleRequest) returns (api.schema.v1.Schedule) {
-    option (google.api.http) = {
-      post: "/api/admin/v1/schedules/{id}/pause"
-      body: "*"
-    };
-  }
-
-  rpc ResumeSchedule(ResumeScheduleRequest) returns (api.schema.v1.Schedule) {
-    option (google.api.http) = {
-      post: "/api/admin/v1/schedules/{id}/resume"
+      post: "/api/admin/v1/schedules/{id}/stop"
       body: "*"
     };
   }
@@ -377,13 +344,6 @@ service AdminService {
   rpc ReplayScheduleDeadLetter(ReplayScheduleDeadLetterRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/api/admin/v1/schedule-dead-letters/{id}/replay"
-      body: "*"
-    };
-  }
-
-  rpc DiscardScheduleDeadLetter(DiscardScheduleDeadLetterRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/api/admin/v1/schedule-dead-letters/{id}/discard"
       body: "*"
     };
   }

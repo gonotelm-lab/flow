@@ -71,9 +71,9 @@ func TestRecorder_FlushesAllEntriesOnClose(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go r.Run(ctx)
+	r.Start(ctx)
 
-	for _, action := range []string{"CREATE_SCHEDULE", "PAUSE_SCHEDULE", "DELETE_SCHEDULE"} {
+	for _, action := range []string{"CREATE_SCHEDULE", "STOP_SCHEDULE", "DELETE_SCHEDULE"} {
 		r.Record(Entry{
 			Action:     action,
 			TargetType: schema.AuditTargetSchedule,
@@ -105,7 +105,7 @@ func TestRecorder_WritesWithoutExplicitClose(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go r.Run(ctx)
+	r.Start(ctx)
 
 	r.Record(Entry{Action: "CREATE_SCHEDULE", TargetType: schema.AuditTargetSchedule})
 
@@ -123,7 +123,7 @@ func TestRecorder_WritesBacklogEnqueuedBeforeWriterRuns(t *testing.T) {
 	r := New(f, Config{QueueSize: 64, BatchSize: 32, EnqueueTimeout: 10 * time.Millisecond})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go r.Run(ctx)
+	r.Start(ctx)
 
 	// 先塞满队列，再放行 writer，让它一次收走
 	for i := 0; i < 5; i++ {
@@ -136,7 +136,7 @@ func TestRecorder_WritesBacklogEnqueuedBeforeWriterRuns(t *testing.T) {
 	assert.GreaterOrEqual(t, f.batchCount(), 1)
 }
 
-// 审计重要，但绝不能把业务拖死：队列满时必须「短暂等待后丢弃」，而不是无限阻塞。
+// 审计重要，但绝不能把业务拖死：队列满时必须短暂等待后丢弃，而不是无限阻塞。
 func TestRecorder_NeverBlocksBusinessWhenQueueFull(t *testing.T) {
 	f := &fakeAuditStore{
 		entered: make(chan struct{}, 16),
@@ -151,7 +151,7 @@ func TestRecorder_NeverBlocksBusinessWhenQueueFull(t *testing.T) {
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go r.Run(ctx)
+	r.Start(ctx)
 
 	// 第一条会触发 write 并卡在 fakeStore 里
 	r.Record(Entry{Action: "A1"})

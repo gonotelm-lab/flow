@@ -1,10 +1,10 @@
 package schedule
 
 import (
+	"context"
 	"testing"
 	"time"
 
-	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,10 +13,10 @@ func TestOneShot_BuildsOneShotTrigger(t *testing.T) {
 	fireAt := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 	s := OneShot(fireAt, "https://example.com/hook", []byte("body"))
 
-	require.NotNil(t, s.GetOneShot(), "必须落在 oneof 的 one_shot 分支")
-	assert.Nil(t, s.GetCron(), "一次性任务不能带 cron 分支")
-	assert.Equal(t, fireAt.UnixMilli(), s.GetOneShot().GetFireAt())
-	assert.Equal(t, "https://example.com/hook", s.CallbackUrl)
+	trigger, ok := s.Trigger.(OneShotTrigger)
+	require.True(t, ok, "必须落在一次性触发上")
+	assert.Equal(t, fireAt, trigger.FireAt)
+	assert.Equal(t, "https://example.com/hook", s.CallbackURL)
 	assert.Equal(t, "body", string(s.Payload))
 	// 没指定 Content-Type 时应当补上缺省值
 	assert.Equal(t, DefaultContentType, s.ContentType)
@@ -27,37 +27,38 @@ func TestAfter_UsesAbsoluteFutureTime(t *testing.T) {
 	s := After(30*time.Second, "https://example.com/hook", nil)
 	after := time.Now()
 
-	fireAt := s.GetOneShot().GetFireAt()
-	assert.GreaterOrEqual(t, fireAt, before.Add(30*time.Second).UnixMilli())
-	assert.LessOrEqual(t, fireAt, after.Add(30*time.Second).UnixMilli())
+	trigger, ok := s.Trigger.(OneShotTrigger)
+	require.True(t, ok)
+	assert.False(t, trigger.FireAt.Before(before.Add(30*time.Second)))
+	assert.False(t, trigger.FireAt.After(after.Add(30*time.Second)))
 }
 
 func TestCron_BuildsCronTrigger(t *testing.T) {
 	s := Cron("*/5 * * * *", "Asia/Shanghai", "https://example.com/hook", []byte("x"))
 
-	require.NotNil(t, s.GetCron(), "必须落在 oneof 的 cron 分支")
-	assert.Nil(t, s.GetOneShot(), "cron 任务不能带 one_shot 分支")
-	assert.Equal(t, "*/5 * * * *", s.GetCron().GetExpr())
-	assert.Equal(t, "Asia/Shanghai", s.GetCron().GetTimezone())
+	trigger, ok := s.Trigger.(CronTrigger)
+	require.True(t, ok, "必须落在 cron 触发上")
+	assert.Equal(t, "*/5 * * * *", trigger.Expr)
+	assert.Equal(t, "Asia/Shanghai", trigger.Timezone)
 }
 
 func TestCron_EmptyTimezoneMeansServerDefault(t *testing.T) {
 	s := Cron("* * * * *", "", "https://example.com/hook", nil)
 	// 留空交给服务端补 UTC，客户端不猜服务器时区
-	assert.Equal(t, "", s.GetCron().GetTimezone())
+	trigger, ok := s.Trigger.(CronTrigger)
+	require.True(t, ok)
+	assert.Equal(t, "", trigger.Timezone)
 }
 
 func TestOptions_AreApplied(t *testing.T) {
 	s := OneShot(time.Now().Add(time.Hour), "https://example.com/hook", nil,
-		WithNamespace("demo"),
 		WithName("nightly-report"),
 		WithIdempotencyKey("order-123"),
 		WithContentType("application/json"),
 	)
 
-	assert.Equal(t, "demo", s.Namespace)
 	assert.Equal(t, "nightly-report", s.Name)
-	assert.Equal(t, "order-123", s.GetIdempotencyKey())
+	assert.Equal(t, "order-123", s.IdempotencyKey)
 	assert.Equal(t, "application/json", s.ContentType)
 }
 
@@ -74,27 +75,50 @@ func TestNewListOptions_DefaultsAndOverrides(t *testing.T) {
 	assert.Equal(t, 20, o.pageSize)
 
 	o = newListOptions([]ListOption{
-		WithListNamespace("ns"),
-		WithScheduleType(schemav1.ScheduleType_SCHEDULE_TYPE_CRON),
-		WithState(schemav1.ScheduleState_SCHEDULE_STATE_PAUSED),
+		WithScheduleType(TypeCron),
+		WithState(StateStopped),
 		WithID("abc"),
 		WithPage(3, 50),
 	})
-	assert.Equal(t, "ns", o.namespace)
-	assert.Equal(t, schemav1.ScheduleType_SCHEDULE_TYPE_CRON, o.scheduleType)
-	assert.Equal(t, schemav1.ScheduleState_SCHEDULE_STATE_PAUSED, o.state)
+	assert.Equal(t, TypeCron, o.scheduleType)
+	assert.Equal(t, StateStopped, o.state)
 	assert.Equal(t, "abc", o.id)
 	assert.Equal(t, 3, o.page)
 	assert.Equal(t, 50, o.pageSize)
 }
 
-// 客户端面**不应该**有 TriggerNow / 死信操作：它们只在 admin 面。
-// 这个断言是编译期的——若有人给 ScheduleServiceClient 加了这些方法，
-// 说明客户端面被污染了，这里会提醒重新审视设计。
-func TestClientSurface_HasNoAdminOnlyOperations(t *testing.T) {
+// 客户端 SDK 不能把 proto 类型漏到表面上：这些方法都只收发本包的类型。
+// 里面没有 Update：定义改不了，只能重新注册（管理面也不提供 Update）。
+func TestClientSurface_HasNoProtoTypes(t *testing.T) {
 	var c *Client
+	_ = []string{"Register", "Get", "List", "Stop", "Delete", "Close",
+		"VerifyRequest", "VerifyRequestWithBody"}
 	assert.Nil(t, c)
+}
 
-	// 客户端 SDK 暴露的方法就是下面这些，没有 TriggerNow / DeadLetter
-	_ = []string{"Register", "Get", "List", "Update", "Pause", "Resume", "Delete", "Close"}
+// 没显式设置幂等键时自动补一个随机键：RPC 重试不会建出两条。
+func TestFillIdempotencyKey(t *testing.T) {
+	generated := Spec{}
+	require.NoError(t, fillIdempotencyKey(&generated))
+	assert.Regexp(t, "^[0-9a-f]{32}$", generated.IdempotencyKey)
+
+	another := Spec{}
+	require.NoError(t, fillIdempotencyKey(&another))
+	assert.NotEqual(t, generated.IdempotencyKey, another.IdempotencyKey)
+
+	// 显式给了就原样保留，不会被覆盖掉
+	explicit := Spec{IdempotencyKey: "nightly-report"}
+	require.NoError(t, fillIdempotencyKey(&explicit))
+	assert.Equal(t, "nightly-report", explicit.IdempotencyKey)
+}
+
+// 没配 namespace 的客户端不该发出请求：注册会被服务端拒，列表会变成跨 namespace 查全部。
+func TestRegisterAndList_RequireNamespace(t *testing.T) {
+	c := NewWithConn(nil, Config{APIKey: testApiKey})
+
+	_, err := c.Register(context.Background(), Spec{})
+	assert.ErrorIs(t, err, ErrNoNamespace)
+
+	_, _, err = c.List(context.Background())
+	assert.ErrorIs(t, err, ErrNoNamespace)
 }

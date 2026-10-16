@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/poll_test.go
 package runtime
 
 import (

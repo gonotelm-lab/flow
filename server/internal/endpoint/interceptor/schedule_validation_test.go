@@ -11,11 +11,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// 这一组测试守的是「服务端 buf.validate 拦截器」这一层。
+// 这一组测试守的是服务端 buf.validate 拦截器这一层。
 //
 // 起因是一个真实事故：Schedule.id 原本只有 `string.uuid = true`，而 proto3 的非 optional
-// 字符串默认值就是 ""，protovalidate 会对空值也跑 uuid 校验，于是**每一次注册**都被
-// 拦截器判成 InvalidArgument —— 客户端根本没法注册。
+// 字符串默认值就是 ""，protovalidate 对空值也会跑 uuid 校验，于是每一次注册都被拦截器
+// 判成 InvalidArgument，客户端根本没法注册。
 //
 // 仓储测试绕过了 service 层，dispatcher 端到端测试绕过了 gRPC 层，两边都测不到它。
 // 所以这里直接对着请求形状做校验，作为回归防线。
@@ -42,7 +42,7 @@ func TestValidate_ScheduleWithoutIDIsAccepted(t *testing.T) {
 		"id 为空是注册的正常形状，不能被 uuid 校验拦下")
 }
 
-// 通过请求外壳再走一遍，确保嵌套校验路径也放行。
+// 套上请求外壳再校验一遍，确认嵌套校验路径也放行。
 func TestValidate_RegisterAndCreateRequestShapes(t *testing.T) {
 	s := registerShapedSchedule()
 
@@ -67,7 +67,7 @@ func TestValidate_ScheduleIDWhenProvidedMustBeUUID(t *testing.T) {
 	})
 }
 
-// 必填与边界约束仍然要生效——别把「放行空 id」误做成「整体不校验」。
+// 必填和边界约束仍然要生效，别把放行空 id 做成整体不校验。
 func TestValidate_ScheduleRequiredFieldsStillEnforced(t *testing.T) {
 	cases := map[string]func(s *schemav1.Schedule){
 		"namespace 为空":    func(s *schemav1.Schedule) { s.Namespace = "" },

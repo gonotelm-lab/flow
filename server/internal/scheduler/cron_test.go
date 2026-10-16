@@ -27,14 +27,14 @@ func TestParse_AcceptsStandard5Fields(t *testing.T) {
 	}
 }
 
-// 秒级 cron 会把回调打爆，因此 6 字段必须被拒绝。这个保证来自「不传 cron.Second」。
+// 秒级 cron 会把回调打爆，因此 6 字段必须被拒绝。这条保证来自不传 cron.Second。
 func TestParse_Rejects6Fields(t *testing.T) {
 	_, err := Parse("*/1 * * * * *", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "5 fields")
 }
 
-// 「cron 用标准表达式」的另一半：描述符也不接受。来自「不传 cron.Descriptor」。
+// cron 用标准表达式的另一半：描述符也不接受，来自不传 cron.Descriptor。
 func TestParse_RejectsDescriptors(t *testing.T) {
 	for _, expr := range []string{"@daily", "@every 1h30m", "@hourly", "@midnight"} {
 		t.Run(expr, func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestParse_RejectsDescriptors(t *testing.T) {
 	}
 }
 
-// Quartz 扩展（L / W / #）不支持，避免出现「看起来能用、语义和 Quartz 不同」的表达式。
+// Quartz 扩展（L / W / #）不支持，避免出现看起来能用、语义却和 Quartz 不同的表达式。
 func TestParse_RejectsQuartzExtensions(t *testing.T) {
 	for _, expr := range []string{
 		"0 0 L * *",
@@ -89,11 +89,11 @@ func TestParse_RejectsEmptyExpression(t *testing.T) {
 // 这是本文件最重要的一个测试。
 //
 // robfig/cron/v3 的 Parser.Parse(spec) 没有 location 参数，内部写死 time.Local。
-// 如果不注入 CRON_TZ 前缀，「每天 9 点」会静默按服务器本地时区算——不报错，只算错。
+// 不注入 CRON_TZ 前缀的话，「每天 9 点」会静默按服务器本地时区算，不报错，只算错。
 //
-// 注意 robfig 的另一个契约：SpecSchedule.Next 找到时刻后会「转回入参所在的时区」
+// robfig 还有另一个契约：SpecSchedule.Next 找到时刻后会转回入参所在的时区
 // （源码注释 Save the original timezone so we can convert back），所以返回值的
-// .Location() 是入参的时区、不是 schedule 的时区。我们只依赖**时刻**（落库是 unix
+// .Location() 是入参的时区，不是 schedule 的时区。我们只依赖时刻（落库是 unix
 // 毫秒），要按 schedule 的时区展示时由展示方自己 In(loc)。
 func TestParse_TimezoneChangesNextFireTime(t *testing.T) {
 	// 2026-01-05 是周一
@@ -143,8 +143,8 @@ func TestParse_TimezoneChangesNextFireTime(t *testing.T) {
 }
 
 // 记录一个几乎所有手写 cron 解析器都会写错的点：日 与 星期 是 OR 不是 AND。
-// 「0 0 1 * MON」= 每月 1 号 **或** 每周一，不是「每月 1 号且是周一」。
-// 我们用库的语义，因此这个测试同时是对外契约的文档。
+// `0 0 1 * MON` = 每月 1 号或每周一，不是每月 1 号且是周一。
+// 我们用库的语义，所以这个测试同时是对外契约的文档。
 func TestNext_DomDowIsOrNotAnd(t *testing.T) {
 	// 2026-01-02 是周五，2026-01-05 是周一，2026-02-01 在更后面
 	base := time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)

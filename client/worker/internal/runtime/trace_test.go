@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/trace_test.go
 package runtime
 
 import (
@@ -33,7 +32,7 @@ func setupTraceTest(t *testing.T) (*tracetest.InMemoryExporter, *sdktrace.Tracer
 	return exporter, tp
 }
 
-// storedTraceparent 用 provider 造一个"已结束的提交侧 span"，返回其 traceparent。
+// storedTraceparent 用 provider 造一个已结束的提交侧 span，返回它的 traceparent。
 func storedTraceparent(t *testing.T, tp *sdktrace.TracerProvider) string {
 	t.Helper()
 	ctx, span := tp.Tracer("test").Start(context.Background(), "submit")

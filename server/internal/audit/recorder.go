@@ -1,8 +1,8 @@
 // Package audit 提供 admin 操作审计的异步记录器。
 //
-// 写入是异步的（已确认的设计选择）：业务变更提交后把条目投进进程内有界队列，
-// 由后台 goroutine 批量落库。代价是进程被 kill 或崩溃时，已提交的业务变更会丢掉
-// 对应的审计记录；换来的是审计写入永远不会拖慢或阻塞业务请求。
+// 写入是异步的，这是明确的设计选择：业务变更提交后把条目投进进程内的有界队列，
+// 由后台 goroutine 批量落库。代价是进程被 kill 或崩溃时，已经提交的业务变更会丢掉
+// 对应的审计记录，换来的是审计写入永远不会拖慢或阻塞业务请求。
 package audit
 
 import (
@@ -78,6 +78,11 @@ type Recorder struct {
 
 	ch chan *schema.AdminAuditLog
 
+	// done 由 Close 关闭，run 见到它就退出。单靠 ctx 不行：run 可能还没开始跑，
+	// Close 就已经在等了，那时没有任何东西能通知它退出。
+	done      chan struct{}
+	closeOnce sync.Once
+
 	wg sync.WaitGroup
 
 	mu     sync.Mutex
@@ -93,6 +98,7 @@ func New(s store.AdminAuditLog, cfg Config) *Recorder {
 		store: s,
 		cfg:   cfg,
 		ch:    make(chan *schema.AdminAuditLog, cfg.QueueSize),
+		done:  make(chan struct{}),
 	}
 }
 
@@ -102,8 +108,8 @@ func (r *Recorder) Record(e Entry) {
 	// 主键必须在这里生成。
 	//
 	// admin_audit_logs.id 虽然是 UUID DEFAULT uuidv7()，但 GORM 会把 Go 的零值 UUID
-	// **显式**写进 INSERT，于是数据库默认值不会生效：第一条以全零主键成功，之后每一条
-	// 都撞主键失败。而异步写入只把错误打到日志，接口照样返回 200 —— 静默丢数据。
+	// 显式写进 INSERT，数据库默认值就不生效了：第一条以全零主键成功，之后每一条都撞
+	// 主键失败。而异步写入只把错误打到日志，接口照样返回 200，数据静默丢掉。
 	id, err := uuid.NewV7()
 	if err != nil {
 		id = uuid.New()
@@ -147,9 +153,17 @@ func (r *Recorder) Record(e Entry) {
 	}
 }
 
-// Run 启动后台写入循环，阻塞直到 ctx 结束。结束时会把队列里剩余条目刷盘。
-func (r *Recorder) Run(ctx context.Context) {
+// Start 启动后台写入循环，配套 Close 关闭。
+//
+// WaitGroup 必须在这里登记，不能放进 goroutine 内部：若调用方写 `go r.Run(ctx)`，
+// Close 可能在协程真正开跑之前就等到计数为零返回，之后那个协程才开始读 ctx——
+// 关机等不到它退出，`-race` 下也是明确的数据竞争。
+func (r *Recorder) Start(ctx context.Context) {
 	r.wg.Add(1)
+	go r.run(ctx)
+}
+
+func (r *Recorder) run(ctx context.Context) {
 	defer r.wg.Done()
 
 	runCtx, cancel := context.WithCancel(ctx)
@@ -177,19 +191,22 @@ func (r *Recorder) Run(ctx context.Context) {
 		case <-runCtx.Done():
 			r.drain()
 			return
+		case <-r.done:
+			r.drain()
+			return
 		case first := <-r.ch:
 			r.write(r.collect(first))
 		}
 	}
 }
 
-// Close 取消写入循环，把队列里剩余条目刷盘，然后等待写入 goroutine 退出。
+// Close 停掉写入循环、刷完队列、等 goroutine 退出。可以重复调用。
 //
-// 注意这里的 drain 不能只依赖 Run 内部的收尾逻辑：Run 是在 wg.Add 之前由调用方
-// `go r.Run(ctx)` 启动的，Close 有可能抢在 Run 真正开始执行之前跑完 wg.Wait()。
-// 那种情况下若只靠 Run 去刷队列，队列里的条目就永远无人写入。因此 Close 自己也
-// drain 一次——drain 从同一个 channel 取，不会重复写。
+// drain 不能只靠 Run 的收尾：Run 可能还没开始跑，Close 的 wg.Wait() 就已经返回了，
+// 那时队列里的条目只有靠这里自己刷。drain 从同一个 channel 取，不会重复写。
 func (r *Recorder) Close() {
+	r.closeOnce.Do(func() { close(r.done) })
+
 	r.mu.Lock()
 	cancel := r.cancel
 	r.mu.Unlock()
@@ -237,7 +254,7 @@ func (r *Recorder) write(batch []*schema.AdminAuditLog) {
 			slog.Int("count", len(batch)),
 		)
 		// 异步写入失败不向上报：调用方已经拿到业务结果，这里只能记录。
-		// 计入 dropped，避免"看起来写成功了"。
+		// 计入 dropped，免得看起来像是写成功了。
 		r.dropped.Add(int64(len(batch)))
 		return
 	}

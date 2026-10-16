@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,7 +8,6 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"runtime/debug"
-	"strconv"
 	"sync"
 	"time"
 
@@ -267,7 +265,7 @@ func (d *Dispatcher) attemptDeadLetter(
 ) {
 	dl, err := d.store.ScheduleDeadLetter.GetRetryingBySchedule(ctx, s.Id)
 	if err != nil {
-		// 死信记录不见了（可能被人工 Discard）：释放槽位，避免 schedule 永久卡住。
+		// 死信记录不见了（例如 schedule 被删）：释放槽位，避免 schedule 永久卡住。
 		slog.WarnContext(ctx, "retrying dead letter not found, releasing fire slot",
 			slog.String("schedule_id", s.Id.String()),
 			slog.Any("err", err),
@@ -291,7 +289,7 @@ func (d *Dispatcher) attemptDeadLetter(
 	}
 
 	if attemptNo >= len(d.cfg.DeadLetterIntervals) {
-		// 慢重试也耗尽：死信转 EXHAUSTED（不阻塞后续触发，等人工 Replay / Discard）。
+		// 慢重试也耗尽：死信转 EXHAUSTED（不阻塞后续触发，等人工重投）。
 		if _, err := d.store.ScheduleDeadLetter.SetState(
 			ctx, dl.Id, schema.DeadLetterStateRetrying, schema.DeadLetterStateExhausted, claimedAt,
 		); err != nil {
@@ -454,14 +452,41 @@ func (d *Dispatcher) enterDeadLetter(
 	now int64,
 	result deliveryResult,
 ) {
+	nextAt := now + jittered(d.cfg.DeadLetterIntervals[0], d.cfg.RetryJitterRatio).Milliseconds()
+
+	// 先把「转入死信」写到 schedule 上，再建死信。
+	//
+	// ApplyOutcome 是条件更新，只认领本次 fire 且槽位仍在时才生效。顺序不能反：schedule
+	// 可能刚好在这次投递期间被 stop（槽位被清空），那时再建死信就会留下一条永远没人
+	// 推进的 RETRYING——界面上一直显示「慢重试中」，实际不会再有下一次尝试。
+	deadLetterState := schema.FireStateDeadLetter
+	held, err := d.store.Schedule.ApplyOutcome(ctx, s.Id, fireId, &store.AttemptOutcome{
+		NextFireState: &deadLetterState,
+		NextAttemptAt: nextAt,
+		AttemptNo:     s.AttemptNo + 1,
+		LastError:     result.errText,
+		Now:           now,
+	})
+	if err != nil {
+		slog.ErrorContext(ctx, "apply dead letter state failed",
+			slog.String("schedule_id", s.Id.String()),
+			slog.Any("err", err),
+		)
+		return
+	}
+	if !held {
+		slog.InfoContext(ctx, "fire slot no longer held, skip dead letter",
+			slog.String("schedule_id", s.Id.String()),
+		)
+		return
+	}
+
 	dlId, err := uuid.NewV7()
 	if err != nil {
 		slog.ErrorContext(ctx, "generate dead letter id failed", slog.Any("err", err))
 		d.releaseSlot(ctx, s, fireId, now)
 		return
 	}
-
-	nextAt := now + jittered(d.cfg.DeadLetterIntervals[0], d.cfg.RetryJitterRatio).Milliseconds()
 
 	if _, err := d.store.ScheduleDeadLetter.Create(ctx, &schema.ScheduleDeadLetter{
 		Id:             dlId,
@@ -484,15 +509,6 @@ func (d *Dispatcher) enterDeadLetter(
 		d.releaseSlot(ctx, s, fireId, now)
 		return
 	}
-
-	deadLetterState := schema.FireStateDeadLetter
-	d.apply(ctx, s, fireId, &store.AttemptOutcome{
-		NextFireState: &deadLetterState,
-		NextAttemptAt: nextAt,
-		AttemptNo:     s.AttemptNo + 1,
-		LastError:     result.errText,
-		Now:           now,
-	})
 }
 
 // recordFailure 每个失败的尝试落一行；成功不记录。
@@ -544,23 +560,10 @@ func (d *Dispatcher) deliver(ctx context.Context, s *schema.Schedule) deliveryRe
 
 	start := time.Now()
 
-	req, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, s.CallbackUrl, bytes.NewReader(s.Payload))
+	req, err := newCallbackRequest(ctx, secret, s, start)
 	if err != nil {
-		return deliveryResult{errText: "failed to build request: " + err.Error()}
+		return deliveryResult{errText: "failed to build callback request: " + err.Error()}
 	}
-
-	req.Header.Set("Content-Type", s.ContentType)
-	req.Header.Set(HeaderScheduleId, s.Id.String())
-	if s.FireId != nil {
-		req.Header.Set(HeaderFireId, s.FireId.String())
-	}
-	req.Header.Set(HeaderScheduledTime, strconv.FormatInt(s.FireScheduledTime, 10))
-
-	// 时间戳参与签名，接收方据此判重放。
-	ts := time.Now().Unix()
-	req.Header.Set(HeaderTimestamp, strconv.FormatInt(ts, 10))
-	req.Header.Set(HeaderSignature, SignatureHeader(secret, ts, s.Payload))
 
 	resp, err := d.httpClient.Do(req)
 	duration := time.Since(start).Milliseconds()
@@ -570,10 +573,7 @@ func (d *Dispatcher) deliver(ctx context.Context, s *schema.Schedule) deliveryRe
 			errText:    "http request failed: " + err.Error(),
 		}
 	}
-	defer func() {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
-		_ = resp.Body.Close()
-	}()
+	defer drainAndClose(resp)
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return deliveryResult{ok: true, httpStatus: resp.StatusCode, durationMs: duration}

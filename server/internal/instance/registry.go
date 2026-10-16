@@ -30,7 +30,7 @@ func zeroRevision() *schema.GlobalRevision {
 	}
 }
 
-// 按create_time(start_time) 从小到大稳定排序返回。
+// 按 start_time（create_time）从小到大稳定排序。
 func sortInstances(instances []*Instance) {
 	sort.SliceStable(instances, func(i, j int) bool {
 		if instances[i].startTime == instances[j].startTime {
@@ -90,13 +90,13 @@ func (r *Registry) registerOnce(
 	var instance *Instance
 
 	err := r.txMgr.Transact(ctx, func(ctx context.Context) error {
-		// 1. get global revision
+		// 1. 取全局 revision
 		curRev, err := r.store.GlobalRevision.GetOrInitForUpdate(ctx, zero)
 		if err != nil {
 			return errors.WithMessage(err, "get global revision failed")
 		}
 
-		// 2. insert instance
+		// 2. 写入 instance
 		revision := curRev.CurrentRevision + 1
 		value = strings.TrimSpace(value)
 		if value == "" {
@@ -110,7 +110,7 @@ func (r *Registry) registerOnce(
 
 		instance.id = created.Id
 
-		// 3. insert instance event
+		// 3. 写 instance event
 		err = r.store.InstanceEvent.Append(ctx, &schema.InstanceEvent{
 			Revision:   revision,
 			Group:      instance.group,
@@ -123,7 +123,7 @@ func (r *Registry) registerOnce(
 			return errors.WithMessage(err, "append instance event failed")
 		}
 
-		// 4. update global revision
+		// 4. 更新全局 revision
 		err = r.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, nowMs)
 		if err != nil {
 			return errors.WithMessage(err, "update global revision failed")
@@ -169,7 +169,7 @@ func (r *Registry) Register(
 }
 
 // GetAllPeers 返回当前所有远端活跃实例（expire_time > now），
-// 并按 create_time(start_time) 从小到大稳定排序返回。
+// 按 start_time（create_time）从小到大稳定排序。
 func (r *Registry) GetAllPeers(ctx context.Context) ([]*Instance, error) {
 	activeInstances, err := r.store.Instance.ListActive(ctx, nowUnixMilli())
 	if err != nil {
@@ -218,7 +218,7 @@ func (r *Registry) Unregister(
 	err := r.txMgr.Transact(ctx, func(ctx context.Context) error {
 		nowMs := nowUnixMilli()
 
-		// 0. get global revision
+		// 0. 取全局 revision
 		curRev, err := r.store.GlobalRevision.GetOrInitForUpdate(ctx, zeroRevision())
 		if err != nil {
 			return errors.WithMessage(err, "get global revision failed")
@@ -226,9 +226,9 @@ func (r *Registry) Unregister(
 
 		revision := curRev.CurrentRevision + 1
 
-		// 1. delete instance
-		// 只有真正删掉行才写 DELETE 事件：sweeper 可能已经先一步清理了同一个过期实例，
-		// 否则会为同一个 key 重复写入 DELETE 事件，并平白推高全局 revision。
+		// 1. 删除 instance
+		// 只有真正删掉了行才写 DELETE 事件。sweeper 可能已经先一步清掉同一个过期实例，
+		// 再写一次就是同一个 key 重复，还会白白推高全局 revision。
 		deleted, err := r.store.Instance.Delete(ctx, instance.id)
 		if err != nil {
 			return errors.WithMessage(err, "delete instance failed")
@@ -241,7 +241,7 @@ func (r *Registry) Unregister(
 			return nil
 		}
 
-		// 2. put event
+		// 2. 写 instance event
 		err = r.store.InstanceEvent.Append(ctx, &schema.InstanceEvent{
 			Revision:   revision,
 			Group:      instance.group,
@@ -254,7 +254,7 @@ func (r *Registry) Unregister(
 			return errors.WithMessage(err, "append instance event failed")
 		}
 
-		// 3. update global revision
+		// 3. 更新全局 revision
 		err = r.store.GlobalRevision.IncrRevision(ctx, discovRevisionName, nowMs)
 		if err != nil {
 			return errors.WithMessage(err, "update global revision failed")
@@ -274,7 +274,7 @@ func (r *Registry) Unregister(
 	return nil
 }
 
-// 关闭registry 所有协程停止心跳推出
+// 关闭 registry，所有心跳协程停止并退出。
 func (r *Registry) Close() {
 	if !r.closing.CompareAndSwap(false, true) {
 		return
@@ -321,7 +321,7 @@ func (r *Registry) keepalive(
 			}
 
 			ticker.Stop()
-			// keepalive的ctx此时大概率已经cancelled 所以用一个新的ctx来处理unregister
+			// 走到这里 keepalive 的 ctx 大概率已经 cancelled，所以 unregister 另取一个新 ctx
 			unregisterCtx := context.WithoutCancel(ctx)
 			unregisterCtx, cc := context.WithTimeout(unregisterCtx, time.Second*5)
 			defer cc()
@@ -366,9 +366,8 @@ func (r *Registry) heartbeat(
 			continue
 		}
 
-		// 考虑这样一种场景：
-		// 前一时刻sweeper先删掉了instance，后一时刻更新心跳
-		// 这里进程并不是挂掉了，而是因为sweeper先删掉了，导致更新失败，尝试自动重新注册
+		// sweeper 可能在前一刻先把 instance 删了，下一刻才轮到心跳更新，更新就会失败。
+		// 这里进程并没有挂掉，只是行被 sweeper 清掉了，所以尝试自动重新注册
 		if !ok {
 			slog.WarnContext(ctx, "heartbeat update missed, try auto re-register",
 				slog.Int64("instance_id", instance.id),

@@ -5,11 +5,11 @@ import {
   CalendarClock,
   Check,
   Copy,
-  Pause,
-  Play,
+  MoreHorizontal,
   Plus,
   RotateCw,
   Search,
+  Square,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -23,6 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -40,13 +47,11 @@ import { ScheduleForm } from "@/components/domain/schedule-form";
 import { StatusDot } from "@/components/domain/status-dot";
 import {
   useDeleteSchedule,
-  useDiscardDeadLetter,
-  usePauseSchedule,
   useReplayDeadLetter,
-  useResumeSchedule,
   useSchedule,
   useScheduleDeadLetters,
   useSchedules,
+  useStopSchedule,
   useTriggerSchedule,
 } from "@/hooks/use-schedules";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -66,14 +71,14 @@ import type { Schedule } from "@/api/types";
 const STATE_TABS = [
   { value: "", label: "全部" },
   { value: "SCHEDULE_STATE_ACTIVE", label: "启用中" },
-  { value: "SCHEDULE_STATE_PAUSED", label: "已暂停" },
+  { value: "SCHEDULE_STATE_STOPPED", label: "已停止" },
   { value: "SCHEDULE_STATE_FINISHED", label: "已完成" },
   { value: "SCHEDULE_STATE_FAILED", label: "失败" },
 ] as const;
 
 const STATE_DOT: Record<string, string> = {
   SCHEDULE_STATE_ACTIVE: "bg-success",
-  SCHEDULE_STATE_PAUSED: "bg-warning",
+  SCHEDULE_STATE_STOPPED: "bg-muted-foreground/50",
   SCHEDULE_STATE_FINISHED: "bg-muted-foreground/50",
   SCHEDULE_STATE_FAILED: "bg-destructive",
 };
@@ -100,8 +105,8 @@ export function ScheduleTable() {
   const [idDraft, setIdDraft] = useState("");
   const [idFilter, setIdFilter] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Schedule | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Schedule | null>(null);
+  const [pendingStop, setPendingStop] = useState<Schedule | null>(null);
 
   const { data, isLoading } = useSchedules({
     page,
@@ -114,8 +119,7 @@ export function ScheduleTable() {
 
   const { data: detail } = useSchedule(selectedId);
 
-  const pause = usePauseSchedule();
-  const resume = useResumeSchedule();
+  const stop = useStopSchedule();
   const trigger = useTriggerSchedule();
   const remove = useDeleteSchedule();
 
@@ -190,7 +194,6 @@ export function ScheduleTable() {
 
           <Button
             onClick={() => {
-              setEditing(null);
               setFormOpen(true);
             }}
           >
@@ -238,11 +241,10 @@ export function ScheduleTable() {
                 <EmptyState
                   icon={CalendarClock}
                   title="还没有定时任务"
-                  description="注册一条回调，到期后由 flowserver 主动 POST 到指定地址"
+
                   action={{
                     label: "新建定时任务",
                     onClick: () => {
-                      setEditing(null);
                       setFormOpen(true);
                     },
                   }}
@@ -255,9 +257,8 @@ export function ScheduleTable() {
             rows.map((s) => {
               const meta = SCHEDULE_STATE_META[s.state ?? ""];
               const busy = (s.fireState ?? "FIRE_STATE_UNSPECIFIED") !== "FIRE_STATE_UNSPECIFIED";
-              const canToggle =
-                s.state === "SCHEDULE_STATE_ACTIVE" || s.state === "SCHEDULE_STATE_PAUSED";
-              const canTrigger = canToggle && !busy;
+              const canStop = s.state === "SCHEDULE_STATE_ACTIVE";
+              const canTrigger = canStop && !busy;
 
               return (
                 <TableRow key={s.id}>
@@ -307,7 +308,7 @@ export function ScheduleTable() {
 
                   <TableCell className="p-0">
                     <div className="flex h-11 items-center px-3 text-sm tabular-nums text-muted-foreground">
-                      {s.state === "SCHEDULE_STATE_PAUSED" ? "—" : formatUnixMillis(s.nextFireAt)}
+                      {s.state === "SCHEDULE_STATE_STOPPED" ? "—" : formatUnixMillis(s.nextFireAt)}
                     </div>
                   </TableCell>
 
@@ -325,66 +326,53 @@ export function ScheduleTable() {
                   </TableCell>
 
                   <TableCell className="p-0">
-                    <div className="flex h-11 items-center gap-3 px-3">
-                      {canToggle && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-14"
-                          onClick={() =>
-                            (s.state === "SCHEDULE_STATE_ACTIVE" ? pause : resume).mutate(s.id, {
-                              onSuccess: () =>
-                                toast.success(
-                                  s.state === "SCHEDULE_STATE_ACTIVE" ? "已暂停" : "已恢复",
-                                ),
-                              onError: (e) => toast.error(`操作失败：${String(e)}`),
-                            })
-                          }
-                        >
-                          {s.state === "SCHEDULE_STATE_ACTIVE" ? (
-                            <>
-                              <Pause className="h-3.5 w-3.5" />
-                              暂停
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-3.5 w-3.5" />
-                              恢复
-                            </>
-                          )}
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={!canTrigger}
-                        className={!canTrigger ? "opacity-40" : undefined}
-                        title={
-                          busy
-                            ? "当前有一次投递尚未结束，需等它结束（同一 schedule 同时只允许一个 fire）"
-                            : "立即投递一次，不影响 cron 节奏"
-                        }
-                        onClick={() =>
-                          trigger.mutate(s.id, {
-                            onSuccess: () => toast.success("已触发一次"),
-                            onError: (e) => toast.error(`触发失败：${String(e)}`),
-                          })
-                        }
-                      >
-                        <Zap className="h-3.5 w-3.5" />
-                        触发
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={() => setPendingDelete(s)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        删除
-                      </Button>
+                    <div className="flex h-11 items-center justify-end px-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" aria-label="操作">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            disabled={!canStop}
+                            title={
+                              canStop
+                                ? "停止后不会再触发，且无法恢复"
+                                : "只有启用中的任务可以停止"
+                            }
+                            onSelect={() => setPendingStop(s)}
+                          >
+                            <Square className="h-3.5 w-3.5" />
+                            停止
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            disabled={!canTrigger}
+                            title={
+                              busy
+                                ? "当前有一次投递尚未结束"
+                                : "立即投递一次，不影响 cron 节奏"
+                            }
+                            onSelect={() =>
+                              trigger.mutate(s.id, {
+                                onSuccess: () => toast.success("已触发一次"),
+                                onError: (e) => toast.error(`触发失败：${String(e)}`),
+                              })
+                            }
+                          >
+                            <Zap className="h-3.5 w-3.5" />
+                            触发
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onSelect={() => setPendingDelete(s)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            删除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -406,30 +394,18 @@ export function ScheduleTable() {
         scheduleId={selectedId}
         schedule={detail}
         onClose={closeDetail}
-        onEdit={(s) => {
-          closeDetail();
-          setEditing(s);
-          setFormOpen(true);
-        }}
       />
 
       <ScheduleForm
         open={formOpen}
-        onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditing(null);
-        }}
-        initial={editing}
+        onOpenChange={(open) => setFormOpen(open)}
       />
 
       <Dialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>删除定时任务</DialogTitle>
-            <DialogDescription>
-              删除是硬删：任务定义、失败记录与死信会一并消失，已发出的回调无法撤回。
-              服务端会把被删内容的快照写进审计日志。
-            </DialogDescription>
+            <DialogDescription>将删除定义、失败记录与死信，不可恢复。</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPendingDelete(null)}>
@@ -453,13 +429,37 @@ export function ScheduleTable() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={!!pendingStop} onOpenChange={(open) => !open && setPendingStop(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>停止定时任务</DialogTitle>
+            <DialogDescription>停止后不会再触发，也无法恢复。</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingStop(null)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!pendingStop) return;
+                stop.mutate(pendingStop.id, {
+                  onSuccess: () => {
+                    toast.success("已停止");
+                    setPendingStop(null);
+                  },
+                  onError: (e) => toast.error(`停止失败：${String(e)}`),
+                });
+              }}
+            >
+              确认停止
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-// ---------------------------------------------------------------------------
-// 详情
-// ---------------------------------------------------------------------------
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -474,15 +474,12 @@ function ScheduleDetailDialog({
   scheduleId,
   schedule,
   onClose,
-  onEdit,
 }: {
   scheduleId: string | null;
   schedule?: Schedule;
   onClose: () => void;
-  onEdit: (s: Schedule) => void;
 }) {
   const replay = useReplayDeadLetter();
-  const discard = useDiscardDeadLetter();
 
   const { data: deadLetters } = useScheduleDeadLetters(
     scheduleId ? { scheduleId, pageSize: 20 } : {},
@@ -537,8 +534,8 @@ function ScheduleDetailDialog({
               </Field>
               <Field label="触发规则">{triggerLabel(schedule)}</Field>
               <Field label="下次触发">
-                {schedule.state === "SCHEDULE_STATE_PAUSED"
-                  ? "已暂停"
+                {schedule.state === "SCHEDULE_STATE_STOPPED"
+                  ? "已停止"
                   : formatUnixMillis(schedule.nextFireAt)}
               </Field>
               <Field label="当前 fire">
@@ -561,7 +558,7 @@ function ScheduleDetailDialog({
               </Field>
               <Field label="累计失败尝试">{schedule.totalFailures ?? 0} 次</Field>
               <Field label="已跳过触发">
-                <span title="因上一次投递尚未结束，或停机期间错过而丢弃的 occurrence 数">
+                <span title="因上一次投递未结束或停机期间错过而丢弃的触发数">
                   {schedule.skippedCount ?? 0} 次
                 </span>
               </Field>
@@ -601,7 +598,10 @@ function ScheduleDetailDialog({
                 <div className="grid gap-2">
                   {rows.map((dl) => {
                     const meta = DEAD_LETTER_STATE_META[dl.state ?? ""];
-                    const replayable = dl.state === "DEAD_LETTER_STATE_EXHAUSTED";
+                    // 终态的 schedule 不能再重投死信，服务端会拒；这里直接把按钮置灰
+                    const replayable =
+                      dl.state === "DEAD_LETTER_STATE_EXHAUSTED" &&
+                      schedule.state === "SCHEDULE_STATE_ACTIVE";
                     return (
                       <div
                         key={dl.id}
@@ -633,7 +633,7 @@ function ScheduleDetailDialog({
                             size="sm"
                             disabled={!replayable}
                             className={!replayable ? "opacity-40" : undefined}
-                            title="重投会沿用原 Fire-Id，接收方据此判断是补投而非新事件"
+                            title="重投沿用原 Fire-Id，接收方据此去重"
                             onClick={() =>
                               replay.mutate(dl.id, {
                                 onSuccess: () => toast.success("已发起重投"),
@@ -643,20 +643,6 @@ function ScheduleDetailDialog({
                           >
                             <RotateCw className="h-3.5 w-3.5" />
                             重投
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!replayable}
-                            className={!replayable ? "opacity-40" : undefined}
-                            onClick={() =>
-                              discard.mutate(dl.id, {
-                                onSuccess: () => toast.success("已放弃"),
-                                onError: (e) => toast.error(`放弃失败：${String(e)}`),
-                              })
-                            }
-                          >
-                            放弃
                           </Button>
                         </div>
                       </div>
@@ -672,7 +658,6 @@ function ScheduleDetailDialog({
           <Button variant="outline" onClick={onClose}>
             关闭
           </Button>
-          {schedule && <Button onClick={() => onEdit(schedule)}>编辑</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

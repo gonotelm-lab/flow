@@ -4,12 +4,13 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/gonotelm-lab/flow/api/signature"
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/impl"
@@ -157,6 +158,8 @@ func seedSchedule(
 type capturedRequest struct {
 	body   []byte
 	header http.Header
+	method string
+	url    *url.URL
 }
 
 type receiver struct {
@@ -179,7 +182,12 @@ func (r *receiver) handler() http.HandlerFunc {
 		}
 
 		r.mu.Lock()
-		r.requests = append(r.requests, capturedRequest{body: body, header: req.Header.Clone()})
+		r.requests = append(r.requests, capturedRequest{
+			body:   body,
+			header: req.Header.Clone(),
+			method: req.Method,
+			url:    req.URL,
+		})
 		n := len(r.requests)
 		failFirst := r.failFirst
 		status := r.status
@@ -279,15 +287,23 @@ func TestDispatcher_SuccessPath(t *testing.T) {
 
 	// 元数据在 header 里
 	assert.Equal(t, sched.Id.String(), recv.at(0).header.Get(HeaderScheduleId))
+	assert.Equal(t, testNamespace, recv.at(0).header.Get(HeaderNamespace))
 	fireId := recv.at(0).header.Get(HeaderFireId)
 	require.NotEmpty(t, fireId)
 
-	// 签名必须能被接收方按文档复算出来
-	ts, err := strconv.ParseInt(recv.at(0).header.Get(HeaderTimestamp), 10, 64)
-	require.NoError(t, err)
-	assert.True(t,
-		Verify(testApiKey, ts, recv.at(0).body, recv.at(0).header.Get(HeaderSignature)),
-		"接收方必须能用 namespace api_key 复算出签名")
+	// 签名必须能被接收方按文档复算出来——用的就是客户端 SDK 里那份实现，
+	// 所以这条断言同时锁住了「服务端签的」与「SDK 验的」是同一条规则。
+	sigErr := signature.Verify(testApiKey, signature.Input{
+		Method: recv.at(0).method,
+		URL:    recv.at(0).url,
+		Header: recv.at(0).header,
+		Body:   recv.at(0).body,
+	}, recv.at(0).header.Get(HeaderSignature))
+	assert.NoError(t, sigErr, "接收方必须能用 namespace api_key 复算出签名")
+
+	// 时间戳必须可解析，接收方才有防重放的基础。
+	_, err := signature.Timestamp(recv.at(0).header)
+	assert.NoError(t, err)
 
 	// 一次性任务成功后进入终态，槽位释放
 	pump(t, d, func() bool {
@@ -436,6 +452,53 @@ func TestDispatcher_SkipsLateOccurrenceInsteadOfCatchingUp(t *testing.T) {
 		"next_fire_at 应当对齐到当前时间之后")
 	assert.Nil(t, got.FireState)
 	assert.Equal(t, schema.ScheduleStateActive, got.State, "cron 跳过之后应当继续正常触发")
+}
+
+// stop 与「最后一次快重试失败」撞在一起时，不能再给已停止的 schedule 建死信：
+// 槽位已经被 stop 清掉，那条死信永远不会被推进，只会在界面上一直显示「慢重试中」。
+func TestDispatcher_StopDuringLastFastAttemptCreatesNoDeadLetter(t *testing.T) {
+	db := newTestDB(t)
+	st := newTestStore(t, db)
+	seedNamespace(t, st)
+
+	ctx := context.Background()
+	now := time.Now().UnixMilli()
+
+	sched := seedSchedule(t, st, schema.ScheduleTypeCron, now-1000, now-1000)
+
+	// 认领一次，模拟「最后一次快重试已经在飞」
+	claimed, err := st.Schedule.ClaimDue(ctx, &store.ScheduleClaimParams{
+		ShardStart: 0,
+		ShardEnd:   sharding.ShardSize - 1,
+		Now:        now,
+		BatchSize:  10,
+		LeaseOwner: "instance-test",
+		LeaseUntil: now + 30_000,
+	})
+	require.NoError(t, err)
+	require.Len(t, claimed, 1)
+
+	maxFast := len(fastConfig().FastRetryIntervals) + 1
+	require.NoError(t, db.Exec("UPDATE schedules SET attempt_no = ? WHERE id = ?",
+		maxFast, sched.Id).Error)
+
+	inflight := getSchedule(t, st, sched.Id)
+	fireId := *inflight.FireId
+
+	// 投递还在飞的时候 schedule 被 stop：槽位清空、转 STOPPED
+	stopped, err := st.Schedule.Stop(ctx, sched.Id, now)
+	require.NoError(t, err)
+	require.True(t, stopped)
+
+	d := newDispatcher(t, st)
+	d.enterDeadLetter(ctx, inflight, fireId, now, deliveryResult{errText: "boom"})
+
+	_, err = st.ScheduleDeadLetter.GetRetryingBySchedule(ctx, sched.Id)
+	assert.Error(t, err, "已停止的 schedule 不该再有死信")
+
+	final := getSchedule(t, st, sched.Id)
+	assert.Equal(t, schema.ScheduleStateStopped, final.State)
+	assert.Nil(t, final.FireState, "stop 清掉的槽位不能被这次投递重新占上")
 }
 
 // 阻塞中的 fire 占着槽位时，到点的下一次 occurrence 不会被投递（Temporal 重叠语义）。

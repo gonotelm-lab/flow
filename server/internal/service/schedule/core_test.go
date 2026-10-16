@@ -156,14 +156,32 @@ func TestMapper_CronRoundTrip(t *testing.T) {
 		ScheduleType: schema.ScheduleTypeCron,
 		CronExpr:     domain.CronExpr,
 		Timezone:     domain.Timezone,
-		State:        schema.ScheduleStatePaused,
+		State:        schema.ScheduleStateStopped,
 	})
 	require.NotNil(t, back)
 	require.NotNil(t, back.GetCron())
 	assert.Equal(t, "*/5 * * * *", back.GetCron().Expr)
 	assert.Equal(t, "Asia/Shanghai", back.GetCron().Timezone)
 	assert.Nil(t, back.GetOneShot())
-	assert.Equal(t, schemav1.ScheduleState_SCHEDULE_STATE_PAUSED, back.State)
+	assert.Equal(t, schemav1.ScheduleState_SCHEDULE_STATE_STOPPED, back.State)
+}
+
+// 未知枚举值必须报错，不能在查表失败时翻成空串：空串在下游是「不筛选」，
+// 会把一个拼错的状态悄悄变成「查全部」。
+func TestMapper_RejectsUnknownEnumValues(t *testing.T) {
+	_, err := ScheduleStateFromProto(schemav1.ScheduleState(99))
+	require.Error(t, err)
+
+	_, err = ScheduleTypeFromProto(schemav1.ScheduleType(99))
+	require.Error(t, err)
+
+	_, err = DeadLetterStateFromProto(schemav1.DeadLetterState(99))
+	require.Error(t, err)
+
+	// UNSPECIFIED 是合法的「不筛选」，翻成空串
+	state, err := ScheduleStateFromProto(schemav1.ScheduleState_SCHEDULE_STATE_UNSPECIFIED)
+	require.NoError(t, err)
+	assert.Empty(t, state)
 }
 
 // 未指定触发类型时不能猜：必须落成空类型，由 Core 的校验拒掉。
@@ -226,24 +244,35 @@ func TestMapper_DeadLetterStateMapping(t *testing.T) {
 		schema.DeadLetterStateRetrying:  schemav1.DeadLetterState_DEAD_LETTER_STATE_RETRYING,
 		schema.DeadLetterStateExhausted: schemav1.DeadLetterState_DEAD_LETTER_STATE_EXHAUSTED,
 		schema.DeadLetterStateReplayed:  schemav1.DeadLetterState_DEAD_LETTER_STATE_REPLAYED,
-		schema.DeadLetterStateDiscarded: schemav1.DeadLetterState_DEAD_LETTER_STATE_DISCARDED,
+		schema.DeadLetterStateStopped:   schemav1.DeadLetterState_DEAD_LETTER_STATE_STOPPED,
 	}
 
 	for domain, proto := range pairs {
 		assert.Equal(t, proto, DeadLetterStateToProto(domain))
-		assert.Equal(t, domain, DeadLetterStateFromProto(proto))
+
+		back, err := DeadLetterStateFromProto(proto)
+		require.NoError(t, err)
+		assert.Equal(t, domain, back)
 	}
 }
 
 func TestMapper_ListFilterMapping(t *testing.T) {
-	assert.Equal(t, schema.ScheduleStateActive,
-		ScheduleStateFromProto(schemav1.ScheduleState_SCHEDULE_STATE_ACTIVE))
-	assert.Equal(t, schema.ScheduleTypeCron,
-		ScheduleTypeFromProto(schemav1.ScheduleType_SCHEDULE_TYPE_CRON))
+	state, err := ScheduleStateFromProto(schemav1.ScheduleState_SCHEDULE_STATE_ACTIVE)
+	require.NoError(t, err)
+	assert.Equal(t, schema.ScheduleStateActive, state)
+
+	scheduleType, err := ScheduleTypeFromProto(schemav1.ScheduleType_SCHEDULE_TYPE_CRON)
+	require.NoError(t, err)
+	assert.Equal(t, schema.ScheduleTypeCron, scheduleType)
 
 	// 未指定（0）不应当变成某个具体状态，否则筛选会莫名其妙少一半数据
-	assert.Equal(t, "", ScheduleStateFromProto(schemav1.ScheduleState_SCHEDULE_STATE_UNSPECIFIED))
-	assert.Equal(t, "", ScheduleTypeFromProto(schemav1.ScheduleType_SCHEDULE_TYPE_UNSPECIFIED))
+	state, err = ScheduleStateFromProto(schemav1.ScheduleState_SCHEDULE_STATE_UNSPECIFIED)
+	require.NoError(t, err)
+	assert.Equal(t, "", state)
+
+	scheduleType, err = ScheduleTypeFromProto(schemav1.ScheduleType_SCHEDULE_TYPE_UNSPECIFIED)
+	require.NoError(t, err)
+	assert.Equal(t, "", scheduleType)
 }
 
 func TestPaging(t *testing.T) {

@@ -3,22 +3,19 @@ package schema
 import "github.com/google/uuid"
 
 // 审计动作。当前只覆盖 admin 管理接口的操作——客户端 gRPC 的
-// Register / Update / Pause / Resume / Delete 不产生审计记录。
+// Register / Stop / Delete 不产生审计记录。
 const (
-	AuditActionCreateSchedule    = "CREATE_SCHEDULE"
-	AuditActionUpdateSchedule    = "UPDATE_SCHEDULE"
-	AuditActionPauseSchedule     = "PAUSE_SCHEDULE"
-	AuditActionResumeSchedule    = "RESUME_SCHEDULE"
-	AuditActionDeleteSchedule    = "DELETE_SCHEDULE"
-	AuditActionTriggerSchedule   = "TRIGGER_SCHEDULE"
-	AuditActionReplayDeadLetter  = "REPLAY_DEAD_LETTER"
-	AuditActionDiscardDeadLetter = "DISCARD_DEAD_LETTER"
+	AuditActionCreateSchedule   = "CREATE_SCHEDULE"
+	AuditActionStopSchedule     = "STOP_SCHEDULE"
+	AuditActionDeleteSchedule   = "DELETE_SCHEDULE"
+	AuditActionTriggerSchedule  = "TRIGGER_SCHEDULE"
+	AuditActionReplayDeadLetter = "REPLAY_DEAD_LETTER"
 )
 
 // 审计目标类型。表设计为通用，task / namespace / worker 后续接入无需改表。
 const (
 	AuditTargetSchedule = "SCHEDULE"
-	// AuditTargetScheduleDeadLetter 用于死信的重投 / 放弃：操作对象是死信记录本身，
+	// AuditTargetScheduleDeadLetter 用于死信重投：操作对象是死信记录本身，
 	// 不是 schedule，记成 SCHEDULE 会让「这条记录到底动了什么」变得含糊。
 	AuditTargetScheduleDeadLetter = "SCHEDULE_DEAD_LETTER"
 )

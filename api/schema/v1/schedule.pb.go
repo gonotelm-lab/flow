@@ -77,16 +77,21 @@ func (ScheduleType) EnumDescriptor() ([]byte, []int) {
 	return file_api_schema_v1_schedule_proto_rawDescGZIP(), []int{0}
 }
 
-// schedule 自身的生命周期状态。一次性任务会有 FINISHED / FAILED 终态，cron 只会
-// 在 ACTIVE / PAUSED 之间切换（直到被删除）。
+// schedule 自身的生命周期状态。
+//
+// ACTIVE 是唯一会触发回调的状态；其余三个都是终态，进去之后只能读和删除。
+// 一次性任务的自动终态是 FINISHED / FAILED；STOPPED 是唯一由人触发的终态，
+// 一次性与 cron 都能进入，且不可恢复（要再次触发只能重新注册一条）。
 type ScheduleState int32
 
 const (
 	ScheduleState_SCHEDULE_STATE_UNSPECIFIED ScheduleState = 0
 	ScheduleState_SCHEDULE_STATE_ACTIVE      ScheduleState = 1
-	ScheduleState_SCHEDULE_STATE_PAUSED      ScheduleState = 2
-	ScheduleState_SCHEDULE_STATE_FINISHED    ScheduleState = 3
-	ScheduleState_SCHEDULE_STATE_FAILED      ScheduleState = 4
+	// 人为单向停止：清空触发计划与未完成的投递链路，此后永不触发；已经发出的
+	// HTTP 无法撤回，其结果不再记账。
+	ScheduleState_SCHEDULE_STATE_STOPPED  ScheduleState = 2
+	ScheduleState_SCHEDULE_STATE_FINISHED ScheduleState = 3
+	ScheduleState_SCHEDULE_STATE_FAILED   ScheduleState = 4
 )
 
 // Enum value maps for ScheduleState.
@@ -94,14 +99,14 @@ var (
 	ScheduleState_name = map[int32]string{
 		0: "SCHEDULE_STATE_UNSPECIFIED",
 		1: "SCHEDULE_STATE_ACTIVE",
-		2: "SCHEDULE_STATE_PAUSED",
+		2: "SCHEDULE_STATE_STOPPED",
 		3: "SCHEDULE_STATE_FINISHED",
 		4: "SCHEDULE_STATE_FAILED",
 	}
 	ScheduleState_value = map[string]int32{
 		"SCHEDULE_STATE_UNSPECIFIED": 0,
 		"SCHEDULE_STATE_ACTIVE":      1,
-		"SCHEDULE_STATE_PAUSED":      2,
+		"SCHEDULE_STATE_STOPPED":     2,
 		"SCHEDULE_STATE_FINISHED":    3,
 		"SCHEDULE_STATE_FAILED":      4,
 	}
@@ -194,10 +199,11 @@ const (
 	DeadLetterState_DEAD_LETTER_STATE_UNSPECIFIED DeadLetterState = 0
 	// 慢重试进行中；阻塞该 schedule 的新触发
 	DeadLetterState_DEAD_LETTER_STATE_RETRYING DeadLetterState = 1
-	// 慢重试已耗尽，等待人工 Replay / Discard；不阻塞新触发
+	// 慢重试已耗尽，等待人工重投；不阻塞新触发
 	DeadLetterState_DEAD_LETTER_STATE_EXHAUSTED DeadLetterState = 2
 	DeadLetterState_DEAD_LETTER_STATE_REPLAYED  DeadLetterState = 3
-	DeadLetterState_DEAD_LETTER_STATE_DISCARDED DeadLetterState = 4
+	// 所属 schedule 被 stop：还没跑完的慢重试就此作废。没有恢复入口，也没有别的收尾动作。
+	DeadLetterState_DEAD_LETTER_STATE_STOPPED DeadLetterState = 4
 )
 
 // Enum value maps for DeadLetterState.
@@ -207,14 +213,14 @@ var (
 		1: "DEAD_LETTER_STATE_RETRYING",
 		2: "DEAD_LETTER_STATE_EXHAUSTED",
 		3: "DEAD_LETTER_STATE_REPLAYED",
-		4: "DEAD_LETTER_STATE_DISCARDED",
+		4: "DEAD_LETTER_STATE_STOPPED",
 	}
 	DeadLetterState_value = map[string]int32{
 		"DEAD_LETTER_STATE_UNSPECIFIED": 0,
 		"DEAD_LETTER_STATE_RETRYING":    1,
 		"DEAD_LETTER_STATE_EXHAUSTED":   2,
 		"DEAD_LETTER_STATE_REPLAYED":    3,
-		"DEAD_LETTER_STATE_DISCARDED":   4,
+		"DEAD_LETTER_STATE_STOPPED":     4,
 	}
 )
 
@@ -639,24 +645,24 @@ const file_api_schema_v1_schedule_proto_rawDesc = "" +
 	"\fScheduleType\x12\x1d\n" +
 	"\x19SCHEDULE_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16SCHEDULE_TYPE_ONE_SHOT\x10\x01\x12\x16\n" +
-	"\x12SCHEDULE_TYPE_CRON\x10\x02*\x9d\x01\n" +
+	"\x12SCHEDULE_TYPE_CRON\x10\x02*\x9e\x01\n" +
 	"\rScheduleState\x12\x1e\n" +
 	"\x1aSCHEDULE_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15SCHEDULE_STATE_ACTIVE\x10\x01\x12\x19\n" +
-	"\x15SCHEDULE_STATE_PAUSED\x10\x02\x12\x1b\n" +
+	"\x15SCHEDULE_STATE_ACTIVE\x10\x01\x12\x1a\n" +
+	"\x16SCHEDULE_STATE_STOPPED\x10\x02\x12\x1b\n" +
 	"\x17SCHEDULE_STATE_FINISHED\x10\x03\x12\x19\n" +
 	"\x15SCHEDULE_STATE_FAILED\x10\x04*v\n" +
 	"\tFireState\x12\x1a\n" +
 	"\x16FIRE_STATE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12FIRE_STATE_PENDING\x10\x01\x12\x19\n" +
 	"\x15FIRE_STATE_DELIVERING\x10\x02\x12\x1a\n" +
-	"\x16FIRE_STATE_DEAD_LETTER\x10\x03*\xb6\x01\n" +
+	"\x16FIRE_STATE_DEAD_LETTER\x10\x03*\xb4\x01\n" +
 	"\x0fDeadLetterState\x12!\n" +
 	"\x1dDEAD_LETTER_STATE_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aDEAD_LETTER_STATE_RETRYING\x10\x01\x12\x1f\n" +
 	"\x1bDEAD_LETTER_STATE_EXHAUSTED\x10\x02\x12\x1e\n" +
-	"\x1aDEAD_LETTER_STATE_REPLAYED\x10\x03\x12\x1f\n" +
-	"\x1bDEAD_LETTER_STATE_DISCARDED\x10\x04B\xa4\x01\n" +
+	"\x1aDEAD_LETTER_STATE_REPLAYED\x10\x03\x12\x1d\n" +
+	"\x19DEAD_LETTER_STATE_STOPPED\x10\x04B\xa4\x01\n" +
 	"\x11com.api.schema.v1B\rScheduleProtoP\x01Z*github.com/gonotelm-lab/flow/api/schema/v1\xa2\x02\x03ASX\xaa\x02\rApi.Schema.V1\xca\x02\rApi\\Schema\\V1\xe2\x02\x19Api\\Schema\\V1\\GPBMetadata\xea\x02\x0fApi::Schema::V1b\x06proto3"
 
 var (

@@ -43,21 +43,21 @@ func main() {
 		log.Fatal("-callback 必填")
 	}
 
-	client, err := scheduleclient.New(*addr)
+	// namespace 属于客户端本身，不在每条定义里传
+	client, err := scheduleclient.New(*addr, scheduleclient.Config{Namespace: *namespace})
 	if err != nil {
 		log.Fatalf("连接 %s 失败: %v", *addr, err)
 	}
 	defer func() { _ = client.Close() }()
 
 	opts := []scheduleclient.Option{
-		scheduleclient.WithNamespace(*namespace),
 		scheduleclient.WithContentType(*contentType),
 	}
 	if *idempotencyKey != "" {
 		opts = append(opts, scheduleclient.WithIdempotencyKey(*idempotencyKey))
 	}
 
-	// 用便利构造函数，不必手拼 proto 的 oneof
+	// 用便利构造函数，不必手拼触发方式
 	var s = scheduleclient.Cron(*cron, *timezone, *callback, []byte(*payload), opts...)
 	if *once {
 		s = scheduleclient.After(*after, *callback, []byte(*payload), opts...)
@@ -71,18 +71,20 @@ func main() {
 		log.Fatalf("注册失败: %v", err)
 	}
 
-	log.Printf("已注册 schedule id=%s", created.GetId())
-	if created.GetCron() != nil {
-		log.Printf("  触发方式: cron %q (timezone=%s)",
-			created.GetCron().GetExpr(), created.GetCron().GetTimezone())
-	} else if created.GetOneShot() != nil {
-		log.Printf("  触发方式: 一次性 %s",
-			time.UnixMilli(created.GetOneShot().GetFireAt()).Format(time.RFC3339))
+	log.Printf("已注册 schedule id=%s", created.ID)
+	switch trigger := created.Trigger.(type) {
+	case scheduleclient.CronTrigger:
+		log.Printf("  触发方式: cron %q (timezone=%s)", trigger.Expr, trigger.Timezone)
+	case scheduleclient.OneShotTrigger:
+		log.Printf("  触发方式: 一次性 %s", trigger.FireAt.Format(time.RFC3339))
 	}
-	log.Printf("  下次触发: %s", time.UnixMilli(created.GetNextFireAt()).Format(time.RFC3339))
-	log.Printf("  回调地址: %s", created.GetCallbackUrl())
-	log.Printf("  当前状态: %s", created.GetState())
+	if !created.NextFireAt.IsZero() {
+		log.Printf("  下次触发: %s", created.NextFireAt.Format(time.RFC3339))
+	}
+	log.Printf("  回调地址: %s", created.CallbackURL)
+	log.Printf("  当前状态: %s", created.State)
 
 	log.Print("提示：回调是 at-least-once 的，接收方请用 X-Flow-Fire-Id 做幂等去重；")
-	log.Print("      并用 X-Flow-Signature（HMAC-SHA256，密钥为 namespace 的 api_key）校验来源。")
+	log.Print("      验签一行就够：client.VerifyRequest(r)")
+	log.Print("      可运行接收方示例：go run ./example/schedule-receiver -api-key <key>")
 }

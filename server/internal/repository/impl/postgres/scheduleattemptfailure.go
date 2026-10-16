@@ -46,14 +46,3 @@ func (s *ScheduleAttemptFailureStoreImpl) ListBySchedule(
 	}
 	return list, nil
 }
-
-func (s *ScheduleAttemptFailureStoreImpl) DeleteBySchedule(
-	ctx context.Context,
-	scheduleId uuid.UUID,
-) error {
-	db := util.GetDB(ctx, s.db)
-	if err := db.Delete(&schema.ScheduleAttemptFailure{}, "schedule_id = ?", scheduleId).Error; err != nil {
-		return sql.WrapError(err)
-	}
-	return nil
-}

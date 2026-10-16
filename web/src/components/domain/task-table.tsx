@@ -243,7 +243,7 @@ export function TaskTable() {
                 <EmptyState
                   icon={ListTodo}
                   title="暂无任务"
-                  description="提交到队列后，任务将显示在这里。"
+
                 />
               </TableCell>
             </TableRow>
@@ -352,8 +352,7 @@ export function TaskTable() {
             <DialogTitle>删除任务？</DialogTitle>
             <DialogDescription>
               将永久删除任务{" "}
-              <span className="text-sm">{deleteTarget?.id}</span>
-              ，此操作不可撤销。
+              <span className="text-sm">{deleteTarget?.id}</span>，不可撤销。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

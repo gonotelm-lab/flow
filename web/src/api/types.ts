@@ -84,8 +84,8 @@ export interface ListTaskEventsResponse {
 // ---------------------------------------------------------------------------
 // 定时回调（Schedule）
 //
-// 触发类型不在 Schedule 上单独占字段，而是由 oneof 分支表达：服务端只会在
-// oneShot / cron 里给一个。int64 字段 protojson 会序列化成字符串，读的时候两种都要认。
+// 触发类型在 Schedule 上没有单独字段，由 oneof 分支表达：服务端只在 oneShot /
+// cron 里给一个。int64 字段 protojson 会序列化成字符串，读的时候两种都要认。
 // ---------------------------------------------------------------------------
 
 export interface OneShotTrigger {

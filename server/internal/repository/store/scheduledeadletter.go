@@ -38,7 +38,4 @@ type ScheduleDeadLetter interface {
 
 	// SetState 做条件状态切换（from -> to），返回是否生效。
 	SetState(ctx context.Context, id uuid.UUID, from, to string, now int64) (bool, error)
-
-	// DeleteBySchedule 供 schedule 硬删时级联清理。
-	DeleteBySchedule(ctx context.Context, scheduleId uuid.UUID) error
 }

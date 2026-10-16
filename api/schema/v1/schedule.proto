@@ -18,12 +18,17 @@ enum ScheduleType {
   SCHEDULE_TYPE_CRON = 2;
 }
 
-// schedule 自身的生命周期状态。一次性任务会有 FINISHED / FAILED 终态，cron 只会
-// 在 ACTIVE / PAUSED 之间切换（直到被删除）。
+// schedule 自身的生命周期状态。
+//
+// ACTIVE 是唯一会触发回调的状态；其余三个都是终态，进去之后只能读和删除。
+// 一次性任务的自动终态是 FINISHED / FAILED；STOPPED 是唯一由人触发的终态，
+// 一次性与 cron 都能进入，且不可恢复（要再次触发只能重新注册一条）。
 enum ScheduleState {
   SCHEDULE_STATE_UNSPECIFIED = 0;
   SCHEDULE_STATE_ACTIVE = 1;
-  SCHEDULE_STATE_PAUSED = 2;
+  // 人为单向停止：清空触发计划与未完成的投递链路，此后永不触发；已经发出的
+  // HTTP 无法撤回，其结果不再记账。
+  SCHEDULE_STATE_STOPPED = 2;
   SCHEDULE_STATE_FINISHED = 3;
   SCHEDULE_STATE_FAILED = 4;
 }
@@ -41,10 +46,11 @@ enum DeadLetterState {
   DEAD_LETTER_STATE_UNSPECIFIED = 0;
   // 慢重试进行中；阻塞该 schedule 的新触发
   DEAD_LETTER_STATE_RETRYING = 1;
-  // 慢重试已耗尽，等待人工 Replay / Discard；不阻塞新触发
+  // 慢重试已耗尽，等待人工重投；不阻塞新触发
   DEAD_LETTER_STATE_EXHAUSTED = 2;
   DEAD_LETTER_STATE_REPLAYED = 3;
-  DEAD_LETTER_STATE_DISCARDED = 4;
+  // 所属 schedule 被 stop：还没跑完的慢重试就此作废。没有恢复入口，也没有别的收尾动作。
+  DEAD_LETTER_STATE_STOPPED = 4;
 }
 
 // 一次性触发。fire_at 为 unix 毫秒，必须严格晚于当前时间（过期注册被拒绝）。

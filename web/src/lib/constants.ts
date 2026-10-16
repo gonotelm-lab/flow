@@ -1,14 +1,3 @@
-export const TASK_STATES = [
-  "TASK_STATE_UNSPECIFIED",
-  "INITED",
-  "RUNNING",
-  "DONE",
-  "FAILED",
-  "CANCELLED",
-] as const;
-
-export type TaskState = (typeof TASK_STATES)[number];
-
 export const TASK_STATE_META: Record<
   string,
   { label: string; variant: "secondary" | "warning" | "success" | "destructive" }
@@ -31,25 +20,11 @@ export const HEARTBEAT_STALE_THRESHOLD_SEC = 30;
 // TaskState（已有 FAILED 等值）重名。JSON 里出现的就是这些带前缀的名字。
 // ---------------------------------------------------------------------------
 
-export const SCHEDULE_TYPES = [
-  "SCHEDULE_TYPE_UNSPECIFIED",
-  "SCHEDULE_TYPE_ONE_SHOT",
-  "SCHEDULE_TYPE_CRON",
-] as const;
-
 export const SCHEDULE_TYPE_LABEL: Record<string, string> = {
   SCHEDULE_TYPE_UNSPECIFIED: "未指定",
   SCHEDULE_TYPE_ONE_SHOT: "一次性",
   SCHEDULE_TYPE_CRON: "重复",
 };
-
-export const SCHEDULE_STATES = [
-  "SCHEDULE_STATE_UNSPECIFIED",
-  "SCHEDULE_STATE_ACTIVE",
-  "SCHEDULE_STATE_PAUSED",
-  "SCHEDULE_STATE_FINISHED",
-  "SCHEDULE_STATE_FAILED",
-] as const;
 
 export const SCHEDULE_STATE_META: Record<
   string,
@@ -59,7 +34,8 @@ export const SCHEDULE_STATE_META: Record<
   }
 > = {
   SCHEDULE_STATE_ACTIVE: { label: "启用中", variant: "success" },
-  SCHEDULE_STATE_PAUSED: { label: "已暂停", variant: "warning" },
+  // 终态用中性色：warning 在运维界面里意味着「待处理 / 可恢复」，stop 两样都不是
+  SCHEDULE_STATE_STOPPED: { label: "已停止", variant: "secondary" },
   SCHEDULE_STATE_FINISHED: { label: "已完成", variant: "secondary" },
   SCHEDULE_STATE_FAILED: { label: "失败", variant: "destructive" },
 };
@@ -72,14 +48,6 @@ export const FIRE_STATE_LABEL: Record<string, string> = {
   FIRE_STATE_DEAD_LETTER: "死信重试中",
 };
 
-export const DEAD_LETTER_STATES = [
-  "DEAD_LETTER_STATE_UNSPECIFIED",
-  "DEAD_LETTER_STATE_RETRYING",
-  "DEAD_LETTER_STATE_EXHAUSTED",
-  "DEAD_LETTER_STATE_REPLAYED",
-  "DEAD_LETTER_STATE_DISCARDED",
-] as const;
-
 export const DEAD_LETTER_STATE_META: Record<
   string,
   {
@@ -87,10 +55,11 @@ export const DEAD_LETTER_STATE_META: Record<
     variant: "secondary" | "warning" | "success" | "destructive";
   }
 > = {
-  DEAD_LETTER_STATE_RETRYING: { label: "重试中", variant: "warning" },
-  DEAD_LETTER_STATE_EXHAUSTED: { label: "待处理", variant: "destructive" },
+  DEAD_LETTER_STATE_RETRYING: { label: "慢重试中", variant: "warning" },
+  // 只说事实：自动重试已经打完了。还有没有出路取决于所属 schedule 是不是 ACTIVE
+  DEAD_LETTER_STATE_EXHAUSTED: { label: "重试耗尽", variant: "destructive" },
   DEAD_LETTER_STATE_REPLAYED: { label: "已重投", variant: "success" },
-  DEAD_LETTER_STATE_DISCARDED: { label: "已放弃", variant: "secondary" },
+  DEAD_LETTER_STATE_STOPPED: { label: "已停止", variant: "secondary" },
 };
 
 /**

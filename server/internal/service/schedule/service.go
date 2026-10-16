@@ -66,10 +66,19 @@ func (s *Service) List(
 
 	page, pageSize := requestPaging(req.GetPage())
 
+	scheduleType, err := ScheduleTypeFromProto(req.GetScheduleType())
+	if err != nil {
+		return nil, err
+	}
+	state, err := ScheduleStateFromProto(req.GetState())
+	if err != nil {
+		return nil, err
+	}
+
 	list, total, err := s.core.List(ctx, ListParams{
 		Namespace:    req.GetNamespace(),
-		ScheduleType: scheduleTypeFromProto[req.GetScheduleType()],
-		State:        scheduleStateFromProto[req.GetState()],
+		ScheduleType: scheduleType,
+		State:        state,
 		Id:           req.GetId(),
 		Page:         page,
 		PageSize:     pageSize,
@@ -93,55 +102,20 @@ func (s *Service) List(
 	return out, nil
 }
 
-func (s *Service) Update(
+func (s *Service) Stop(
 	ctx context.Context,
-	req *schedulev1.UpdateRequest,
-) (*schemav1.Schedule, error) {
-	id, err := parseID(req.GetId())
-	if err != nil {
-		return nil, err
-	}
-	if req.GetSchedule() == nil {
-		return nil, pkgerr.InvalidArgument.WithDetail("request schedule is empty")
-	}
-
-	updated, err := s.core.Update(ctx, id, FromProtoSchedule(req.GetSchedule()))
-	if err != nil {
-		return nil, err
-	}
-	return ToProtoSchedule(updated), nil
-}
-
-func (s *Service) Pause(
-	ctx context.Context,
-	req *schedulev1.PauseRequest,
+	req *schedulev1.StopRequest,
 ) (*schemav1.Schedule, error) {
 	id, err := parseID(req.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	paused, err := s.core.Pause(ctx, id)
+	stopped, err := s.core.Stop(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return ToProtoSchedule(paused), nil
-}
-
-func (s *Service) Resume(
-	ctx context.Context,
-	req *schedulev1.ResumeRequest,
-) (*schemav1.Schedule, error) {
-	id, err := parseID(req.GetId())
-	if err != nil {
-		return nil, err
-	}
-
-	resumed, err := s.core.Resume(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return ToProtoSchedule(resumed), nil
+	return ToProtoSchedule(stopped), nil
 }
 
 func (s *Service) Delete(

@@ -111,9 +111,8 @@ func (w *Watcher) CurrentRevision(ctx context.Context) (int64, error) {
 	return rev.CurrentRevision, nil
 }
 
-// WatchWithRevision 按 revision 增量轮询并产出事件批次。
-// - group: 事件分组（如 flow/instances）
-// - lastRevision: 已消费到的 revision；仅消费 > lastRevision 的新事件
+// WatchWithRevision 从 lastRevision 之后开始增量轮询，产出事件批次。
+// group 是事件分组（如 flow/instances）；lastRevision 是已消费到的 revision，只消费比它大的新事件。
 func (w *Watcher) WatchWithRevision(
 	ctx context.Context,
 	group string,

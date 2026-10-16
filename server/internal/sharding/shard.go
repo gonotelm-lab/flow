@@ -11,7 +11,7 @@ const (
 type Shard struct {
 	Id int64
 
-	// 分片区间表示  [Start, End]
+	// 分片区间为 [Start, End]
 	Start int
 	End   int
 }
@@ -27,7 +27,7 @@ type Calculator interface {
 	) *Shard
 }
 
-// 按照顺序计算shard
+// 按排序后的顺序计算 shard
 type SequentialCalculator struct{}
 
 func (c *SequentialCalculator) GetShard(
@@ -47,7 +47,7 @@ func (c *SequentialCalculator) GetShard(
 	shardSize := ShardSize / len(others)
 	start := index * shardSize
 	end := start + shardSize - 1
-	// 如果是最后一个分片 占完剩余全部
+	// 最后一个分片把剩下的全占了
 	if index == len(others)-1 {
 		end = ShardSize - 1
 	}

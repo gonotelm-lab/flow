@@ -127,14 +127,3 @@ func (s *ScheduleDeadLetterStoreImpl) SetState(
 	}
 	return res.RowsAffected > 0, nil
 }
-
-func (s *ScheduleDeadLetterStoreImpl) DeleteBySchedule(
-	ctx context.Context,
-	scheduleId uuid.UUID,
-) error {
-	db := util.GetDB(ctx, s.db)
-	if err := db.Delete(&schema.ScheduleDeadLetter{}, "schedule_id = ?", scheduleId).Error; err != nil {
-		return sql.WrapError(err)
-	}
-	return nil
-}

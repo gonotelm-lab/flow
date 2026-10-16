@@ -246,30 +246,30 @@ func (x *ListResponse) GetSchedules() []*v1.Schedule {
 	return nil
 }
 
-// 仅 name / callback_url / content_type / payload / trigger 可通过本接口修改；
-// 运行态字段由调度器维护，提交时被忽略。
-type UpdateRequest struct {
+// 单向停止：清空触发计划与未完成的投递链路，此后永不触发，不可恢复。
+//
+// 幂等：已经是 STOPPED 时直接返回当前对象。
+type StopRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Schedule      *v1.Schedule           `protobuf:"bytes,2,opt,name=schedule,proto3" json:"schedule,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UpdateRequest) Reset() {
-	*x = UpdateRequest{}
+func (x *StopRequest) Reset() {
+	*x = StopRequest{}
 	mi := &file_api_schedule_v1_rpc_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UpdateRequest) String() string {
+func (x *StopRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UpdateRequest) ProtoMessage() {}
+func (*StopRequest) ProtoMessage() {}
 
-func (x *UpdateRequest) ProtoReflect() protoreflect.Message {
+func (x *StopRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_schedule_v1_rpc_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -281,107 +281,12 @@ func (x *UpdateRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UpdateRequest.ProtoReflect.Descriptor instead.
-func (*UpdateRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
+func (*StopRequest) Descriptor() ([]byte, []int) {
 	return file_api_schedule_v1_rpc_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *UpdateRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *UpdateRequest) GetSchedule() *v1.Schedule {
-	if x != nil {
-		return x.Schedule
-	}
-	return nil
-}
-
-type PauseRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PauseRequest) Reset() {
-	*x = PauseRequest{}
-	mi := &file_api_schedule_v1_rpc_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PauseRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PauseRequest) ProtoMessage() {}
-
-func (x *PauseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_schedule_v1_rpc_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PauseRequest.ProtoReflect.Descriptor instead.
-func (*PauseRequest) Descriptor() ([]byte, []int) {
-	return file_api_schedule_v1_rpc_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *PauseRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type ResumeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ResumeRequest) Reset() {
-	*x = ResumeRequest{}
-	mi := &file_api_schedule_v1_rpc_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ResumeRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ResumeRequest) ProtoMessage() {}
-
-func (x *ResumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_schedule_v1_rpc_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ResumeRequest.ProtoReflect.Descriptor instead.
-func (*ResumeRequest) Descriptor() ([]byte, []int) {
-	return file_api_schedule_v1_rpc_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *ResumeRequest) GetId() string {
+func (x *StopRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
@@ -397,7 +302,7 @@ type DeleteRequest struct {
 
 func (x *DeleteRequest) Reset() {
 	*x = DeleteRequest{}
-	mi := &file_api_schedule_v1_rpc_proto_msgTypes[7]
+	mi := &file_api_schedule_v1_rpc_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -409,7 +314,7 @@ func (x *DeleteRequest) String() string {
 func (*DeleteRequest) ProtoMessage() {}
 
 func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_schedule_v1_rpc_proto_msgTypes[7]
+	mi := &file_api_schedule_v1_rpc_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,7 +327,7 @@ func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRequest) Descriptor() ([]byte, []int) {
-	return file_api_schedule_v1_rpc_proto_rawDescGZIP(), []int{7}
+	return file_api_schedule_v1_rpc_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DeleteRequest) GetId() string {
@@ -450,23 +355,16 @@ const file_api_schedule_v1_rpc_proto_rawDesc = "" +
 	"\x02id\x18\x05 \x01(\tR\x02id\"v\n" +
 	"\fListResponse\x12/\n" +
 	"\x04page\x18\x01 \x01(\v2\x1b.api.schema.v1.PageResponseR\x04page\x125\n" +
-	"\tschedules\x18\x02 \x03(\v2\x17.api.schema.v1.ScheduleR\tschedules\"a\n" +
-	"\rUpdateRequest\x12\x1b\n" +
-	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\x123\n" +
-	"\bschedule\x18\x02 \x01(\v2\x17.api.schema.v1.ScheduleR\bschedule\"+\n" +
-	"\fPauseRequest\x12\x1b\n" +
-	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\",\n" +
-	"\rResumeRequest\x12\x1b\n" +
+	"\tschedules\x18\x02 \x03(\v2\x17.api.schema.v1.ScheduleR\tschedules\"*\n" +
+	"\vStopRequest\x12\x1b\n" +
 	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id\",\n" +
 	"\rDeleteRequest\x12\x1b\n" +
-	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id2\xe3\x03\n" +
+	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x01r\x03\xb0\x01\x01R\x02id2\xdb\x02\n" +
 	"\x0fScheduleService\x12E\n" +
 	"\bRegister\x12 .api.schedule.v1.RegisterRequest\x1a\x17.api.schema.v1.Schedule\x12;\n" +
 	"\x03Get\x12\x1b.api.schedule.v1.GetRequest\x1a\x17.api.schema.v1.Schedule\x12C\n" +
-	"\x04List\x12\x1c.api.schedule.v1.ListRequest\x1a\x1d.api.schedule.v1.ListResponse\x12A\n" +
-	"\x06Update\x12\x1e.api.schedule.v1.UpdateRequest\x1a\x17.api.schema.v1.Schedule\x12?\n" +
-	"\x05Pause\x12\x1d.api.schedule.v1.PauseRequest\x1a\x17.api.schema.v1.Schedule\x12A\n" +
-	"\x06Resume\x12\x1e.api.schedule.v1.ResumeRequest\x1a\x17.api.schema.v1.Schedule\x12@\n" +
+	"\x04List\x12\x1c.api.schedule.v1.ListRequest\x1a\x1d.api.schedule.v1.ListResponse\x12=\n" +
+	"\x04Stop\x12\x1c.api.schedule.v1.StopRequest\x1a\x17.api.schema.v1.Schedule\x12@\n" +
 	"\x06Delete\x12\x1e.api.schedule.v1.DeleteRequest\x1a\x16.google.protobuf.EmptyB\xab\x01\n" +
 	"\x13com.api.schedule.v1B\bRpcProtoP\x01Z,github.com/gonotelm-lab/flow/api/schedule/v1\xa2\x02\x03ASX\xaa\x02\x0fApi.Schedule.V1\xca\x02\x0fApi\\Schedule\\V1\xe2\x02\x1bApi\\Schedule\\V1\\GPBMetadata\xea\x02\x11Api::Schedule::V1b\x06proto3"
 
@@ -482,50 +380,43 @@ func file_api_schedule_v1_rpc_proto_rawDescGZIP() []byte {
 	return file_api_schedule_v1_rpc_proto_rawDescData
 }
 
-var file_api_schedule_v1_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_api_schedule_v1_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_api_schedule_v1_rpc_proto_goTypes = []any{
 	(*RegisterRequest)(nil), // 0: api.schedule.v1.RegisterRequest
 	(*GetRequest)(nil),      // 1: api.schedule.v1.GetRequest
 	(*ListRequest)(nil),     // 2: api.schedule.v1.ListRequest
 	(*ListResponse)(nil),    // 3: api.schedule.v1.ListResponse
-	(*UpdateRequest)(nil),   // 4: api.schedule.v1.UpdateRequest
-	(*PauseRequest)(nil),    // 5: api.schedule.v1.PauseRequest
-	(*ResumeRequest)(nil),   // 6: api.schedule.v1.ResumeRequest
-	(*DeleteRequest)(nil),   // 7: api.schedule.v1.DeleteRequest
-	(*v1.Schedule)(nil),     // 8: api.schema.v1.Schedule
-	(*v1.PageRequest)(nil),  // 9: api.schema.v1.PageRequest
-	(v1.ScheduleType)(0),    // 10: api.schema.v1.ScheduleType
-	(v1.ScheduleState)(0),   // 11: api.schema.v1.ScheduleState
-	(*v1.PageResponse)(nil), // 12: api.schema.v1.PageResponse
-	(*emptypb.Empty)(nil),   // 13: google.protobuf.Empty
+	(*StopRequest)(nil),     // 4: api.schedule.v1.StopRequest
+	(*DeleteRequest)(nil),   // 5: api.schedule.v1.DeleteRequest
+	(*v1.Schedule)(nil),     // 6: api.schema.v1.Schedule
+	(*v1.PageRequest)(nil),  // 7: api.schema.v1.PageRequest
+	(v1.ScheduleType)(0),    // 8: api.schema.v1.ScheduleType
+	(v1.ScheduleState)(0),   // 9: api.schema.v1.ScheduleState
+	(*v1.PageResponse)(nil), // 10: api.schema.v1.PageResponse
+	(*emptypb.Empty)(nil),   // 11: google.protobuf.Empty
 }
 var file_api_schedule_v1_rpc_proto_depIdxs = []int32{
-	8,  // 0: api.schedule.v1.RegisterRequest.schedule:type_name -> api.schema.v1.Schedule
-	9,  // 1: api.schedule.v1.ListRequest.page:type_name -> api.schema.v1.PageRequest
-	10, // 2: api.schedule.v1.ListRequest.schedule_type:type_name -> api.schema.v1.ScheduleType
-	11, // 3: api.schedule.v1.ListRequest.state:type_name -> api.schema.v1.ScheduleState
-	12, // 4: api.schedule.v1.ListResponse.page:type_name -> api.schema.v1.PageResponse
-	8,  // 5: api.schedule.v1.ListResponse.schedules:type_name -> api.schema.v1.Schedule
-	8,  // 6: api.schedule.v1.UpdateRequest.schedule:type_name -> api.schema.v1.Schedule
-	0,  // 7: api.schedule.v1.ScheduleService.Register:input_type -> api.schedule.v1.RegisterRequest
-	1,  // 8: api.schedule.v1.ScheduleService.Get:input_type -> api.schedule.v1.GetRequest
-	2,  // 9: api.schedule.v1.ScheduleService.List:input_type -> api.schedule.v1.ListRequest
-	4,  // 10: api.schedule.v1.ScheduleService.Update:input_type -> api.schedule.v1.UpdateRequest
-	5,  // 11: api.schedule.v1.ScheduleService.Pause:input_type -> api.schedule.v1.PauseRequest
-	6,  // 12: api.schedule.v1.ScheduleService.Resume:input_type -> api.schedule.v1.ResumeRequest
-	7,  // 13: api.schedule.v1.ScheduleService.Delete:input_type -> api.schedule.v1.DeleteRequest
-	8,  // 14: api.schedule.v1.ScheduleService.Register:output_type -> api.schema.v1.Schedule
-	8,  // 15: api.schedule.v1.ScheduleService.Get:output_type -> api.schema.v1.Schedule
-	3,  // 16: api.schedule.v1.ScheduleService.List:output_type -> api.schedule.v1.ListResponse
-	8,  // 17: api.schedule.v1.ScheduleService.Update:output_type -> api.schema.v1.Schedule
-	8,  // 18: api.schedule.v1.ScheduleService.Pause:output_type -> api.schema.v1.Schedule
-	8,  // 19: api.schedule.v1.ScheduleService.Resume:output_type -> api.schema.v1.Schedule
-	13, // 20: api.schedule.v1.ScheduleService.Delete:output_type -> google.protobuf.Empty
-	14, // [14:21] is the sub-list for method output_type
-	7,  // [7:14] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	6,  // 0: api.schedule.v1.RegisterRequest.schedule:type_name -> api.schema.v1.Schedule
+	7,  // 1: api.schedule.v1.ListRequest.page:type_name -> api.schema.v1.PageRequest
+	8,  // 2: api.schedule.v1.ListRequest.schedule_type:type_name -> api.schema.v1.ScheduleType
+	9,  // 3: api.schedule.v1.ListRequest.state:type_name -> api.schema.v1.ScheduleState
+	10, // 4: api.schedule.v1.ListResponse.page:type_name -> api.schema.v1.PageResponse
+	6,  // 5: api.schedule.v1.ListResponse.schedules:type_name -> api.schema.v1.Schedule
+	0,  // 6: api.schedule.v1.ScheduleService.Register:input_type -> api.schedule.v1.RegisterRequest
+	1,  // 7: api.schedule.v1.ScheduleService.Get:input_type -> api.schedule.v1.GetRequest
+	2,  // 8: api.schedule.v1.ScheduleService.List:input_type -> api.schedule.v1.ListRequest
+	4,  // 9: api.schedule.v1.ScheduleService.Stop:input_type -> api.schedule.v1.StopRequest
+	5,  // 10: api.schedule.v1.ScheduleService.Delete:input_type -> api.schedule.v1.DeleteRequest
+	6,  // 11: api.schedule.v1.ScheduleService.Register:output_type -> api.schema.v1.Schedule
+	6,  // 12: api.schedule.v1.ScheduleService.Get:output_type -> api.schema.v1.Schedule
+	3,  // 13: api.schedule.v1.ScheduleService.List:output_type -> api.schedule.v1.ListResponse
+	6,  // 14: api.schedule.v1.ScheduleService.Stop:output_type -> api.schema.v1.Schedule
+	11, // 15: api.schedule.v1.ScheduleService.Delete:output_type -> google.protobuf.Empty
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_api_schedule_v1_rpc_proto_init() }
@@ -539,7 +430,7 @@ func file_api_schedule_v1_rpc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_schedule_v1_rpc_proto_rawDesc), len(file_api_schedule_v1_rpc_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -20,11 +20,11 @@ func NewAdminAuditLogStoreImpl(db *gorm.DB) store.AdminAuditLog {
 }
 
 func normalizeAuditLog(log *schema.AdminAuditLog) {
-	// 兜底生成主键。
+	// 这里兜底生成主键。
 	//
 	// admin_audit_logs.id 虽然写了 UUID DEFAULT uuidv7()，但 GORM 会把 Go 的零值 UUID
-	// **显式**放进 INSERT，数据库默认值根本不会生效：第一条以全零主键成功，之后每条都撞
-	// 主键。审计是异步写的，这种失败只会安静地出现在日志里，接口照样 200 —— 必须在这里兜住。
+	// 显式写进 INSERT，数据库默认值根本不生效：第一条全零主键能插进去，之后每条都撞主键。
+	// 审计是异步写的，这种失败只会安静地留在日志里，接口照样返回 200，得在这里兜住。
 	if log.Id == uuid.Nil {
 		if id, err := uuid.NewV7(); err == nil {
 			log.Id = id

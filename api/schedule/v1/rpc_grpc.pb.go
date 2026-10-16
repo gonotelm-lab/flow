@@ -24,9 +24,7 @@ const (
 	ScheduleService_Register_FullMethodName = "/api.schedule.v1.ScheduleService/Register"
 	ScheduleService_Get_FullMethodName      = "/api.schedule.v1.ScheduleService/Get"
 	ScheduleService_List_FullMethodName     = "/api.schedule.v1.ScheduleService/List"
-	ScheduleService_Update_FullMethodName   = "/api.schedule.v1.ScheduleService/Update"
-	ScheduleService_Pause_FullMethodName    = "/api.schedule.v1.ScheduleService/Pause"
-	ScheduleService_Resume_FullMethodName   = "/api.schedule.v1.ScheduleService/Resume"
+	ScheduleService_Stop_FullMethodName     = "/api.schedule.v1.ScheduleService/Stop"
 	ScheduleService_Delete_FullMethodName   = "/api.schedule.v1.ScheduleService/Delete"
 )
 
@@ -37,9 +35,7 @@ type ScheduleServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
-	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
-	Pause(ctx context.Context, in *PauseRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
-	Resume(ctx context.Context, in *ResumeRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
+	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -81,30 +77,10 @@ func (c *scheduleServiceClient) List(ctx context.Context, in *ListRequest, opts 
 	return out, nil
 }
 
-func (c *scheduleServiceClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
+func (c *scheduleServiceClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.Schedule)
-	err := c.cc.Invoke(ctx, ScheduleService_Update_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *scheduleServiceClient) Pause(ctx context.Context, in *PauseRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Schedule)
-	err := c.cc.Invoke(ctx, ScheduleService_Pause_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *scheduleServiceClient) Resume(ctx context.Context, in *ResumeRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.Schedule)
-	err := c.cc.Invoke(ctx, ScheduleService_Resume_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, ScheduleService_Stop_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,9 +104,7 @@ type ScheduleServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*v1.Schedule, error)
 	Get(context.Context, *GetRequest) (*v1.Schedule, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
-	Update(context.Context, *UpdateRequest) (*v1.Schedule, error)
-	Pause(context.Context, *PauseRequest) (*v1.Schedule, error)
-	Resume(context.Context, *ResumeRequest) (*v1.Schedule, error)
+	Stop(context.Context, *StopRequest) (*v1.Schedule, error)
 	Delete(context.Context, *DeleteRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedScheduleServiceServer()
 }
@@ -151,14 +125,8 @@ func (UnimplementedScheduleServiceServer) Get(context.Context, *GetRequest) (*v1
 func (UnimplementedScheduleServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedScheduleServiceServer) Update(context.Context, *UpdateRequest) (*v1.Schedule, error) {
-	return nil, status.Error(codes.Unimplemented, "method Update not implemented")
-}
-func (UnimplementedScheduleServiceServer) Pause(context.Context, *PauseRequest) (*v1.Schedule, error) {
-	return nil, status.Error(codes.Unimplemented, "method Pause not implemented")
-}
-func (UnimplementedScheduleServiceServer) Resume(context.Context, *ResumeRequest) (*v1.Schedule, error) {
-	return nil, status.Error(codes.Unimplemented, "method Resume not implemented")
+func (UnimplementedScheduleServiceServer) Stop(context.Context, *StopRequest) (*v1.Schedule, error) {
+	return nil, status.Error(codes.Unimplemented, "method Stop not implemented")
 }
 func (UnimplementedScheduleServiceServer) Delete(context.Context, *DeleteRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
@@ -238,56 +206,20 @@ func _ScheduleService_List_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ScheduleService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateRequest)
+func _ScheduleService_Stop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ScheduleServiceServer).Update(ctx, in)
+		return srv.(ScheduleServiceServer).Stop(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: ScheduleService_Update_FullMethodName,
+		FullMethod: ScheduleService_Stop_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ScheduleServiceServer).Update(ctx, req.(*UpdateRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ScheduleService_Pause_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PauseRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ScheduleServiceServer).Pause(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ScheduleService_Pause_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ScheduleServiceServer).Pause(ctx, req.(*PauseRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ScheduleService_Resume_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResumeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ScheduleServiceServer).Resume(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: ScheduleService_Resume_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ScheduleServiceServer).Resume(ctx, req.(*ResumeRequest))
+		return srv.(ScheduleServiceServer).Stop(ctx, req.(*StopRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -330,16 +262,8 @@ var ScheduleService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ScheduleService_List_Handler,
 		},
 		{
-			MethodName: "Update",
-			Handler:    _ScheduleService_Update_Handler,
-		},
-		{
-			MethodName: "Pause",
-			Handler:    _ScheduleService_Pause_Handler,
-		},
-		{
-			MethodName: "Resume",
-			Handler:    _ScheduleService_Resume_Handler,
+			MethodName: "Stop",
+			Handler:    _ScheduleService_Stop_Handler,
 		},
 		{
 			MethodName: "Delete",

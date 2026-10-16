@@ -39,24 +39,10 @@ message ListResponse {
   repeated api.schema.v1.Schedule schedules = 2;
 }
 
-// 仅 name / callback_url / content_type / payload / trigger 可通过本接口修改；
-// 运行态字段由调度器维护，提交时被忽略。
-message UpdateRequest {
-  string id = 1 [
-    (buf.validate.field).required = true,
-    (buf.validate.field).string.uuid = true
-  ];
-  api.schema.v1.Schedule schedule = 2;
-}
-
-message PauseRequest {
-  string id = 1 [
-    (buf.validate.field).required = true,
-    (buf.validate.field).string.uuid = true
-  ];
-}
-
-message ResumeRequest {
+// 单向停止：清空触发计划与未完成的投递链路，此后永不触发，不可恢复。
+//
+// 幂等：已经是 STOPPED 时直接返回当前对象。
+message StopRequest {
   string id = 1 [
     (buf.validate.field).required = true,
     (buf.validate.field).string.uuid = true
@@ -74,8 +60,6 @@ service ScheduleService {
   rpc Register(RegisterRequest) returns (api.schema.v1.Schedule);
   rpc Get(GetRequest) returns (api.schema.v1.Schedule);
   rpc List(ListRequest) returns (ListResponse);
-  rpc Update(UpdateRequest) returns (api.schema.v1.Schedule);
-  rpc Pause(PauseRequest) returns (api.schema.v1.Schedule);
-  rpc Resume(ResumeRequest) returns (api.schema.v1.Schedule);
+  rpc Stop(StopRequest) returns (api.schema.v1.Schedule);
   rpc Delete(DeleteRequest) returns (google.protobuf.Empty);
 }

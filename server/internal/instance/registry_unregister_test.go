@@ -188,7 +188,7 @@ func TestRegistry_AutoReRegister_RekeysLocals(t *testing.T) {
 	expireAndSweep(t, &store)
 	require.Equal(t, 1, st.countEvents(oldKey, InstanceEventDelete), "sweeper writes DELETE for the stale instance")
 
-	// 心跳发现 update 落空 → 自动重注册（新行、新 key）。
+	// 心跳发现 update 落空，触发自动重注册（新行、新 key）。
 	registry.heartbeat(testTxContext(), ins)
 	newID, newKey := ins.id, ins.key
 	require.NotEqual(t, oldID, newID)

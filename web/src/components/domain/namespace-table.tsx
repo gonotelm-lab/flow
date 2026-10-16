@@ -182,7 +182,7 @@ export function NamespaceTable() {
                 <EmptyState
                   icon={Boxes}
                   title="暂无命名空间"
-                  description="创建命名空间以组织任务。"
+
                   action={{
                     label: "创建命名空间",
                     onClick: () => setShowCreate(true),

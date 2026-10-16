@@ -1,24 +1,23 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useCreateSchedule, useUpdateSchedule } from "@/hooks/use-schedules";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useCreateSchedule } from "@/hooks/use-schedules";
 import { useNamespace } from "@/lib/namespace-context";
 import type { Schedule } from "@/api/types";
 
 type ScheduleFormProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 传入表示编辑，null / undefined 表示新建 */
-  initial?: Schedule | null;
 };
 
 type TriggerKind = "one_shot" | "cron";
@@ -42,21 +41,39 @@ function localDateTimeToMillis(value: string): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
-function millisToLocalDateTime(ms?: string | number): string {
-  if (ms === undefined || ms === null || ms === "") return "";
-  const n = typeof ms === "string" ? Number(ms) : ms;
-  if (!Number.isFinite(n) || n <= 0) return "";
-  const d = new Date(n);
-  const pad = (v: number) => String(v).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** 打开对话框时给一个随机幂等键：用户不改就用它，改了就用用户填的。 */
+function randomIdempotencyKey(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps) {
+/** 字段标签 + 悬停说明。说明放 tooltip，不占表单的纵向空间。 */
+function FieldLabel({ text, hint }: { text: string; hint: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <label className="text-sm font-medium">{text}</label>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={`${text}说明`}
+            className="text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs leading-relaxed">
+          {hint}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
+export function ScheduleForm({ open, onOpenChange }: ScheduleFormProps) {
   const { namespace } = useNamespace();
   const create = useCreateSchedule();
-  const update = useUpdateSchedule();
-
-  const editing = !!initial;
 
   const [kind, setKind] = useState<TriggerKind>("cron");
   const [fireAt, setFireAt] = useState("");
@@ -68,42 +85,20 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
   const [name, setName] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
 
-  // 打开时把 initial 灌进表单
+  // 每次打开都从空白开始：定义注册之后改不了，只能新建一条
   useEffect(() => {
     if (!open) return;
 
-    if (initial) {
-      setName(initial.name ?? "");
-      setCallbackUrl(initial.callbackUrl ?? "");
-      setContentType(initial.contentType ?? "application/json");
-      setIdempotencyKey(initial.idempotencyKey ?? "");
-      // 编辑时不回填 payload 会让「保存」把原有 payload 清空，因此这里展示占位提示
-      setPayload("");
-      if (initial.cron) {
-        setKind("cron");
-        setCronExpr(initial.cron.expr ?? "*/5 * * * *");
-        setTimezone(initial.cron.timezone ?? "");
-        setFireAt("");
-      } else if (initial.oneShot) {
-        setKind("one_shot");
-        setFireAt(millisToLocalDateTime(initial.oneShot.fireAt));
-        setCronExpr("*/5 * * * *");
-        setTimezone("");
-      }
-    } else {
-      setKind("cron");
-      setCronExpr("*/5 * * * *");
-      setTimezone("");
-      setFireAt("");
-      setCallbackUrl("");
-      setContentType("application/json");
-      setPayload("");
-      setName("");
-      setIdempotencyKey("");
-    }
-  }, [open, initial]);
-
-  const submitting = create.isPending || update.isPending;
+    setKind("cron");
+    setCronExpr("*/5 * * * *");
+    setTimezone("");
+    setFireAt("");
+    setCallbackUrl("");
+    setContentType("application/json");
+    setPayload("");
+    setName("");
+    setIdempotencyKey(randomIdempotencyKey());
+  }, [open]);
 
   const submit = () => {
     const trimmedUrl = callbackUrl.trim();
@@ -113,8 +108,9 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
     }
 
     const schedule: Schedule = {
-      id: initial?.id ?? "",
-      namespace: initial?.namespace ?? namespace ?? "",
+      // 定义里没有 id：客户端留空，由服务端生成
+      id: "",
+      namespace: namespace ?? "",
       name: name.trim(),
       callbackUrl: trimmedUrl,
       contentType: contentType.trim() || "application/octet-stream",
@@ -141,46 +137,30 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
       schedule.cron = { expr, timezone: timezone.trim() };
     }
 
-    if (!editing && idempotencyKey.trim()) {
+    if (idempotencyKey.trim()) {
       schedule.idempotencyKey = idempotencyKey.trim();
     }
 
-    const onError = (err: unknown) => {
-      const message = err instanceof Error ? err.message : String(err);
-      toast.error(`保存失败：${message}`);
-    };
-
-    if (editing) {
-      update.mutate(
-        { id: initial!.id, schedule },
-        {
-          onSuccess: () => {
-            toast.success("已保存");
-            onOpenChange(false);
-          },
-          onError,
-        },
-      );
-    } else {
-      create.mutate(schedule, {
-        onSuccess: () => {
-          toast.success("已创建");
-          onOpenChange(false);
-        },
-        onError,
-      });
-    }
+    create.mutate(schedule, {
+      onSuccess: () => {
+        toast.success("已创建");
+        onOpenChange(false);
+      },
+      onError: (err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        toast.error(`创建失败：${message}`);
+      },
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-h-[85vh] max-w-2xl overflow-y-auto"
+      >
         <DialogHeader>
-          <DialogTitle>{editing ? "编辑定时任务" : "新建定时任务"}</DialogTitle>
-          <DialogDescription>
-            到期后 flowserver 会向回调地址发一次 POST，body 就是下面的 payload。
-            投递是至少一次，接收方请用 X-Flow-Fire-Id 做幂等去重。
-          </DialogDescription>
+          <DialogTitle>新建定时任务</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -208,20 +188,23 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
 
           {kind === "one_shot" ? (
             <div className="grid gap-2">
-              <label className="text-sm font-medium">触发时间</label>
+              <FieldLabel
+                text="触发时间"
+                hint="必须晚于当前时间。"
+              />
               <Input
                 type="datetime-local"
                 value={fireAt}
                 onChange={(e) => setFireAt(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                必须晚于当前时间，服务端会用数据库时间校验并拒绝过期注册。
-              </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
-                <label className="text-sm font-medium">cron 表达式</label>
+                <FieldLabel
+                  text="cron 表达式"
+                  hint="标准 5 字段（分 时 日 月 周），最小粒度 1 分钟。星期 0-6，0 为周日；月份 1-12；不支持 L / W / #。语义与 Quartz 不同。"
+                />
                 <Input
                   value={cronExpr}
                   onChange={(e) => setCronExpr(e.target.value)}
@@ -229,37 +212,31 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">时区（IANA）</label>
+                <FieldLabel text="时区（IANA）" hint="留空表示 UTC。" />
                 <Input
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   placeholder="UTC"
                 />
               </div>
-              <p className="text-xs text-muted-foreground sm:col-span-2">
-                标准 5 字段「分 时 日 月 周」，最小粒度 1 分钟。星期 0-6 且
-                <span className="font-medium"> 0 表示周日</span>，月份 1-12；
-                不支持 L / W / #。这与 Quartz 不同，请勿按 Quartz 语义书写。
-                留空时区表示 UTC。
-              </p>
             </div>
           )}
 
           <div className="grid gap-2">
-            <label className="text-sm font-medium">回调地址</label>
+            <FieldLabel
+              text="回调地址"
+              hint="仅支持 http / https。"
+            />
             <Input
               value={callbackUrl}
               onChange={(e) => setCallbackUrl(e.target.value)}
               placeholder="https://example.com/hook"
             />
-            <p className="text-xs text-muted-foreground">
-              仅支持 http / https；不探测可达性，也不会跟随重定向。
-            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium">名称（可选）</label>
+              <FieldLabel text="名称（可选）" hint="便于运维识别。" />
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -267,7 +244,10 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
               />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Content-Type</label>
+              <FieldLabel
+                text="Content-Type"
+                hint="留空表示 application/octet-stream。"
+              />
               <Input
                 value={contentType}
                 onChange={(e) => setContentType(e.target.value)}
@@ -276,30 +256,29 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
             </div>
           </div>
 
-          {!editing && (
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">幂等键（可选）</label>
-              <Input
-                value={idempotencyKey}
-                onChange={(e) => setIdempotencyKey(e.target.value)}
-                placeholder="填了之后重复提交只会创建一条"
-              />
-            </div>
-          )}
+          <div className="grid gap-2">
+            <FieldLabel
+              text="幂等键（可选）"
+              hint="已自动生成随机键；同一个键重复提交只保留一条。"
+            />
+            <Input
+              value={idempotencyKey}
+              onChange={(e) => setIdempotencyKey(e.target.value)}
+              placeholder="自动生成"
+            />
+          </div>
 
           <div className="grid gap-2">
-            <label className="text-sm font-medium">
-              payload{editing && <span className="text-muted-foreground">（留空则保持原值）</span>}
-            </label>
+            <FieldLabel
+              text="payload"
+              hint="作为回调请求体原样发送。"
+            />
             <textarea
               className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               value={payload}
               onChange={(e) => setPayload(e.target.value)}
               placeholder='{"hello":"world"}'
             />
-            <p className="text-xs text-muted-foreground">
-              这段文本会原样作为回调 body 发送，不做任何包装。
-            </p>
           </div>
         </div>
 
@@ -307,8 +286,8 @@ export function ScheduleForm({ open, onOpenChange, initial }: ScheduleFormProps)
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             取消
           </Button>
-          <Button onClick={submit} disabled={submitting}>
-            {submitting ? "保存中…" : "保存"}
+          <Button onClick={submit} disabled={create.isPending}>
+            {create.isPending ? "创建中…" : "创建"}
           </Button>
         </DialogFooter>
       </DialogContent>
