@@ -129,6 +129,80 @@ func TestTaskWorkerStore_List(t *testing.T) {
 	})
 }
 
+func TestTaskWorkerStore_List_HidesExpiredWorkers(t *testing.T) {
+	cleanTaskWorkers(t)
+	ctx := context.Background()
+
+	now := nowMs()
+	alive := newTestTaskWorker("alive")
+	alive.HeartbeatTime = now
+	expired := newTestTaskWorker("expired")
+	expired.HeartbeatTime = now - 10*60*1000
+
+	for _, w := range []*schema.TaskWorker{alive, expired} {
+		_, err := gTestTaskWorkerStore.Create(ctx, w)
+		require.NoError(t, err)
+	}
+
+	cutoff := now - 60*1000
+
+	got, total, err := gTestTaskWorkerStore.List(ctx, &store.WorkerListParams{
+		HeartbeatAfter: cutoff,
+		Limit:          10,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), total)
+	require.Len(t, got, 1)
+	assert.Equal(t, alive.Id, got[0].Id)
+
+	t.Run("zero_cutoff_keeps_all", func(t *testing.T) {
+		_, total, err := gTestTaskWorkerStore.List(ctx, &store.WorkerListParams{Limit: 10})
+		require.NoError(t, err)
+		assert.Equal(t, int64(2), total)
+	})
+}
+
+func TestTaskWorkerStore_DeleteExpired(t *testing.T) {
+	cleanTaskWorkers(t)
+	ctx := context.Background()
+
+	now := nowMs()
+	alive := newTestTaskWorker("alive")
+	alive.HeartbeatTime = now
+	_, err := gTestTaskWorkerStore.Create(ctx, alive)
+	require.NoError(t, err)
+
+	expiredIds := make([]int64, 0, 3)
+	for i := 0; i < 3; i++ {
+		w := newTestTaskWorker(fmt.Sprintf("expired-%d", i))
+		w.HeartbeatTime = now - 8*24*60*60*1000
+		created, err := gTestTaskWorkerStore.Create(ctx, w)
+		require.NoError(t, err)
+		expiredIds = append(expiredIds, created.Id)
+	}
+
+	retentionCutoff := now - 7*24*60*60*1000
+
+	deleted, err := gTestTaskWorkerStore.DeleteExpired(ctx, retentionCutoff, 2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), deleted, "单批上限必须生效")
+
+	deleted, err = gTestTaskWorkerStore.DeleteExpired(ctx, retentionCutoff, 2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), deleted)
+
+	deleted, err = gTestTaskWorkerStore.DeleteExpired(ctx, retentionCutoff, 2)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), deleted, "没有可删的行时不应报错")
+
+	for _, id := range expiredIds {
+		_, err := gTestTaskWorkerStore.Get(ctx, id)
+		assert.ErrorIs(t, err, pkgerr.NoRecord)
+	}
+	_, err = gTestTaskWorkerStore.Get(ctx, alive.Id)
+	require.NoError(t, err, "心跳新鲜的 worker 不能被删除")
+}
+
 func TestTaskWorkerStore_Delete(t *testing.T) {
 	cleanTaskWorkers(t)
 	ctx := context.Background()

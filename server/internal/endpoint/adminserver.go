@@ -7,17 +7,20 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	adminv1 "github.com/gonotelm-lab/flow/api/admin/v1"
+	"github.com/gonotelm-lab/flow/server/internal/audit"
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/endpoint/interceptor"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/service/admin"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"golang.org/x/sync/errgroup"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -36,13 +39,15 @@ type AdminServer struct {
 func NewAdminServer(
 	ctx context.Context,
 	cfg *config.ApiServer,
+	workerCfg *config.WorkerConfig,
 	repoStore *repository.Store,
+	auditRec *audit.Recorder,
 ) (*AdminServer, error) {
 	s := &AdminServer{
 		rootCtx: ctx,
 		cfg:     cfg,
 	}
-	if err := s.init(repoStore); err != nil {
+	if err := s.init(workerCfg, repoStore, auditRec); err != nil {
 		return nil, err
 	}
 	return s, nil
@@ -76,7 +81,11 @@ func (s *AdminServer) Stop() {
 	slog.Info("admin server stopped")
 }
 
-func (s *AdminServer) init(repoStore *repository.Store) error {
+func (s *AdminServer) init(
+	workerCfg *config.WorkerConfig,
+	repoStore *repository.Store,
+	auditRec *audit.Recorder,
+) error {
 	const unixSocketPath = "/tmp/flow-admin.sock"
 	os.Remove(unixSocketPath)
 	var err error
@@ -90,7 +99,11 @@ func (s *AdminServer) init(repoStore *repository.Store) error {
 		interceptor.UnaryServerInterceptor(),
 	)
 
-	adminService := admin.NewService(repoStore)
+	var workerTTL time.Duration
+	if workerCfg != nil {
+		workerTTL = workerCfg.WorkerTTL
+	}
+	adminService := admin.NewService(repoStore, auditRec, admin.ServiceConfig{WorkerTTL: workerTTL})
 	adminv1.RegisterAdminServiceServer(s.adminGrpcServer, adminService)
 
 	conn, err := grpc.NewClient(
@@ -103,7 +116,20 @@ func (s *AdminServer) init(repoStore *repository.Store) error {
 	}
 
 	s.proxyConn = conn
-	mux := runtime.NewServeMux()
+	// 透传调用方 IP / UA，供审计日志记录。
+	//
+	// Operator 字段按设计留空（当前没有用户体系），所以 source_ip 与 user_agent 是审计
+	// 记录里唯一非自填的痕迹。grpc-gateway 默认只映射一小撮固定头，X-Forwarded-For
+	// 不在其中，必须显式放行。
+	mux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
+			switch strings.ToLower(key) {
+			case "x-forwarded-for", "x-real-ip", "user-agent":
+				return key, true
+			}
+			return runtime.DefaultHeaderMatcher(key)
+		}),
+	)
 	err = adminv1.RegisterAdminServiceHandler(s.rootCtx, mux, s.proxyConn)
 	if err != nil {
 		return err

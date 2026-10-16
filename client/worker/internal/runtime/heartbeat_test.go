@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/heartbeat_test.go
 package runtime
 
 import (

@@ -1,4 +1,3 @@
-// flow/client/worker/filter_test.go
 package worker
 
 import (

@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/poll.go
 package runtime
 
 import (
@@ -18,10 +17,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// traceContextPropagator 固定使用 W3C TraceContext，不依赖宿主全局 propagator 配置。
+// traceContextPropagator 写死用 W3C TraceContext，不依赖宿主的全局 propagator 配置。
 var traceContextPropagator = propagation.TraceContext{}
 
-// spanContextFromTraceparent 解析 W3C traceparent 为远程 SpanContext；无效时 ok=false。
+// spanContextFromTraceparent 把 W3C traceparent 解析成远程 SpanContext，无效就返回 ok=false。
 func spanContextFromTraceparent(tp string) (oteltrace.SpanContext, bool) {
 	if tp == "" {
 		return oteltrace.SpanContext{}, false

@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/runtime.go
 package runtime
 
 import (
@@ -12,14 +11,14 @@ import (
 	"google.golang.org/grpc"
 )
 
-// TraceMode 控制 worker 恢复任务 traceparent 的方式。
-// 定义在 runtime 包：worker 包通过类型别名导出，避免 import cycle。
+// TraceMode 决定 worker 怎么恢复任务的 traceparent。
+// 之所以放在 runtime 包，是让 worker 包能用类型别名导出它，绕开 import cycle。
 type TraceMode string
 
 const (
-	// TraceModeChild 默认：handler span 作为存储 span 的子 span（remote parent），延续同一条链路。
+	// TraceModeChild 是默认值：handler span 作为存储 span 的子 span（remote parent），延续同一条链路。
 	TraceModeChild TraceMode = "child"
-	// TraceModeLink：handler span 为根 span，通过 link 关联存储 span。
+	// TraceModeLink：handler span 自己当根 span，用 link 关联到存储 span。
 	TraceModeLink TraceMode = "link"
 )
 

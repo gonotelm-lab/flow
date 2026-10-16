@@ -8,7 +8,8 @@ import (
 
 type Instance interface {
 	Create(ctx context.Context, instance *schema.Instance) (*schema.Instance, error)
-	Delete(ctx context.Context, id int64) error
+	// Delete 删除指定实例，返回是否真正删除了记录（false 表示该行已不存在）。
+	Delete(ctx context.Context, id int64) (bool, error)
 	Get(ctx context.Context, id int64) (*schema.Instance, error)
 	ListActive(ctx context.Context, aliveAfterMs int64) ([]*schema.Instance, error)
 	UpdateExpireTime(ctx context.Context, id int64, expireTimeMs, expectToken int64) (bool, error)

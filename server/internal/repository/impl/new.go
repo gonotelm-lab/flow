@@ -74,3 +74,42 @@ func NewTaskEventStore(driver sql.Driver, db *gorm.DB) (store.TaskEvent, error) 
 
 	return nil, errDriverNotSupported
 }
+
+func NewScheduleStore(driver sql.Driver, db *gorm.DB) (store.Schedule, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewScheduleStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}
+
+func NewScheduleDeadLetterStore(driver sql.Driver, db *gorm.DB) (store.ScheduleDeadLetter, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewScheduleDeadLetterStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}
+
+func NewScheduleAttemptFailureStore(
+	driver sql.Driver,
+	db *gorm.DB,
+) (store.ScheduleAttemptFailure, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewScheduleAttemptFailureStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}
+
+func NewAdminAuditLogStore(driver sql.Driver, db *gorm.DB) (store.AdminAuditLog, error) {
+	switch driver {
+	case sql.DriverPgsql:
+		return postgres.NewAdminAuditLogStoreImpl(db), nil
+	}
+
+	return nil, errDriverNotSupported
+}

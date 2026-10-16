@@ -1,12 +1,12 @@
-// Raw worker：使用底层 []byte handler，演示 OkResult / ErrorResult 约定。
+// Raw worker：直接用底层 []byte handler，演示 OkResult / ErrorResult 的用法。
 //
 //	payload 以 "fail:" 开头 → ErrorResult
-//	其他 payload → OkResult，内容为 "echo:" + payload
+//	其他 payload → OkResult，内容是 "echo:" + payload
 //
 //	go run ./example/raw -addr localhost:7091 -namespace demo -task-type raw
 //
-// 追踪：SDK 自动接入全局 OTel（取全局 TracerProvider/Propagator）。
-// 宿主进程自行初始化 OTel（任意实现）后即自动参与链路；未初始化则自动 no-op。
+// 追踪：SDK 会自动接上全局 OTel（取全局 TracerProvider/Propagator）。
+// 宿主进程自己初始化 OTel（用什么实现都行），之后就会自动进链路；没初始化则自动 no-op。
 package main
 
 import (

@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Boxes,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   Cpu,
   Home,
   ListTodo,
+  ShieldCheck,
 } from "lucide-react";
+import { FlowMark } from "@/components/layout/flow-mark";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useNamespace } from "@/lib/namespace-context";
@@ -19,8 +22,10 @@ import {
 const NAV_ITEMS = [
   { to: "/", icon: Home, label: "首页" },
   { to: "/tasks", icon: ListTodo, label: "任务" },
+  { to: "/schedules", icon: CalendarClock, label: "定时任务" },
   { to: "/workers", icon: Cpu, label: "工作节点" },
   { to: "/namespaces", icon: Boxes, label: "命名空间" },
+  { to: "/audit", icon: ShieldCheck, label: "审计日志" },
 ] as const;
 
 const STORAGE_KEY = "flow-sidebar-collapsed";
@@ -59,9 +64,7 @@ export function Sidebar() {
         )}
       >
         <div className="flex min-w-0 items-center">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-foreground text-[11px] font-bold text-background">
-            F
-          </div>
+          <FlowMark className="h-7 w-7 text-foreground" />
           {!collapsed && (
             <span className="ml-2.5 truncate text-sm font-semibold tracking-tight text-foreground">
               Flow

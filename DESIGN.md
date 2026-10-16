@@ -5,6 +5,7 @@ colors:
   background: oklch(0.99 0.002 264)
   foreground: oklch(0.18 0.01 264)
   primary: oklch(0.22 0.015 264)
+  accent: oklch(0.955 0.006 264)
   muted: oklch(0.96 0.004 264)
   muted-foreground: oklch(0.48 0.01 264)
   destructive: oklch(0.52 0.19 25)
@@ -74,11 +75,21 @@ Flow Admin 是面向 Platform Ops 的轻量运维面板。视觉语言借鉴 Lin
 
 ## Components
 
-- **Sidebar**：header 内 logo + 折叠 icon（无文案）；nav-active-indicator 左侧竖线；任务/工作节点 destructive badge（折叠态为圆点）
+- **Sidebar**：header 内 mark（`FlowMark`，`h-7 w-7`，颜色继承 `text-foreground`）+ 展开态 wordmark 文本 + 折叠 icon（无文案）；nav-active-indicator 左侧竖线；任务/工作节点 destructive badge（折叠态为圆点）
 - **Tables**：`table-auto` + colgroup；ID 列 `minWidth: 20rem` + `whitespace-nowrap`；Skeleton 加载态
 - **StatusDot**：2px 圆点，RUNNING / 异常心跳带 pulse
 - **CommandMenu**：cmdk Dialog；分组为「导航」「快捷筛选」「快捷键」；group heading 无 `tracking-wide`
 - **NamespaceSwitcher**：Topbar outline 按钮，`text-sm` sans
+
+## Logo
+
+- **形态**：双旋臂旋涡 —— 两条渐细臂绕心旋转，一长一短，长臂外端为斜切刀口。表达「任务在管道里持续流转」，同时靠不对称避开同类产品已占用的对称风车/单臂螺旋形态。
+- **网格**：`viewBox="0 0 24 24"`，内容内缩 2 单位；臂最粗约 3.6 单位，纯填充、无描边。
+- **颜色**：`currentColor` 单色，跟随 `foreground`。**不得**使用 success / warning / destructive / info 等语义色，不得加渐变、阴影、描边。
+- **最小尺寸**：≥24px 用 `flow-mark.svg`；16–23px（favicon、折叠侧栏）用 `flow-mark-16.svg` —— 少半圈、通道更宽、臂更粗的光学校正版。
+- **禁用**：不要旋转、拉伸、压扁、加动效，不要放进按钮/badge 内部，不要与文字或图标重叠。
+- **文件**：`web/public/brand/flow-mark.svg`（主）、`flow-mark-16.svg`（小尺寸）、`flow-mark-alt.svg`（对称等长臂备选，未启用）、`flow-lockup.svg`（mark + Geist SemiBold 转曲 wordmark）；`web/public/favicon.svg` 内嵌 `prefers-color-scheme`（浅色 `#0F1216` / 深色 `#E9EBEF`，回退 `#777A82`）。
+- **组件**：`web/src/components/layout/flow-mark.tsx` 内联 SVG，侧栏与任何 UI 内使用它而不是 `<img>`，以保证随主题与 `currentColor` 联动。
 
 ## Interaction Patterns
 

@@ -387,3 +387,56 @@ func TestTaskStore_Delete(t *testing.T) {
 	_, err = gTestTaskStore.Get(ctx, created.Id)
 	assert.ErrorIs(t, err, pkgerr.NoRecord)
 }
+
+func TestTaskStore_StatsByWorkerIDs(t *testing.T) {
+	cleanTasks(t)
+	ctx := context.Background()
+
+	const (
+		workerA    int64 = 7001
+		workerB    int64 = 7002
+		workerIdle int64 = 7003
+	)
+
+	fixtures := []struct {
+		state  string
+		worker int64
+	}{
+		{"DONE", workerA},
+		{"DONE", workerA},
+		{"FAILED", workerA},
+		{"RUNNING", workerA}, // 未结束，不计入
+		{"INITED", workerA},  // 未结束，不计入
+		{"DONE", workerB},
+		{"CANCELLED", workerB},
+		{"DONE", 0}, // 没有归属，不属于任何 worker
+	}
+	latest := nowMs()
+	for i, f := range fixtures {
+		task := newTestTask("ns-stats", "email", f.state, 1000)
+		task.WorkerId = f.worker
+		task.UpdateTime = latest - int64(len(fixtures)-i)*1000
+		_, err := gTestTaskStore.Create(ctx, task)
+		require.NoError(t, err)
+	}
+
+	stats, err := gTestTaskStore.StatsByWorkerIDs(ctx, []int64{workerA, workerB, workerIdle})
+	require.NoError(t, err)
+
+	require.Contains(t, stats, workerA)
+	assert.Equal(t, int64(3), stats[workerA].Total, "DONE + FAILED + CANCELLED 才算处理完")
+	assert.Equal(t, int64(2), stats[workerA].Success)
+
+	require.Contains(t, stats, workerB)
+	assert.Equal(t, int64(2), stats[workerB].Total)
+	assert.Equal(t, int64(1), stats[workerB].Success)
+
+	assert.NotContains(t, stats, workerIdle, "没有任何任务的 worker 不该出现在聚合结果里")
+	assert.NotContains(t, stats, int64(0), "worker_id=0 的失联任务不属于任何 worker")
+
+	t.Run("empty_ids", func(t *testing.T) {
+		stats, err := gTestTaskStore.StatsByWorkerIDs(ctx, nil)
+		require.NoError(t, err)
+		assert.Empty(t, stats)
+	})
+}

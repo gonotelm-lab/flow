@@ -18,6 +18,11 @@ var (
 	gTestTaskStore           *TaskStoreImpl
 	gTestTaskWorkerStore     *TaskWorkerStoreImpl
 	gTestTaskEventStore      *TaskEventStoreImpl
+
+	gTestScheduleStore               *ScheduleStoreImpl
+	gTestScheduleDeadLetterStore     *ScheduleDeadLetterStoreImpl
+	gTestScheduleAttemptFailureStore *ScheduleAttemptFailureStoreImpl
+	gTestAdminAuditLogStore          *AdminAuditLogStoreImpl
 )
 
 func TestMain(m *testing.M) {
@@ -42,6 +47,11 @@ func TestMain(m *testing.M) {
 	gTestTaskStore = &TaskStoreImpl{db: gTestDB}
 	gTestTaskWorkerStore = &TaskWorkerStoreImpl{db: gTestDB}
 	gTestTaskEventStore = &TaskEventStoreImpl{db: gTestDB}
+
+	gTestScheduleStore = &ScheduleStoreImpl{db: gTestDB}
+	gTestScheduleDeadLetterStore = &ScheduleDeadLetterStoreImpl{db: gTestDB}
+	gTestScheduleAttemptFailureStore = &ScheduleAttemptFailureStoreImpl{db: gTestDB}
+	gTestAdminAuditLogStore = &AdminAuditLogStoreImpl{db: gTestDB}
 
 	m.Run()
 

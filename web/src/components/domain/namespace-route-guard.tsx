@@ -3,7 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useNamespace } from "@/lib/namespace-context";
 
-const PROTECTED_PREFIXES = ["/tasks", "/workers"];
+// 定时任务按命名空间隔离，所以需要先选命名空间；审计日志是全局视图，不需要。
+const PROTECTED_PREFIXES = ["/tasks", "/schedules", "/workers"];
 
 export function NamespaceRouteGuard({
   children,

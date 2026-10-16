@@ -103,7 +103,7 @@ func (s *Service) Heartbeat(
 	}, nil
 }
 
-// 长轮询
+// Poll 长轮询
 func (s *Service) Poll(
 	ctx context.Context,
 	req *workerv1.PollRequest,
@@ -158,7 +158,7 @@ func (s *Service) tryPoll(
 	req *workerv1.PollRequest,
 ) (*workerv1.PollResponse, error) {
 	// pollCtx 只控制长轮询等待窗口；到期后不再发起 Claim，避免用已取消 ctx 打库刷 ERROR。
-	// Claim 本身走 requestCtx：客户端取消仍会取消 SQL 并保留日志。
+	// Claim 走 requestCtx：客户端取消照样会取消 SQL，日志保留。
 	if pollCtx.Err() != nil {
 		return &workerv1.PollResponse{}, nil
 	}
@@ -175,7 +175,7 @@ func (s *Service) tryPoll(
 		return nil, nil
 	}
 
-	// 通过 gRPC response trailer 下发 traceparent（标准 metadata 载体，不加 proto 字段）
+	// traceparent 走 gRPC response trailer 下发（标准 metadata 载体，不加 proto 字段）
 	if task.Traceparent != "" {
 		_ = grpc.SetTrailer(requestCtx, metadata.Pairs("traceparent", task.Traceparent))
 	}

@@ -42,3 +42,4 @@ __pycache__
 node_modules
 .impeccable
 /docs/superpowers
+.gocache

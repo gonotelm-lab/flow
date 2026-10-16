@@ -82,6 +82,9 @@ func (s *TaskWorkerStoreImpl) List(
 	if params.TaskType != "" {
 		q = q.Where("task_type ILIKE ?", "%"+params.TaskType+"%")
 	}
+	if params.HeartbeatAfter > 0 {
+		q = q.Where("heartbeat_time > ?", params.HeartbeatAfter)
+	}
 
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
@@ -96,4 +99,28 @@ func (s *TaskWorkerStoreImpl) List(
 	}
 
 	return workers, total, nil
+}
+
+func (s *TaskWorkerStoreImpl) DeleteExpired(
+	ctx context.Context,
+	before int64,
+	limit int,
+) (int64, error) {
+	if limit <= 0 {
+		return 0, nil
+	}
+
+	db := util.GetDB(ctx, s.db)
+	pick := db.Model(&schema.TaskWorker{}).
+		Select("id").
+		Where("heartbeat_time < ?", before).
+		Order("heartbeat_time ASC, id ASC").
+		Limit(limit)
+
+	res := db.Where("id IN (?)", pick).Delete(&schema.TaskWorker{})
+	if err := res.Error; err != nil {
+		return 0, sql.WrapError(err)
+	}
+
+	return res.RowsAffected, nil
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Command } from "cmdk";
-import { Boxes, Cpu, Home, ListTodo } from "lucide-react";
+import { Boxes, CalendarClock, Cpu, Home, ListTodo, ShieldCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,8 +11,10 @@ import {
 const pages = [
   { label: "首页", path: "/", icon: Home },
   { label: "任务", path: "/tasks", icon: ListTodo },
+  { label: "定时任务", path: "/schedules", icon: CalendarClock },
   { label: "工作节点", path: "/workers", icon: Cpu },
   { label: "命名空间", path: "/namespaces", icon: Boxes },
+  { label: "审计日志", path: "/audit", icon: ShieldCheck },
 ];
 
 const shortcuts = [

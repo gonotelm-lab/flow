@@ -7,10 +7,11 @@ import (
 )
 
 type WorkerListParams struct {
-	Namespace string
-	TaskType  string
-	Offset    int
-	Limit     int
+	Namespace      string
+	TaskType       string
+	HeartbeatAfter int64
+	Offset         int
+	Limit          int
 }
 
 type TaskWorker interface {
@@ -19,4 +20,6 @@ type TaskWorker interface {
 	UpdateHeartbeat(ctx context.Context, id int64, heartbeatTime int64) (bool, error)
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context, params *WorkerListParams) ([]*schema.TaskWorker, int64, error)
+
+	DeleteExpired(ctx context.Context, before int64, limit int) (int64, error)
 }

@@ -1,4 +1,3 @@
-// flow/client/worker/worker.go
 package worker
 
 import (

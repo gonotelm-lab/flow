@@ -1,4 +1,3 @@
-// flow/client/worker/typed.go
 package worker
 
 import "context"

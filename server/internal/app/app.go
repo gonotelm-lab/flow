@@ -8,11 +8,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gonotelm-lab/flow/server/internal/audit"
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/endpoint"
 	"github.com/gonotelm-lab/flow/server/internal/instance"
 	"github.com/gonotelm-lab/flow/server/internal/otel"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
+	"github.com/gonotelm-lab/flow/server/internal/scheduler"
 	"github.com/gonotelm-lab/flow/server/internal/sharding"
 	"github.com/gonotelm-lab/flow/server/internal/taskmender"
 
@@ -38,6 +40,12 @@ type App struct {
 
 	retryMender   *taskmender.RetryMender
 	staleDetector *taskmender.StaleDetector
+	workerReaper  *taskmender.WorkerReaper
+
+	// dispatcher 为 nil 时不启动定时回调调度（config.Conf.Scheduler 为空）。
+	dispatcher *scheduler.Dispatcher
+	// auditRec 是所有 admin 操作审计的异步写入器，进程退出前必须 flush。
+	auditRec *audit.Recorder
 
 	store *repository.Store
 }
@@ -79,15 +87,21 @@ func New(repo *repository.Impl, rootCtx context.Context) (*App, error) {
 	}
 	a.rootCtx, a.rootCancel = context.WithCancel(rootCtx)
 
+	// 审计写入是异步的，这里只构造；实际写库由 bootstrap 里的 Run 循环驱动。
+	auditRec := audit.New(repo.Store().AdminAuditLog, audit.Config{})
+
 	apiServer, err := endpoint.NewApiServer(
 		a.rootCtx,
 		config.Conf.ApiServer,
+		config.Conf.Worker,
 		repo.Store(),
+		auditRec,
 	)
 	if err != nil {
 		return nil, err
 	}
 	a.apiServer = apiServer
+	a.auditRec = auditRec
 
 	return a, nil
 }
@@ -102,6 +116,9 @@ func (a *App) bootstrap() error {
 
 		a.staleDetector = taskmender.NewStaleDetector(a.store, config.Conf.Worker)
 		go a.staleDetector.Run(a.rootCtx)
+
+		a.workerReaper = taskmender.NewWorkerReaper(a.store, config.Conf.Worker)
+		a.workerReaper.Start(a.rootCtx)
 	}
 
 	regValue := fmt.Sprintf("%s:%d", config.Conf.ApiServer.Grpc.Listen, config.Conf.ApiServer.Grpc.Port)
@@ -116,6 +133,22 @@ func (a *App) bootstrap() error {
 	}
 
 	a.ready.Store(true)
+
+	// 审计写入循环：与业务生命周期同进退，close 时会 flush 剩余条目。
+	a.auditRec.Start(a.rootCtx)
+
+	// 调度器必须在 updateShard 之后启动：它读的就是这里刚算出来的分片区间。
+	// 之后每次实例变更，watcher 都会刷新 a.selfShard，dispatcher 每 tick 现读，
+	// 因此扩缩容不需要任何额外的重平衡通知。
+	if config.Conf.Scheduler != nil {
+		a.dispatcher = scheduler.NewDispatcher(
+			a.store,
+			config.Conf.Scheduler,
+			func() *sharding.Shard { return a.selfShard.Load() },
+			fmt.Sprintf("instance-%d", a.self.GetId()),
+		)
+		go a.dispatcher.Run(a.rootCtx)
+	}
 
 	return nil
 }
@@ -185,7 +218,19 @@ func (a *App) close() {
 	if a.staleDetector != nil {
 		a.staleDetector.Close()
 	}
+	if a.workerReaper != nil {
+		a.workerReaper.Close()
+	}
+	if a.dispatcher != nil {
+		a.dispatcher.Close()
+	}
 	a.rootCancel()
+
+	// 放在 rootCancel 之后：Run 会在 ctx 结束时退出循环，Close 再把队列里剩下的
+	// 审计条目 flush 掉，避免关机丢掉「谁在什么时候删了什么」。
+	if a.auditRec != nil {
+		a.auditRec.Close()
+	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

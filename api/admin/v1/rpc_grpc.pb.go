@@ -21,17 +21,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AdminService_CreateNamespace_FullMethodName = "/api.admin.v1.AdminService/CreateNamespace"
-	AdminService_GetNamespace_FullMethodName    = "/api.admin.v1.AdminService/GetNamespace"
-	AdminService_ListNamespaces_FullMethodName  = "/api.admin.v1.AdminService/ListNamespaces"
-	AdminService_UpdateNamespace_FullMethodName = "/api.admin.v1.AdminService/UpdateNamespace"
-	AdminService_ListTasks_FullMethodName       = "/api.admin.v1.AdminService/ListTasks"
-	AdminService_GetTask_FullMethodName         = "/api.admin.v1.AdminService/GetTask"
-	AdminService_CancelTask_FullMethodName      = "/api.admin.v1.AdminService/CancelTask"
-	AdminService_DeleteTask_FullMethodName      = "/api.admin.v1.AdminService/DeleteTask"
-	AdminService_ListTaskEvents_FullMethodName  = "/api.admin.v1.AdminService/ListTaskEvents"
-	AdminService_ListWorkers_FullMethodName     = "/api.admin.v1.AdminService/ListWorkers"
-	AdminService_GetWorker_FullMethodName       = "/api.admin.v1.AdminService/GetWorker"
+	AdminService_CreateNamespace_FullMethodName          = "/api.admin.v1.AdminService/CreateNamespace"
+	AdminService_GetNamespace_FullMethodName             = "/api.admin.v1.AdminService/GetNamespace"
+	AdminService_ListNamespaces_FullMethodName           = "/api.admin.v1.AdminService/ListNamespaces"
+	AdminService_UpdateNamespace_FullMethodName          = "/api.admin.v1.AdminService/UpdateNamespace"
+	AdminService_ListTasks_FullMethodName                = "/api.admin.v1.AdminService/ListTasks"
+	AdminService_GetTask_FullMethodName                  = "/api.admin.v1.AdminService/GetTask"
+	AdminService_CancelTask_FullMethodName               = "/api.admin.v1.AdminService/CancelTask"
+	AdminService_DeleteTask_FullMethodName               = "/api.admin.v1.AdminService/DeleteTask"
+	AdminService_ListTaskEvents_FullMethodName           = "/api.admin.v1.AdminService/ListTaskEvents"
+	AdminService_ListWorkers_FullMethodName              = "/api.admin.v1.AdminService/ListWorkers"
+	AdminService_GetWorker_FullMethodName                = "/api.admin.v1.AdminService/GetWorker"
+	AdminService_CreateSchedule_FullMethodName           = "/api.admin.v1.AdminService/CreateSchedule"
+	AdminService_GetSchedule_FullMethodName              = "/api.admin.v1.AdminService/GetSchedule"
+	AdminService_ListSchedules_FullMethodName            = "/api.admin.v1.AdminService/ListSchedules"
+	AdminService_StopSchedule_FullMethodName             = "/api.admin.v1.AdminService/StopSchedule"
+	AdminService_DeleteSchedule_FullMethodName           = "/api.admin.v1.AdminService/DeleteSchedule"
+	AdminService_TriggerSchedule_FullMethodName          = "/api.admin.v1.AdminService/TriggerSchedule"
+	AdminService_ListScheduleDeadLetters_FullMethodName  = "/api.admin.v1.AdminService/ListScheduleDeadLetters"
+	AdminService_ReplayScheduleDeadLetter_FullMethodName = "/api.admin.v1.AdminService/ReplayScheduleDeadLetter"
+	AdminService_ListAdminAuditLogs_FullMethodName       = "/api.admin.v1.AdminService/ListAdminAuditLogs"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -49,6 +58,16 @@ type AdminServiceClient interface {
 	ListTaskEvents(ctx context.Context, in *ListTaskEventsRequest, opts ...grpc.CallOption) (*ListTaskEventsResponse, error)
 	ListWorkers(ctx context.Context, in *ListWorkersRequest, opts ...grpc.CallOption) (*ListWorkersResponse, error)
 	GetWorker(ctx context.Context, in *GetWorkerRequest, opts ...grpc.CallOption) (*v1.Worker, error)
+	CreateSchedule(ctx context.Context, in *CreateScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
+	GetSchedule(ctx context.Context, in *GetScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
+	ListSchedules(ctx context.Context, in *ListSchedulesRequest, opts ...grpc.CallOption) (*ListSchedulesResponse, error)
+	StopSchedule(ctx context.Context, in *StopScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
+	DeleteSchedule(ctx context.Context, in *DeleteScheduleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// 立即投递一次，不推进 next_fire_at。仅运维面。
+	TriggerSchedule(ctx context.Context, in *TriggerScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error)
+	ListScheduleDeadLetters(ctx context.Context, in *ListScheduleDeadLettersRequest, opts ...grpc.CallOption) (*ListScheduleDeadLettersResponse, error)
+	ReplayScheduleDeadLetter(ctx context.Context, in *ReplayScheduleDeadLetterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ListAdminAuditLogs(ctx context.Context, in *ListAdminAuditLogsRequest, opts ...grpc.CallOption) (*ListAdminAuditLogsResponse, error)
 }
 
 type adminServiceClient struct {
@@ -169,6 +188,96 @@ func (c *adminServiceClient) GetWorker(ctx context.Context, in *GetWorkerRequest
 	return out, nil
 }
 
+func (c *adminServiceClient) CreateSchedule(ctx context.Context, in *CreateScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.Schedule)
+	err := c.cc.Invoke(ctx, AdminService_CreateSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) GetSchedule(ctx context.Context, in *GetScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.Schedule)
+	err := c.cc.Invoke(ctx, AdminService_GetSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListSchedules(ctx context.Context, in *ListSchedulesRequest, opts ...grpc.CallOption) (*ListSchedulesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListSchedulesResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListSchedules_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) StopSchedule(ctx context.Context, in *StopScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.Schedule)
+	err := c.cc.Invoke(ctx, AdminService_StopSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) DeleteSchedule(ctx context.Context, in *DeleteScheduleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AdminService_DeleteSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) TriggerSchedule(ctx context.Context, in *TriggerScheduleRequest, opts ...grpc.CallOption) (*v1.Schedule, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.Schedule)
+	err := c.cc.Invoke(ctx, AdminService_TriggerSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListScheduleDeadLetters(ctx context.Context, in *ListScheduleDeadLettersRequest, opts ...grpc.CallOption) (*ListScheduleDeadLettersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListScheduleDeadLettersResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListScheduleDeadLetters_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ReplayScheduleDeadLetter(ctx context.Context, in *ReplayScheduleDeadLetterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AdminService_ReplayScheduleDeadLetter_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListAdminAuditLogs(ctx context.Context, in *ListAdminAuditLogsRequest, opts ...grpc.CallOption) (*ListAdminAuditLogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAdminAuditLogsResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListAdminAuditLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
@@ -184,6 +293,16 @@ type AdminServiceServer interface {
 	ListTaskEvents(context.Context, *ListTaskEventsRequest) (*ListTaskEventsResponse, error)
 	ListWorkers(context.Context, *ListWorkersRequest) (*ListWorkersResponse, error)
 	GetWorker(context.Context, *GetWorkerRequest) (*v1.Worker, error)
+	CreateSchedule(context.Context, *CreateScheduleRequest) (*v1.Schedule, error)
+	GetSchedule(context.Context, *GetScheduleRequest) (*v1.Schedule, error)
+	ListSchedules(context.Context, *ListSchedulesRequest) (*ListSchedulesResponse, error)
+	StopSchedule(context.Context, *StopScheduleRequest) (*v1.Schedule, error)
+	DeleteSchedule(context.Context, *DeleteScheduleRequest) (*emptypb.Empty, error)
+	// 立即投递一次，不推进 next_fire_at。仅运维面。
+	TriggerSchedule(context.Context, *TriggerScheduleRequest) (*v1.Schedule, error)
+	ListScheduleDeadLetters(context.Context, *ListScheduleDeadLettersRequest) (*ListScheduleDeadLettersResponse, error)
+	ReplayScheduleDeadLetter(context.Context, *ReplayScheduleDeadLetterRequest) (*emptypb.Empty, error)
+	ListAdminAuditLogs(context.Context, *ListAdminAuditLogsRequest) (*ListAdminAuditLogsResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -226,6 +345,33 @@ func (UnimplementedAdminServiceServer) ListWorkers(context.Context, *ListWorkers
 }
 func (UnimplementedAdminServiceServer) GetWorker(context.Context, *GetWorkerRequest) (*v1.Worker, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetWorker not implemented")
+}
+func (UnimplementedAdminServiceServer) CreateSchedule(context.Context, *CreateScheduleRequest) (*v1.Schedule, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateSchedule not implemented")
+}
+func (UnimplementedAdminServiceServer) GetSchedule(context.Context, *GetScheduleRequest) (*v1.Schedule, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSchedule not implemented")
+}
+func (UnimplementedAdminServiceServer) ListSchedules(context.Context, *ListSchedulesRequest) (*ListSchedulesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSchedules not implemented")
+}
+func (UnimplementedAdminServiceServer) StopSchedule(context.Context, *StopScheduleRequest) (*v1.Schedule, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopSchedule not implemented")
+}
+func (UnimplementedAdminServiceServer) DeleteSchedule(context.Context, *DeleteScheduleRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSchedule not implemented")
+}
+func (UnimplementedAdminServiceServer) TriggerSchedule(context.Context, *TriggerScheduleRequest) (*v1.Schedule, error) {
+	return nil, status.Error(codes.Unimplemented, "method TriggerSchedule not implemented")
+}
+func (UnimplementedAdminServiceServer) ListScheduleDeadLetters(context.Context, *ListScheduleDeadLettersRequest) (*ListScheduleDeadLettersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListScheduleDeadLetters not implemented")
+}
+func (UnimplementedAdminServiceServer) ReplayScheduleDeadLetter(context.Context, *ReplayScheduleDeadLetterRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplayScheduleDeadLetter not implemented")
+}
+func (UnimplementedAdminServiceServer) ListAdminAuditLogs(context.Context, *ListAdminAuditLogsRequest) (*ListAdminAuditLogsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAdminAuditLogs not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -446,6 +592,168 @@ func _AdminService_GetWorker_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_CreateSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CreateSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CreateSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CreateSchedule(ctx, req.(*CreateScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_GetSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).GetSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_GetSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).GetSchedule(ctx, req.(*GetScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListSchedules_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSchedulesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListSchedules(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListSchedules_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListSchedules(ctx, req.(*ListSchedulesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_StopSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).StopSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_StopSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).StopSchedule(ctx, req.(*StopScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_DeleteSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).DeleteSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_DeleteSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).DeleteSchedule(ctx, req.(*DeleteScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_TriggerSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TriggerScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).TriggerSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_TriggerSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).TriggerSchedule(ctx, req.(*TriggerScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListScheduleDeadLetters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListScheduleDeadLettersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListScheduleDeadLetters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListScheduleDeadLetters_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListScheduleDeadLetters(ctx, req.(*ListScheduleDeadLettersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ReplayScheduleDeadLetter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplayScheduleDeadLetterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ReplayScheduleDeadLetter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ReplayScheduleDeadLetter_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ReplayScheduleDeadLetter(ctx, req.(*ReplayScheduleDeadLetterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListAdminAuditLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAdminAuditLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListAdminAuditLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListAdminAuditLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListAdminAuditLogs(ctx, req.(*ListAdminAuditLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -496,6 +804,42 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetWorker",
 			Handler:    _AdminService_GetWorker_Handler,
+		},
+		{
+			MethodName: "CreateSchedule",
+			Handler:    _AdminService_CreateSchedule_Handler,
+		},
+		{
+			MethodName: "GetSchedule",
+			Handler:    _AdminService_GetSchedule_Handler,
+		},
+		{
+			MethodName: "ListSchedules",
+			Handler:    _AdminService_ListSchedules_Handler,
+		},
+		{
+			MethodName: "StopSchedule",
+			Handler:    _AdminService_StopSchedule_Handler,
+		},
+		{
+			MethodName: "DeleteSchedule",
+			Handler:    _AdminService_DeleteSchedule_Handler,
+		},
+		{
+			MethodName: "TriggerSchedule",
+			Handler:    _AdminService_TriggerSchedule_Handler,
+		},
+		{
+			MethodName: "ListScheduleDeadLetters",
+			Handler:    _AdminService_ListScheduleDeadLetters_Handler,
+		},
+		{
+			MethodName: "ReplayScheduleDeadLetter",
+			Handler:    _AdminService_ReplayScheduleDeadLetter_Handler,
+		},
+		{
+			MethodName: "ListAdminAuditLogs",
+			Handler:    _AdminService_ListAdminAuditLogs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

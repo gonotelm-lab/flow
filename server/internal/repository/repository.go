@@ -25,6 +25,10 @@ func newRepository(driver sql.Driver, db *gorm.DB) (*Impl, error) {
 	}, nil
 }
 
+func New(driver sql.Driver, db *gorm.DB) (*Impl, error) {
+	return newRepository(driver, db)
+}
+
 func (s *Impl) DB() *gorm.DB {
 	return s.db
 }

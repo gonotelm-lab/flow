@@ -1,4 +1,3 @@
-// flow/client/worker/internal/runtime/runtime_test.go
 package runtime
 
 import (

@@ -6,17 +6,20 @@ import (
 	"log/slog"
 	"net"
 
+	schedulev1 "github.com/gonotelm-lab/flow/api/schedule/v1"
 	taskv1 "github.com/gonotelm-lab/flow/api/task/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
+	"github.com/gonotelm-lab/flow/server/internal/audit"
 	"github.com/gonotelm-lab/flow/server/internal/config"
 	"github.com/gonotelm-lab/flow/server/internal/endpoint/interceptor"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
+	"github.com/gonotelm-lab/flow/server/internal/service/schedule"
 	"github.com/gonotelm-lab/flow/server/internal/service/task"
 	"github.com/gonotelm-lab/flow/server/internal/service/worker"
 
-	"golang.org/x/sync/errgroup"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/stats"
 )
@@ -45,7 +48,9 @@ type ApiServer struct {
 func NewApiServer(
 	ctx context.Context,
 	cfg *config.ApiServer,
+	workerCfg *config.WorkerConfig,
 	repoStore *repository.Store,
+	auditRec *audit.Recorder,
 ) (*ApiServer, error) {
 	listenAddr := fmt.Sprintf("%s:%d", cfg.Grpc.Listen, cfg.Grpc.Port)
 	grpcListener, err := net.Listen("tcp", listenAddr)
@@ -59,7 +64,7 @@ func NewApiServer(
 		interceptor.StreamServerInterceptor(),
 	)
 
-	adminServer, err := NewAdminServer(ctx, cfg, repoStore)
+	adminServer, err := NewAdminServer(ctx, cfg, workerCfg, repoStore, auditRec)
 	if err != nil {
 		return nil, err
 	}
@@ -108,4 +113,8 @@ func (s *ApiServer) registerGrpcServices(repoStore *repository.Store) {
 
 	taskService := task.NewService(repoStore)
 	taskv1.RegisterTaskServiceServer(s.grpcServer, taskService)
+
+	// 定时回调的客户端面：与 TaskService / WorkerService 一样只有 gRPC，不挂 HTTP annotation。
+	scheduleService := schedule.NewService(repoStore)
+	schedulev1.RegisterScheduleServiceServer(s.grpcServer, scheduleService)
 }

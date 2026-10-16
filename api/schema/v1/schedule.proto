@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package api.schema.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/gonotelm-lab/flow/api/schema/v1";
+
+// 触发类型。与 Schedule.trigger 的 oneof 分支一一对应。
+//
+// 注意：proto3 的枚举值在包级作用域可见，同包的 TaskState 已有 FAILED 等值，
+// 因此本文件所有枚举值一律带枚举名前缀，避免重名冲突。
+enum ScheduleType {
+  SCHEDULE_TYPE_UNSPECIFIED = 0;
+  SCHEDULE_TYPE_ONE_SHOT = 1;
+  SCHEDULE_TYPE_CRON = 2;
+}
+
+// schedule 自身的生命周期状态。
+//
+// ACTIVE 是唯一会触发回调的状态；其余三个都是终态，进去之后只能读和删除。
+// 一次性任务的自动终态是 FINISHED / FAILED；STOPPED 是唯一由人触发的终态，
+// 一次性与 cron 都能进入，且不可恢复（要再次触发只能重新注册一条）。
+enum ScheduleState {
+  SCHEDULE_STATE_UNSPECIFIED = 0;
+  SCHEDULE_STATE_ACTIVE = 1;
+  // 人为单向停止：清空触发计划与未完成的投递链路，此后永不触发；已经发出的
+  // HTTP 无法撤回，其结果不再记账。
+  SCHEDULE_STATE_STOPPED = 2;
+  SCHEDULE_STATE_FINISHED = 3;
+  SCHEDULE_STATE_FAILED = 4;
+}
+
+// 当前 fire 槽位状态。一条 schedule 在任一时刻最多一个未完成 fire；
+// FIRE_STATE_UNSPECIFIED 表示槽位空闲。非空闲期间到点的 occurrence 会被跳过。
+enum FireState {
+  FIRE_STATE_UNSPECIFIED = 0;
+  FIRE_STATE_PENDING = 1;
+  FIRE_STATE_DELIVERING = 2;
+  FIRE_STATE_DEAD_LETTER = 3;
+}
+
+enum DeadLetterState {
+  DEAD_LETTER_STATE_UNSPECIFIED = 0;
+  // 慢重试进行中；阻塞该 schedule 的新触发
+  DEAD_LETTER_STATE_RETRYING = 1;
+  // 慢重试已耗尽，等待人工重投；不阻塞新触发
+  DEAD_LETTER_STATE_EXHAUSTED = 2;
+  DEAD_LETTER_STATE_REPLAYED = 3;
+  // 所属 schedule 被 stop：还没跑完的慢重试就此作废。没有恢复入口，也没有别的收尾动作。
+  DEAD_LETTER_STATE_STOPPED = 4;
+}
+
+// 一次性触发。fire_at 为 unix 毫秒，必须严格晚于当前时间（过期注册被拒绝）。
+message OneShotTrigger {
+  int64 fire_at = 1 [(buf.validate.field).int64.gt = 0];
+}
+
+// cron 触发。标准 5 字段（分 时 日 月 周），最小粒度 1 分钟。
+//
+// 方言为 robfig/cron/v3（不支持 L / W / # 与 @ 描述符），与 Quartz 在字段数、
+// 星期编号、月份编号三个维度都不同，勿按 Quartz 语义使用。
+message CronTrigger {
+  string expr = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 5,
+    (buf.validate.field).string.max_len = 128
+  ];
+  // IANA 时区名，如 Asia/Shanghai；留空表示 UTC。
+  string timezone = 2 [(buf.validate.field).string.max_len = 64];
+}
+
+message Schedule {
+  // id 由服务端生成，注册 / 更新时客户端**必须留空**。
+  //
+  // 因此这里必须加 ignore: IGNORE_IF_ZERO_VALUE。proto3 的非 optional 字符串零值就是 ""，
+  // 而 protovalidate 默认对零值也跑 string.uuid 校验，结果是「客户端注册时 id 为空」
+  // 被判成 InvalidArgument —— **每一次注册都会被拦下**。加上 ignore 之后语义变成
+  // 「留空则跳过校验；一旦提供了就必须是合法 UUID」，既放行正常注册，又拦住乱填的 id。
+  //
+  // 注：枚举名取自 buf.lock 固定的 protovalidate 版本（较新的版本已改名为
+  // IGNORE_IF_DEFAULT_VALUE，升级依赖时要同步改这里）。
+  string id = 1 [
+    (google.api.field_behavior) = IDENTIFIER,
+    (buf.validate.field) = {
+      ignore: IGNORE_IF_ZERO_VALUE
+      string: {uuid: true}
+    }
+  ];
+
+  string namespace = 2 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  string name = 3 [(buf.validate.field).string.max_len = 128];
+
+  // 一次性与 cron 互斥，由类型系统保证不会同时存在。
+  //
+  // required = true 让「一个分支都没设」在拦截器层就被拒掉，客户端在 .proto 上就能看到
+  // 「必须选一种触发方式」这条契约，而不是等业务层报错。
+  oneof trigger {
+    option (buf.validate.oneof).required = true;
+
+    OneShotTrigger one_shot = 4;
+    CronTrigger cron = 5;
+  }
+
+  // 回调目标。仅校验格式：必须是 http/https、host 非空、不含内嵌凭据。
+  // 不校验可达性，不拦截私网与 metadata 地址（见设计文档「已接受的残余风险」）。
+  string callback_url = 6 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2048
+  ];
+  // 回调时使用的 Content-Type；留空则用 application/octet-stream。
+  string content_type = 7 [(buf.validate.field).string.max_len = 128];
+  // 回调 body 原样透传，不做任何包装。
+  bytes payload = 8;
+  // 可选幂等键，namespace 内唯一；重复注册返回已存在的 schedule。
+  string idempotency_key = 9 [(buf.validate.field).string.max_len = 128];
+
+  // ---- 以下为运行态，全部 OUTPUT_ONLY ----
+
+  ScheduleState state = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // 下次计划触发时刻，unix 毫秒
+  int64 next_fire_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  FireState fire_state = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 attempt_no = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 last_success_at = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int32 consecutive_failures = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+  int64 total_failures = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // 因上一次 fire 未结束（或被判定迟到）而跳过的 occurrence 数
+  int64 skipped_count = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string last_error = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  google.protobuf.Timestamp create_time = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Timestamp update_time = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+}

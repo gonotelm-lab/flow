@@ -119,11 +119,17 @@ func TestInstanceStore_Delete(t *testing.T) {
 	created, err := gTestInstanceStore.Create(ctx, ins)
 	require.NoError(t, err)
 
-	err = gTestInstanceStore.Delete(ctx, created.Id)
+	deleted, err := gTestInstanceStore.Delete(ctx, created.Id)
 	require.NoError(t, err)
+	require.True(t, deleted)
 
 	_, err = gTestInstanceStore.Get(ctx, created.Id)
 	assert.ErrorIs(t, err, pkgerr.NoRecord)
+
+	// 同一行重复删除，第二次不应再报告已删除。
+	deleted, err = gTestInstanceStore.Delete(ctx, created.Id)
+	require.NoError(t, err)
+	assert.False(t, deleted)
 }
 
 func TestInstanceStore_UpdateExpireTime(t *testing.T) {

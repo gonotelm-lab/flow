@@ -304,18 +304,28 @@ func (s *Service) listWorkers(
 	limit := int(pageSize)
 
 	workers, total, err := s.store.TaskWorker.List(ctx, &store.WorkerListParams{
-		Namespace: namespace,
-		TaskType:  taskType,
-		Offset:    offset,
-		Limit:     limit,
+		Namespace:      namespace,
+		TaskType:       taskType,
+		HeartbeatAfter: s.workerHeartbeatCutoff(),
+		Offset:         offset,
+		Limit:          limit,
 	})
 	if err != nil {
 		return nil, 0, errors.WithMessage(err, "failed to list workers")
 	}
 
+	workerIds := make([]int64, 0, len(workers))
+	for _, w := range workers {
+		workerIds = append(workerIds, w.Id)
+	}
+	stats, err := s.store.Task.StatsByWorkerIDs(ctx, workerIds)
+	if err != nil {
+		return nil, 0, errors.WithMessage(err, "failed to aggregate worker dealt stats")
+	}
+
 	result := make([]*apischema.Worker, 0, len(workers))
 	for _, w := range workers {
-		result = append(result, toProtoWorker(w))
+		result = append(result, toProtoWorker(w, stats[w.Id]))
 	}
 
 	return result, total, nil
@@ -333,10 +343,23 @@ func (s *Service) getWorker(
 		return nil, errors.WithMessage(err, "failed to get worker")
 	}
 
-	return toProtoWorker(worker), nil
+	stats, err := s.store.Task.StatsByWorkerIDs(ctx, []int64{id})
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to aggregate worker dealt stats")
+	}
+
+	return toProtoWorker(worker, stats[id]), nil
 }
 
-func toProtoWorker(w *reposchema.TaskWorker) *apischema.Worker {
+func (s *Service) workerHeartbeatCutoff() int64 {
+	if s.workerTTL <= 0 {
+		return 0
+	}
+
+	return time.Now().Add(-s.workerTTL).UnixMilli()
+}
+
+func toProtoWorker(w *reposchema.TaskWorker, stats *store.WorkerDealtStats) *apischema.Worker {
 	if w == nil {
 		return nil
 	}
@@ -348,12 +371,20 @@ func toProtoWorker(w *reposchema.TaskWorker) *apischema.Worker {
 		TaskType:      w.TaskType,
 		CreateTime:    timestamppb.New(time.UnixMilli(w.CreateTime)),
 		HeartbeatTime: timestamppb.New(time.UnixMilli(w.HeartbeatTime)),
-		TotalDealt:    w.TotalDealt,
-		SuccessDealt:  w.SuccessDealt,
 	}
-	if w.LastWorkTime > 0 {
-		worker.LastWorkTime = timestamppb.New(time.UnixMilli(w.LastWorkTime))
+	if stats != nil {
+		worker.TotalDealt = stats.Total
+		worker.SuccessDealt = stats.Success
 	}
+
+	lastWorkTime := w.LastWorkTime
+	if lastWorkTime <= 0 && stats != nil {
+		lastWorkTime = stats.LastDealtTime
+	}
+	if lastWorkTime > 0 {
+		worker.LastWorkTime = timestamppb.New(time.UnixMilli(lastWorkTime))
+	}
+
 	return worker
 }
 

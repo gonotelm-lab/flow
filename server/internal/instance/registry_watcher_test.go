@@ -105,11 +105,14 @@ func newDiscoveryInMemoryStore(
 				state.instances[copied.Id] = &copied
 				return &copied, nil
 			},
-			deleteFn: func(_ context.Context, id int64) error {
+			deleteFn: func(_ context.Context, id int64) (bool, error) {
 				state.mu.Lock()
 				defer state.mu.Unlock()
+				if _, ok := state.instances[id]; !ok {
+					return false, nil
+				}
 				delete(state.instances, id)
-				return nil
+				return true, nil
 			},
 			updateExpireTimeFn: func(
 				_ context.Context,
@@ -380,7 +383,7 @@ func TestRegistryWatcher_BurstEventsWithSmallBatch(t *testing.T) {
 
 	watcher := NewWatcher(&store, WatcherConfig{
 		Interval:        time.Millisecond,
-		BatchSize:       1, // 极端场景：最小批次，强制分页轮询。
+		BatchSize:       1, // 极端场景：批次设成最小，强制分页轮询。
 		MaxRetryBackoff: 10 * time.Millisecond,
 	})
 
