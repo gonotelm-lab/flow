@@ -1,7 +1,7 @@
 <a id="readme-top"></a>
 
 <h1 align="center">
-  <img src="web/public/brand/flow-lockup.svg" alt="Flow" height="34" />
+  <img src="web/public/brand/flow-lockup.svg" alt="Flow" width="204" />
 </h1>
 
 <p align="center">
@@ -85,17 +85,11 @@ s.Stop(ctx, id)   // 单向停止：此后不再触发，不可恢复
 
 ### 接收回调
 
-```
-POST <callback_url>
-X-Flow-Schedule-Id / X-Flow-Fire-Id / X-Flow-Scheduled-Time /
-X-Flow-Timestamp / X-Flow-Namespace / X-Flow-Signature
+到期后 server 向你注册的 URL 发一次 POST：body 是注册时传入的 payload，请求头带签名与触发信息。
 
-<body = 注册时传入的 payload>
-```
+投递返回 2xx 即成功，否则重投。
 
-HTTP 2xx 视为投递成功，其余（含 3xx 与超时）按失败重投。同一个 `X-Flow-Fire-Id` 在重试与实例接管之间保持不变，**接收方必须用它做幂等去重**。
-
-签名是 HMAC-SHA256，用 SDK 一行验签：
+用 SDK 一行验签：
 
 ```go
 verifier, _ := schedule.New("", schedule.Config{Namespace: ns, APIKey: apiKey})
@@ -105,7 +99,7 @@ if err := verifier.VerifyRequest(r); err != nil {
 }
 ```
 
-算法规范见 [`api/signature`](api/signature/signature.go)，可运行的接收方见 [`client/example/schedule-receiver`](client/example/schedule-receiver)。
+可运行的接收方见 [`client/example/schedule-receiver`](client/example/schedule-receiver)。
 
 ## API
 

@@ -64,7 +64,8 @@ export const DEAD_LETTER_STATE_META: Record<
 
 /**
  * 调度器的重试节奏，用于在界面上解释「为什么它还在重试」。
- * 数值与 server/etc/conf.toml.tpl 的默认值一致。
+ * 数值与 server/etc/conf.toml.tpl 的默认值一致：快重试是首发之后的间隔列表
+ * （共 len+1 次尝试），死信慢重试的条数就是慢重试次数。
  */
-export const FAST_RETRY_INTERVALS = ["1s", "2s", "4s", "8s", "16s"];
+export const FAST_RETRY_INTERVALS = ["3s", "10s"];
 export const DEAD_LETTER_INTERVALS = ["1m", "5m", "30m"];
