@@ -64,7 +64,7 @@ import {
   SCHEDULE_STATE_META,
   SCHEDULE_TYPE_LABEL,
 } from "@/lib/constants";
-import { decodeProtoBytes, formatUnixMillis, truncateId } from "@/lib/format";
+import { decodeProtoBytes, formatUnixMillis } from "@/lib/format";
 import { useNamespace } from "@/lib/namespace-context";
 import type { Schedule } from "@/api/types";
 
@@ -206,12 +206,14 @@ export function ScheduleTable() {
       <Table>
         <colgroup>
           <col style={{ width: "2.5rem" }} />
-          <col style={{ minWidth: "18rem" }} />
+          {/* ID 显示完整 UUID：列宽按内容给足，避免「列很宽、ID 却被截断」的错位观感 */}
+          <col style={{ width: "20rem" }} />
           <col style={{ width: "7rem" }} />
           <col />
           <col style={{ minWidth: "11rem" }} />
-          <col style={{ width: "7rem" }} />
-          <col style={{ width: "12rem" }} />
+          {/* 状态列要同时放下状态徽章和「死信重试中」这类 fire 文案，7rem 会把两者挤成竖排 */}
+          <col style={{ width: "10rem" }} />
+          <col style={{ width: "7.5rem" }} />
         </colgroup>
         <TableHeader>
           <TableRow>
@@ -221,7 +223,8 @@ export function ScheduleTable() {
             <TableHead>触发规则</TableHead>
             <TableHead>下次触发</TableHead>
             <TableHead>状态</TableHead>
-            <TableHead>操作</TableHead>
+            {/* 操作列的 ⋯ 靠右对齐，表头也右对齐，避免表头与内容错位 */}
+            <TableHead className="text-right">操作</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -279,11 +282,11 @@ export function ScheduleTable() {
                         onClick={() => openDetail(s.id)}
                         title={s.id}
                       >
-                        {truncateId(s.id, 12)}
+                        {s.id}
                       </button>
                       <button
                         type="button"
-                        className="text-muted-foreground hover:text-foreground"
+                        className="shrink-0 text-muted-foreground hover:text-foreground"
                         aria-label="复制 ID"
                         onClick={() => copyToClipboard(s.id, "已复制 ID")}
                       >
@@ -318,7 +321,7 @@ export function ScheduleTable() {
                         {meta?.label ?? s.state}
                       </Badge>
                       {busy && (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="whitespace-nowrap text-xs text-muted-foreground">
                           {FIRE_STATE_LABEL[s.fireState ?? ""] ?? "投递中"}
                         </span>
                       )}
