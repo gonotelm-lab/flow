@@ -3,7 +3,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors duration-150",
+  // whitespace-nowrap：徽章在窄列里会被 flex 挤到逐字换行（「启用中」竖排），任何状态标签都不该折行
+  "inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium transition-colors duration-150",
   {
     variants: {
       variant: {
