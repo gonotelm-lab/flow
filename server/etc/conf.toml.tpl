@@ -42,8 +42,8 @@ leaseDuration = "${FLOW_SCHEDULER_LEASE_DURATION:-30s}"
 # 迟到容差：超过它视为「停机期间错过」，不触发而是跳过并重算。
 latenessTolerance = "${FLOW_SCHEDULER_LATENESS_TOLERANCE:-30s}"
 retryJitterRatio = ${FLOW_SCHEDULER_RETRY_JITTER_RATIO:-0.2}
-# 逗号分隔的快速重试间隔（含首次共 len+1 次尝试）
-fastRetryIntervals = "${FLOW_SCHEDULER_FAST_RETRY_INTERVALS:-1s,2s,4s,8s,16s}"
+# 逗号分隔的快速重试间隔（含首次共 len+1 次尝试；默认 2 个间隔 = 首发 + 2 次重试 = 3 次快尝试）
+fastRetryIntervals = "${FLOW_SCHEDULER_FAST_RETRY_INTERVALS:-3s,10s}"
 # 逗号分隔的死信慢重试间隔
 deadLetterIntervals = "${FLOW_SCHEDULER_DEAD_LETTER_INTERVALS:-1m,5m,30m}"
 

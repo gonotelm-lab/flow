@@ -15,7 +15,7 @@ func TestDefaultSchedulerConfig_IsValid(t *testing.T) {
 	require.NoError(t, cfg.Validate())
 
 	assert.Equal(t, []time.Duration{
-		1 * time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second,
+		3 * time.Second, 10 * time.Second,
 	}, cfg.FastRetryIntervals)
 	assert.Equal(t, []time.Duration{
 		1 * time.Minute, 5 * time.Minute, 30 * time.Minute,
@@ -113,9 +113,10 @@ func TestLoad_SchedulerSectionDefaults(t *testing.T) {
 	assert.Equal(t, 30*time.Second, s.LeaseDuration)
 	assert.Equal(t, 30*time.Second, s.LatenessTolerance)
 	assert.InDelta(t, 0.2, s.RetryJitterRatio, 0.0001)
-	assert.Len(t, s.FastRetryIntervals, 5)
+	// 快重试 2 个间隔 = 3 次尝试（含首发），死信 3 次，合计每次 fire 最多 6 次
+	assert.Len(t, s.FastRetryIntervals, 2)
 	assert.Len(t, s.DeadLetterIntervals, 3)
-	assert.Len(t, cfg.Scheduler.FastRetryIntervals, 5)
+	assert.Len(t, cfg.Scheduler.FastRetryIntervals, 2)
 	assert.Len(t, cfg.Scheduler.DeadLetterIntervals, 3)
 
 	// 租约必须严格大于 HTTP 超时，否则配置本身就不合法

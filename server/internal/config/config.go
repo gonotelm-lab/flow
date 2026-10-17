@@ -300,6 +300,10 @@ type SchedulerConfig struct {
 
 	// FastRetryIntervalsRaw / DeadLetterIntervalsRaw 是逗号分隔的时长序列，
 	// 由 envsubst 注入模板得到。
+	//
+	// 计数语义不对称：快序列的长度是「重试次数」（首发另计，共 len+1 次尝试），
+	// 死信序列的长度就是慢重试次数。默认 3s,10s + 1m,5m,30m → 每次 fire 最多
+	// 3 次快尝试 + 3 次慢尝试 = 6 次投递。
 	FastRetryIntervalsRaw  string `toml:"fastRetryIntervals"`
 	DeadLetterIntervalsRaw string `toml:"deadLetterIntervals"`
 
@@ -318,7 +322,7 @@ func DefaultSchedulerConfig() *SchedulerConfig {
 		LeaseDuration:          30 * time.Second,
 		LatenessTolerance:      30 * time.Second,
 		RetryJitterRatio:       0.2,
-		FastRetryIntervalsRaw:  "1s,2s,4s,8s,16s",
+		FastRetryIntervalsRaw:  "3s,10s",
 		DeadLetterIntervalsRaw: "1m,5m,30m",
 	}
 	_ = cfg.Validate()
