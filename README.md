@@ -93,7 +93,7 @@ X-Flow-Timestamp / X-Flow-Namespace / X-Flow-Signature
 <body = 注册时传入的 payload>
 ```
 
-HTTP 2xx 视为投递成功，其余（含 3xx 与超时）按失败重投。同一个 `X-Flow-Fire-Id` 在重试与实例接管之间保持不变，**接收方必须用它做幂等去重**。
+HTTP 2xx 视为投递成功，其余（含 3xx 与超时）按失败重投。同一个 `X-Flow-Fire-Id` 在重试与实例接管之间保持不变。
 
 签名是 HMAC-SHA256，用 SDK 一行验签：
 
