@@ -1,7 +1,7 @@
 <a id="readme-top"></a>
 
 <h1 align="center">
-  <img src="web/public/brand/flow-lockup.svg" alt="Flow" height="64" />
+  <img src="web/public/brand/flow-lockup.svg" alt="Flow" width="204" />
 </h1>
 
 <p align="center">
