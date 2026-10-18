@@ -55,11 +55,12 @@ docker run --rm -p 7090:7090 -p 7091:7091 \
 ### 提交与消费任务
 
 ```go
-tasks, _ := task.New("localhost:7091")
-t, _ := tasks.Submit(ctx, "demo", "echo", []byte(`{"message":"hi"}`), task.WithMaxRetry(3))
+// import task "github.com/gonotelm-lab/flow/client/task/v2"
+tasks, _ := task.New("localhost:7091", task.Config{Namespace: "demo", APIKey: apiKey})
+t, _ := tasks.Submit(ctx, "echo", []byte(`{"message":"hi"}`), task.WithMaxRetry(3))
 
 w, _ := worker.New("localhost:7091", worker.Config{
-    Namespace: "demo", TaskType: "echo", MaxConcurrency: 4,
+    Namespace: "demo", TaskType: "echo", MaxConcurrency: 4, APIKey: apiKey,
 })
 worker.RegisterTyped[echoInput, echoOutput](w, func(ctx context.Context, in echoInput) (echoOutput, error) {
     return echoOutput{Message: strings.ToUpper(in.Message)}, nil
@@ -67,12 +68,15 @@ worker.RegisterTyped[echoInput, echoOutput](w, func(ctx context.Context, in echo
 w.Run(ctx)
 ```
 
+`apiKey` 是 namespace 的 api_key：服务端开启鉴权时必填，关闭时留空即可（SDK 不会发出凭据头）。
+`client/task`（v1，每次调用传 namespace）已废弃，保留仅为升级缓冲。
+
 可运行示例见 [`client/example`](client/example)。
 
 ### 注册定时回调
 
 ```go
-s, _ := schedule.New("localhost:7091", schedule.Config{Namespace: "demo"})
+s, _ := schedule.New("localhost:7091", schedule.Config{Namespace: "demo", APIKey: apiKey})
 
 s.Register(ctx, schedule.OneShot(time.Now().Add(10*time.Minute), hookURL, payload))
 s.Register(ctx, schedule.Cron("*/5 * * * *", "Asia/Shanghai", hookURL, payload))
@@ -100,6 +104,17 @@ if err := verifier.VerifyRequest(r); err != nil {
 ```
 
 可运行的接收方见 [`client/example/schedule-receiver`](client/example/schedule-receiver)。
+
+### 开启 API Key 鉴权
+
+客户端面（7091 的 task / worker / schedule）支持基于 namespace api_key 的鉴权，**默认关闭**：
+
+```bash
+FLOW_API_AUTH_ENABLED=true
+```
+
+打开后，每个请求都要带 `authorization: Bearer <api_key>`，且只能访问自己 namespace 的资源；
+客户端把 key 填进 `Config.APIKey` 即可，缺 key 或 key 无效返回 `UNAUTHENTICATED`。
 
 ## API
 
@@ -136,6 +151,7 @@ Admin HTTP（`:7090`，前缀 `/api/admin/v1`，gRPC-Gateway）：
 | `FLOW_DB_AUTO_INIT` | `true` | 库缺失时自动创建并执行迁移 |
 | `FLOW_API_SERVER_HTTP_PORT` | `7090` | Admin HTTP |
 | `FLOW_API_SERVER_GRPC_PORT` | `7091` | gRPC |
+| `FLOW_API_AUTH_ENABLED` | `false` | 客户端面（7091）的 api_key 鉴权开关；打开前先升级客户端 |
 | `FLOW_WORKER_*` | — | 轮询、心跳、过期扫描、节点回收 |
 | `FLOW_SCHEDULER_*` | — | 定时回调调度器；删掉整个 `[scheduler]` 段则不启动 |
 | `FLOW_OTEL_ENABLED` / `FLOW_OTEL_ENDPOINT` / `FLOW_OTEL_PROTOCOL` | `false` / — | 对接 OTLP collector |
@@ -150,7 +166,7 @@ Admin HTTP（`:7090`，前缀 `/api/admin/v1`，gRPC-Gateway）：
 
 - 数据库 schema 用 [goose](https://github.com/pressly/goose) 迁移，SQL 内嵌在二进制里、启动时执行；多实例并发启动不会重复执行。
 - 镜像在发布 Release 时由 GitHub Actions 构建并推送到 `ghcr.io/gonotelm-lab/flow/{server,web}`（linux/amd64、linux/arm64），tag 取 `vX.Y.Z` 形式的应用级 tag。
-- **server 目前没有任何鉴权**，回调 URL 也只做格式校验（不探测可达性，不拦截私网地址）。**必须保证 7090 / 7091 不暴露到不可信网络。**
+- 客户端面（7091）可开启 api_key 鉴权（`FLOW_API_AUTH_ENABLED`，默认关闭）；**admin HTTP（7090）没有任何鉴权**，回调 URL 也只做格式校验（不探测可达性，不拦截私网地址）。**必须保证 7090 不暴露到不可信网络；7091 在关闭鉴权时同样如此。**
 
 ## 开发
 
@@ -165,10 +181,25 @@ FLOW_DB_HOST=127.0.0.1 FLOW_DB_PORT=5432 FLOW_DB_USER=postgres \
 FLOW_DB_PASS=postgres FLOW_DB_NAME=flowdb go test ./...
 ```
 
+### 端到端测试
+
+`client/e2e` 跑在真 server + 真库上，默认跳过（没配 `FLOW_E2E_ADDR` 就不跑），所以 `go test ./...` 不受影响。
+
+一条命令跑完（自己起临时 PostgreSQL，鉴权开 / 关两种模式各跑一遍）：
+
+```bash
+scripts/e2e.sh --docker-db
+```
+
+用已有的 PostgreSQL 就去掉 `--docker-db`（读 `FLOW_DB_*`，默认 `127.0.0.1:5432`）。
+server 日志写在 `.e2e-logs/`（已 gitignore）。CI 由 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+调用同一个脚本，数据库来自 service 容器。
+
 ```
 api/      Protobuf 定义与生成代码
-client/   Go SDK：task 提交、worker 运行时、schedule 客户端与回调验签
+client/   Go SDK：task（v2）/ worker / schedule 客户端与回调验签
 server/   Go 服务：config / repository / service / instance / taskmender / endpoint
+scripts/  e2e 脚本（scripts/e2e.sh）
 web/      React + Vite 运维后台
 ```
 

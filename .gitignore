@@ -43,3 +43,6 @@ node_modules
 .impeccable
 /docs/superpowers
 .gocache
+
+# e2e 运行日志（scripts/e2e.sh）
+/.e2e-logs

@@ -56,10 +56,20 @@ func (s *Service) getNamespace(
 		return nil, errors.WithMessage(err, "failed to get namespace")
 	}
 
-	apiNs := toApiNamespace(ns)
-	apiNs.ApiKey = ""
+	apiNs := toApiNamespaceMasked(ns)
 
 	return apiNs, nil
+}
+
+// toApiNamespaceMasked 是不带明文 api_key 的视图：明文只在创建时返回一次。
+// api_key 一旦成了凭据，运维面还到处回显，鉴权就形同虚设。
+func toApiNamespaceMasked(ns *reposchema.Namespace) *apischema.Namespace {
+	apiNs := toApiNamespace(ns)
+	if apiNs != nil {
+		apiNs.ApiKey = ""
+	}
+
+	return apiNs
 }
 
 func toApiNamespace(ns *reposchema.Namespace) *apischema.Namespace {
@@ -106,7 +116,7 @@ func (s *Service) listNamespaces(
 
 	result := make([]*apischema.Namespace, 0, len(namespaces))
 	for _, ns := range namespaces {
-		result = append(result, toApiNamespace(ns))
+		result = append(result, toApiNamespaceMasked(ns))
 	}
 
 	return result, total, nil
@@ -136,7 +146,7 @@ func (s *Service) updateNamespace(
 		return nil, errors.WithMessage(err, "failed to get updated namespace")
 	}
 
-	return toApiNamespace(updated), nil
+	return toApiNamespaceMasked(updated), nil
 }
 
 func maskApiKey(apiKey string) string {

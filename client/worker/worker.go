@@ -6,6 +6,7 @@ import (
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
+	"github.com/gonotelm-lab/flow/client/internal/apikey"
 	"github.com/gonotelm-lab/flow/client/worker/internal/runtime"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
@@ -27,8 +28,10 @@ func frequentMethodFilter() otelgrpc.Filter {
 }
 
 type Client struct {
-	cfg     Config
-	conn    grpc.ClientConnInterface
+	cfg Config
+	// conn 是调用方给的原始连接（只用于 Close）；callConn 是注入凭据后的连接，RPC 都走它。
+	conn     grpc.ClientConnInterface
+	callConn grpc.ClientConnInterface
 	ownsConn bool
 
 	mu      sync.Mutex
@@ -36,6 +39,9 @@ type Client struct {
 	rt      *runtime.Runtime
 }
 
+// New 建立连接并返回 worker 客户端，opts 原样透传给 grpc.NewClient。
+//
+// 这里不校验 Config：namespace 为空时由 Start 返回 ErrEmptyNamespace。
 func New(addr string, cfg Config, opts ...grpc.DialOption) (*Client, error) {
 	baseOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -53,10 +59,15 @@ func New(addr string, cfg Config, opts ...grpc.DialOption) (*Client, error) {
 	return c, nil
 }
 
+// NewWithConn 用调用方自己的连接（多 worker 共享连接时用）。
+// Config.APIKey 非空时，所有 RPC 都会自动带上 `authorization: Bearer <key>`。
 func NewWithConn(conn grpc.ClientConnInterface, cfg Config) *Client {
+	callConn := apikey.WrapConn(conn, cfg.APIKey)
+
 	return &Client{
-		cfg:  ConfigWithDefaults(cfg),
-		conn: conn,
+		cfg:      ConfigWithDefaults(cfg),
+		conn:     conn,
+		callConn: callConn,
 	}
 }
 
@@ -67,6 +78,11 @@ func (c *Client) Handle(fn HandleFunc) {
 }
 
 func (c *Client) Start() error {
+	// 配置校验放在这里而不是 New：Start 才是第一个会发 RPC 的入口。
+	if err := c.cfg.validate(); err != nil {
+		return err
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -79,7 +95,7 @@ func (c *Client) Start() error {
 
 	handler := c.handler
 	c.rt = runtime.New(runtime.RuntimeConfig{
-		Conn:              c.conn,
+		Conn:              c.callConn,
 		Namespace:         c.cfg.Namespace,
 		TaskType:          c.cfg.TaskType,
 		Name:              c.cfg.Name,

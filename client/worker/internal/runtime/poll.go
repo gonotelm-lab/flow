@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
@@ -83,17 +84,26 @@ type PollLoop struct {
 	cfg    PollLoopConfig
 	client workerv1.WorkerServiceClient
 
-	mu          sync.Mutex
-	runningIDs  map[string]struct{}
-	cancelFuncs map[string]context.CancelFunc
+	mu         sync.Mutex
+	runningIDs map[string]struct{}
+	running    map[string]*runningTask
+}
+
+// runningTask 是一次在飞的任务。
+//
+// canceledByServer 要和「运行停止」分开：服务端取消的任务在服务端已经是 CANCELLED，
+// 回报没有意义；而关停时任务仍是 RUNNING，不回报就会被 stale 检测判成超时 FAILED。
+type runningTask struct {
+	cancel           context.CancelFunc
+	canceledByServer atomic.Bool
 }
 
 func NewPollLoop(cfg PollLoopConfig) *PollLoop {
 	return &PollLoop{
-		cfg:         cfg,
-		client:      workerv1.NewWorkerServiceClient(cfg.Conn),
-		runningIDs:  make(map[string]struct{}),
-		cancelFuncs: make(map[string]context.CancelFunc),
+		cfg:        cfg,
+		client:     workerv1.NewWorkerServiceClient(cfg.Conn),
+		runningIDs: make(map[string]struct{}),
+		running:    make(map[string]*runningTask),
 	}
 }
 
@@ -109,11 +119,14 @@ func (p *PollLoop) RunningTaskIDs() []string {
 
 func (p *PollLoop) CancelTask(taskID string) {
 	p.mu.Lock()
-	cancel, ok := p.cancelFuncs[taskID]
+	task, ok := p.running[taskID]
 	p.mu.Unlock()
-	if ok && cancel != nil {
-		cancel()
+	if !ok || task == nil {
+		return
 	}
+
+	task.canceledByServer.Store(true)
+	task.cancel()
 }
 
 func (p *PollLoop) Run(ctx context.Context) {
@@ -200,6 +213,27 @@ func (p *PollLoop) startTaskSpan(ctx context.Context, task *schemav1.Task, trace
 	return ctx, span
 }
 
+// reportTimeout 是回报结果的等待上限：关停时也要把结果送出去，但不能无限等。
+const reportTimeout = 10 * time.Second
+
+// reportOutcome 回报任务结果。
+//
+// ctx 取自 handler，但用 WithoutCancel 脱开关停带来的取消：任务已经跑完，结果必须送出去，
+// 否则它在服务端一直停在 RUNNING，最后被 stale 检测当成超时判成 FAILED（终态、不重试）。
+// trace 等 ctx 值仍然保留；timeout 兜住服务端不可达的情况。
+func (p *PollLoop) reportOutcome(
+	ctx context.Context,
+	task *schemav1.Task,
+	action workerv1.ReportAction,
+	payload []byte,
+	skipRetry bool,
+) {
+	reportCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), reportTimeout)
+	defer cancel()
+
+	_ = p.cfg.Reporter.ReportTask(reportCtx, p.cfg.WorkerID, task, action, payload, skipRetry)
+}
+
 func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent string) {
 	defer p.cfg.Semaphore.Release()
 
@@ -207,9 +241,10 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent
 	taskCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	run := &runningTask{cancel: cancel}
 	p.mu.Lock()
 	p.runningIDs[taskID] = struct{}{}
-	p.cancelFuncs[taskID] = cancel
+	p.running[taskID] = run
 	p.mu.Unlock()
 
 	p.cfg.Logger.Info("task started", "task_id", taskID)
@@ -219,7 +254,7 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent
 	defer func() {
 		p.mu.Lock()
 		delete(p.runningIDs, taskID)
-		delete(p.cancelFuncs, taskID)
+		delete(p.running, taskID)
 		p.mu.Unlock()
 	}()
 
@@ -230,13 +265,19 @@ func (p *PollLoop) runTask(ctx context.Context, task *schemav1.Task, traceparent
 				"panic", r,
 				"stack", string(debug.Stack()),
 			)
-			_ = p.cfg.Reporter.ReportTask(handlerCtx, p.cfg.WorkerID, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
+			p.reportOutcome(handlerCtx, task, workerv1.ReportAction_FAIL, []byte("panic"), false)
 		}
 	}()
 
 	action, payload, skipRetry := p.cfg.Handler(handlerCtx, task)
-	if taskCtx.Err() == nil {
-		p.cfg.Logger.Info("task finished", "task_id", taskID, "action", action.String())
-		_ = p.cfg.Reporter.ReportTask(handlerCtx, p.cfg.WorkerID, task, action, payload, skipRetry)
+
+	// 服务端取消的任务已经是 CANCELLED，回报没有意义；关停（taskCtx 被父 ctx 取消）
+	// 则必须回报，所以这里只认「服务端取消」这一个信号。
+	if run.canceledByServer.Load() {
+		p.cfg.Logger.Info("task canceled by server, skip report", "task_id", taskID)
+		return
 	}
+
+	p.cfg.Logger.Info("task finished", "task_id", taskID, "action", action.String())
+	p.reportOutcome(handlerCtx, task, action, payload, skipRetry)
 }

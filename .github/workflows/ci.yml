@@ -1,0 +1,126 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+          cache-dependency-path: api/go.sum
+      - name: build
+        working-directory: api
+        run: go build ./...
+
+  server:
+    name: server
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flowdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FLOW_DB_HOST: 127.0.0.1
+      FLOW_DB_PORT: 5432
+      FLOW_DB_USER: postgres
+      FLOW_DB_PASS: postgres
+      FLOW_DB_NAME: flowdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: build and vet
+        working-directory: server
+        run: |
+          go build ./...
+          go vet ./...
+      # 集成测试会连库、自建临时库，所以这一步需要上面的 postgres service。
+      - name: test
+        working-directory: server
+        run: go test ./... -count=1
+
+  client:
+    name: client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: client/go.mod
+          cache-dependency-path: client/go.sum
+      - name: build, vet and test
+        working-directory: client
+        run: |
+          go build ./...
+          go vet ./...
+          go test ./... -count=1
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    needs: [server, client]
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: flowdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FLOW_DB_HOST: 127.0.0.1
+      FLOW_DB_PORT: 5432
+      FLOW_DB_USER: postgres
+      FLOW_DB_PASS: postgres
+      FLOW_DB_NAME: flowdb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: |
+            server/go.sum
+            client/go.sum
+      # 起真 server + 真库，按「鉴权开 / 关」两种模式各跑一遍 client/e2e。
+      - name: e2e
+        run: scripts/e2e.sh
+      - name: flowserver logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flowserver-logs
+          path: .e2e-logs/flowserver-*.log
+          if-no-files-found: ignore
+          retention-days: 3

@@ -13,6 +13,8 @@ import (
 )
 
 func TestListWorkers_HidesExpiredWorkersAndReportsDealtStats(t *testing.T) {
+	requireTestDB(t)
+
 	ctx := context.Background()
 	cleanWorkersAndTasks(t)
 
@@ -36,17 +38,17 @@ func TestListWorkers_HidesExpiredWorkersAndReportsDealtStats(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	assert.Equal(t, int64(1), resp.Page.GetTotalCount(), "过期节点不该计入 totalCount")
+	assert.Equal(t, int64(1), resp.Page.GetTotalCount(), "expired workers must not count towards totalCount")
 	require.Len(t, resp.Workers, 1)
 
 	got := resp.Workers[0]
 	assert.Equal(t, alive.Id, got.GetId())
-	assert.Equal(t, int64(3), got.GetTotalDealt(), "DONE + FAILED 才是处理量")
+	assert.Equal(t, int64(3), got.GetTotalDealt(), "only DONE and FAILED count as dealt")
 	assert.Equal(t, int64(2), got.GetSuccessDealt())
-	require.NotNil(t, got.GetLastWorkTime(), "最近工作应来自 tasks 聚合")
+	require.NotNil(t, got.GetLastWorkTime(), "last work time should come from the tasks aggregate")
 	assert.Equal(t, now-1_000, got.GetLastWorkTime().AsTime().UnixMilli())
 
-	t.Run("直查过期节点仍可读", func(t *testing.T) {
+	t.Run("an expired worker is still readable by id", func(t *testing.T) {
 		detail, err := svc.GetWorker(ctx, &adminv1.GetWorkerRequest{Id: expired.Id})
 		require.NoError(t, err)
 		assert.Equal(t, expired.Id, detail.GetId())
@@ -54,7 +56,7 @@ func TestListWorkers_HidesExpiredWorkersAndReportsDealtStats(t *testing.T) {
 		assert.Equal(t, int64(1), detail.GetSuccessDealt())
 	})
 
-	t.Run("没有任务过的新节点显示 0/0", func(t *testing.T) {
+	t.Run("a fresh worker with no tasks shows 0/0", func(t *testing.T) {
 		fresh := createWorker(t, ctx, ns, "fresh", now)
 		detail, err := svc.GetWorker(ctx, &adminv1.GetWorkerRequest{Id: fresh.Id})
 		require.NoError(t, err)
@@ -65,6 +67,8 @@ func TestListWorkers_HidesExpiredWorkersAndReportsDealtStats(t *testing.T) {
 }
 
 func TestListWorkers_ZeroTTLKeepsExpiredWorkers(t *testing.T) {
+	requireTestDB(t)
+
 	ctx := context.Background()
 	cleanWorkersAndTasks(t)
 

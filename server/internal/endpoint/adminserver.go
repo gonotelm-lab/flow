@@ -94,9 +94,10 @@ func (s *AdminServer) init(
 		return err
 	}
 
+	// 运维面不开客户端面鉴权：Auth 留 nil，这条链和加鉴权之前一样。
 	s.adminGrpcServer = grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		interceptor.UnaryServerInterceptor(),
+		interceptor.UnaryServerInterceptor(interceptor.Options{}),
 	)
 
 	var workerTTL time.Duration

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/gonotelm-lab/flow/server/internal/auth"
 	"github.com/gonotelm-lab/flow/server/internal/repository"
 	"github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/store"
@@ -61,6 +62,12 @@ func (c *Core) mustGet(ctx context.Context, id uuid.UUID) (*schema.Schedule, err
 		}
 		return nil, errors.WithMessage(err, "failed to get schedule")
 	}
+
+	// Get / Stop / Delete 都从这里取行，跨 namespace 一律当成不存在。
+	if !auth.Allows(ctx, sched.Namespace) {
+		return nil, srverr.ScheduleNotFound
+	}
+
 	return sched, nil
 }
 
@@ -126,6 +133,16 @@ func (c *Core) Get(ctx context.Context, id uuid.UUID) (*schema.Schedule, error) 
 
 func (c *Core) List(ctx context.Context, p ListParams) ([]*schema.Schedule, int64, error) {
 	offset, limit := paging(p.Page, p.PageSize)
+
+	// 已认证的调用方只能查自己的 namespace。列表的 namespace 是可选筛选，不传时
+	// 底层会跨 namespace 返回全量，所以这里要补上；显式传了别人的 namespace 就
+	// 直接拒绝，不悄悄改掉——悄悄改会让调用方的 bug 更难查。
+	if caller, ok := auth.NamespaceFromContext(ctx); ok {
+		if p.Namespace != "" && p.Namespace != caller {
+			return nil, 0, pkgerr.PermissionDenied.WithDetail(auth.MismatchDetail)
+		}
+		p.Namespace = caller
+	}
 
 	list, total, err := c.store.Schedule.List(ctx, &store.ScheduleListParams{
 		Namespace:    p.Namespace,
@@ -340,6 +357,11 @@ func (c *Core) checkNamespace(ctx context.Context, namespace string) error {
 	namespace = strings.TrimSpace(namespace)
 	if namespace == "" {
 		return pkgerr.InvalidArgument.WithDetail("namespace is empty")
+	}
+
+	// 先判归属：请求里写的是别人的 namespace 时，不该用「这个 namespace 存不存在」来回答。
+	if !auth.Allows(ctx, namespace) {
+		return pkgerr.PermissionDenied.WithDetail(auth.MismatchDetail)
 	}
 
 	if _, err := c.store.Namespace.Get(ctx, namespace); err != nil {

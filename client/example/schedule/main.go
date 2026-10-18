@@ -37,6 +37,7 @@ func main() {
 	payload := flag.String("payload", `{"hello":"world"}`, "回调 body 的原始内容")
 	contentType := flag.String("content-type", "application/json", "回调 Content-Type")
 	idempotencyKey := flag.String("idempotency-key", "", "可选幂等键（namespace 内唯一）")
+	apiKey := flag.String("api-key", "", "namespace 的 api_key（服务端开了鉴权就必填）")
 	flag.Parse()
 
 	if *callback == "" {
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	// namespace 属于客户端本身，不在每条定义里传
-	client, err := scheduleclient.New(*addr, scheduleclient.Config{Namespace: *namespace})
+	client, err := scheduleclient.New(*addr, scheduleclient.Config{Namespace: *namespace, APIKey: *apiKey})
 	if err != nil {
 		log.Fatalf("连接 %s 失败: %v", *addr, err)
 	}

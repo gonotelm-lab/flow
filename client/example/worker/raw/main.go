@@ -26,6 +26,7 @@ func main() {
 	namespace := flag.String("namespace", "demo", "任务 namespace")
 	taskType := flag.String("task-type", "raw", "任务类型")
 	name := flag.String("name", "raw-worker", "worker 名称")
+	apiKey := flag.String("api-key", "", "namespace 的 api_key（服务端开了鉴权就必填）")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -34,6 +35,7 @@ func main() {
 		Namespace: *namespace,
 		TaskType:  *taskType,
 		Name:      *name,
+		APIKey:    *apiKey,
 		Logger:    logger,
 	})
 	if err != nil {

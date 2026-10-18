@@ -58,10 +58,11 @@ func NewApiServer(
 		return nil, err
 	}
 
+	authCfg := authConfig(cfg, repoStore)
 	grpcServer := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithFilter(workerFrequentFilter()))),
-		interceptor.UnaryServerInterceptor(),
-		interceptor.StreamServerInterceptor(),
+		interceptor.UnaryServerInterceptor(interceptor.Options{Auth: authCfg}),
+		interceptor.StreamServerInterceptor(interceptor.Options{Auth: authCfg}),
 	)
 
 	adminServer, err := NewAdminServer(ctx, cfg, workerCfg, repoStore, auditRec)
@@ -117,4 +118,15 @@ func (s *ApiServer) registerGrpcServices(repoStore *repository.Store) {
 	// 定时回调的客户端面：与 TaskService / WorkerService 一样只有 gRPC，不挂 HTTP annotation。
 	scheduleService := schedule.NewService(repoStore)
 	schedulev1.RegisterScheduleServiceServer(s.grpcServer, scheduleService)
+}
+
+// authConfig 组装客户端面鉴权要用的依赖。
+//
+// 7091 上三个 service 都受保护，没有豁免的方法；运维面走另一台 server、不鉴权，
+// 所以这里不需要方法白名单。
+func authConfig(cfg *config.ApiServer, repoStore *repository.Store) *interceptor.AuthConfig {
+	return &interceptor.AuthConfig{
+		Enabled:    cfg.AuthEnabled(),
+		Namespaces: repoStore.Namespace,
+	}
 }
