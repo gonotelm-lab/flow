@@ -1,7 +1,9 @@
 package worker
 
 import (
+	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gonotelm-lab/flow/client/worker/internal/runtime"
@@ -16,14 +18,30 @@ const (
 )
 
 type Config struct {
-	Namespace         string
-	TaskType          string
-	Name              string
+	// Namespace 必填：一个 worker 只消费一个 namespace 的任务。
+	// 为空时由 Start 返回 ErrEmptyNamespace（构造不校验）。
+	Namespace string
+	TaskType  string
+	Name      string
+	// APIKey 是该 namespace 的 api_key：服务端开启鉴权后必填，关闭时留空即可。
+	APIKey string
+
 	MaxConcurrency    int
 	HeartbeatInterval time.Duration
 	Codec             Codec
 	Logger            *slog.Logger
 	TraceMode         TraceMode
+}
+
+// ErrEmptyNamespace 没有配置 Config.Namespace。
+var ErrEmptyNamespace = errors.New("worker: namespace is required")
+
+func (cfg Config) validate() error {
+	if strings.TrimSpace(cfg.Namespace) == "" {
+		return ErrEmptyNamespace
+	}
+
+	return nil
 }
 
 func ConfigWithDefaults(cfg Config) Config {

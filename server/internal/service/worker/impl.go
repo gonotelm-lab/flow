@@ -7,6 +7,7 @@ import (
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	workerv1 "github.com/gonotelm-lab/flow/api/worker/v1"
+	"github.com/gonotelm-lab/flow/server/internal/auth"
 	reposchema "github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	"github.com/gonotelm-lab/flow/server/internal/repository/store"
 	srverr "github.com/gonotelm-lab/flow/server/internal/service/errors"
@@ -18,6 +19,10 @@ import (
 
 func (s *Service) register(ctx context.Context, worker *schemav1.Worker) error {
 	namespace := worker.GetNamespace()
+	if !auth.Allows(ctx, namespace) {
+		return pkgerr.PermissionDenied.WithDetail(auth.MismatchDetail)
+	}
+
 	_, err := s.repo.Namespace.Get(ctx, namespace)
 	if err != nil {
 		if errors.Is(err, pkgerr.NoRecord) {
@@ -47,9 +52,34 @@ func (s *Service) register(ctx context.Context, worker *schemav1.Worker) error {
 }
 
 func (s *Service) unregister(ctx context.Context, workerId int64) error {
+	if err := s.checkWorkerNamespace(ctx, workerId); err != nil {
+		return err
+	}
+
 	err := s.repo.TaskWorker.Delete(ctx, workerId)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to delete task worker %d", workerId)
+	}
+
+	return nil
+}
+
+// checkWorkerNamespace 按 worker id 取行，校验归属。
+//
+// Unregister / Heartbeat 原来不读行，这里会多一次主键查询。行不存在时返回 nil，
+// 保持加鉴权之前「静默成功」的行为；只有行存在、却属于别的 namespace 时才拒绝。
+func (s *Service) checkWorkerNamespace(ctx context.Context, workerId int64) error {
+	row, err := s.repo.TaskWorker.Get(ctx, workerId)
+	if err != nil {
+		if errors.Is(err, pkgerr.NoRecord) {
+			return nil
+		}
+
+		return errors.WithMessagef(err, "failed to get task worker %d", workerId)
+	}
+
+	if !auth.Allows(ctx, row.Namespace) {
+		return pkgerr.NoRecord
 	}
 
 	return nil
@@ -60,6 +90,10 @@ func (s *Service) heartbeat(
 	workerId int64,
 	runningTaskIds []string,
 ) (int64, []string, error) {
+	if err := s.checkWorkerNamespace(ctx, workerId); err != nil {
+		return 0, nil, err
+	}
+
 	heartbeatTime := time.Now().UnixMilli()
 	_, err := s.repo.TaskWorker.UpdateHeartbeat(ctx, workerId, heartbeatTime)
 	if err != nil {
@@ -104,6 +138,10 @@ func (s *Service) poll(
 	namespace string,
 	taskType string,
 ) (*reposchema.Task, error) {
+	if !auth.Allows(ctx, namespace) {
+		return nil, pkgerr.PermissionDenied.WithDetail(auth.MismatchDetail)
+	}
+
 	oldState := schemav1.TaskState_INITED.String()
 	newState := schemav1.TaskState_RUNNING.String()
 
@@ -163,6 +201,11 @@ func (s *Service) report(ctx context.Context, req *workerv1.ReportRequest) error
 			return nil
 		}
 		return errors.WithMessagef(err, "failed to get task %s", taskId)
+	}
+
+	// 行上有 namespace，归属判断不用再查一次。别人的任务一律 NotFound。
+	if !auth.Allows(ctx, task.Namespace) {
+		return pkgerr.NoRecord
 	}
 
 	if task.State != schemav1.TaskState_RUNNING.String() {

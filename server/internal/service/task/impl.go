@@ -6,8 +6,9 @@ import (
 
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
 	taskv1 "github.com/gonotelm-lab/flow/api/task/v1"
-	reposchema "github.com/gonotelm-lab/flow/server/internal/repository/schema"
+	"github.com/gonotelm-lab/flow/server/internal/auth"
 	serverotel "github.com/gonotelm-lab/flow/server/internal/otel"
+	reposchema "github.com/gonotelm-lab/flow/server/internal/repository/schema"
 	srverr "github.com/gonotelm-lab/flow/server/internal/service/errors"
 	pkgerr "github.com/gonotelm-lab/flow/server/pkg/errors"
 	"github.com/google/uuid"
@@ -20,6 +21,11 @@ func (s *Service) Submit(
 	req *taskv1.SubmitRequest,
 ) (*taskv1.SubmitResponse, error) {
 	namespace := req.GetNamespace()
+	// 先判归属，再查 namespace 是否存在：别人的 namespace 存不存在，不该由错误码告诉调用方。
+	if !auth.Allows(ctx, namespace) {
+		return nil, pkgerr.PermissionDenied.WithDetail(auth.MismatchDetail)
+	}
+
 	_, err := s.repo.Namespace.Get(ctx, namespace)
 	if err != nil {
 		if errors.Is(err, pkgerr.NoRecord) {
@@ -80,6 +86,11 @@ func (s *Service) Get(
 		return nil, errors.WithMessage(err, "failed to get task")
 	}
 
+	// 别人的任务一律当成不存在：回 PermissionDenied 就等于承认这个 id 存在。
+	if !auth.Allows(ctx, task.Namespace) {
+		return nil, srverr.TaskNotFound
+	}
+
 	return &taskv1.GetResponse{Task: toProtoTask(task)}, nil
 }
 
@@ -98,6 +109,11 @@ func (s *Service) Cancel(
 			return nil, srverr.TaskNotFound
 		}
 		return nil, errors.WithMessage(err, "failed to get task")
+	}
+
+	// 和 Get 一样：跨 namespace 一律当成不存在，连状态都不透露。
+	if !auth.Allows(ctx, task.Namespace) {
+		return nil, srverr.TaskNotFound
 	}
 
 	if task.State != schemav1.TaskState_INITED.String() &&

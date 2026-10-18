@@ -243,6 +243,8 @@ func (cfg *WorkerConfig) Validate() error {
 type ApiServer struct {
 	Http *HttpServer `toml:"http"`
 	Grpc *GrpcServer `toml:"grpc"`
+	// Auth 为 nil 时不启用客户端面鉴权（等于配置里没有 [apiServer.auth] 段）。
+	Auth *AuthConfig `toml:"auth"`
 }
 
 type HttpServer struct {
@@ -253,6 +255,17 @@ type HttpServer struct {
 type GrpcServer struct {
 	Listen string `toml:"listen"`
 	Port   int    `toml:"port"`
+}
+
+// AuthConfig 是客户端面（task / worker / schedule）的 api_key 鉴权开关，默认关闭；
+// 关闭时请求头会被完全忽略。
+type AuthConfig struct {
+	Enabled bool `toml:"enabled"`
+}
+
+// AuthEnabled 返回客户端面鉴权是否打开。nil（没配）算关闭。
+func (cfg *ApiServer) AuthEnabled() bool {
+	return cfg != nil && cfg.Auth != nil && cfg.Auth.Enabled
 }
 
 type OtelConfig struct {

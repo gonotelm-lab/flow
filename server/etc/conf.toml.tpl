@@ -56,6 +56,9 @@ port = ${FLOW_API_SERVER_HTTP_PORT:-7090}
 listen = "${FLOW_API_SERVER_GRPC_LISTEN:-0.0.0.0}"
 port = ${FLOW_API_SERVER_GRPC_PORT:-7091}
 
+[apiServer.auth]
+enabled = ${FLOW_API_AUTH_ENABLED:-false}
+
 [otel]
 enabled = ${FLOW_OTEL_ENABLED:-false}
 serviceName = "${FLOW_OTEL_SERVICE_NAME:-flow-server}"

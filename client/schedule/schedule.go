@@ -28,23 +28,33 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 
 	schedulev1 "github.com/gonotelm-lab/flow/api/schedule/v1"
 	schemav1 "github.com/gonotelm-lab/flow/api/schema/v1"
+	"github.com/gonotelm-lab/flow/client/internal/apikey"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// Config 是客户端自身需要的配置，与 gRPC 拨号参数分开。
-//
-// 一个 Client 对应一个 namespace，跟 client/worker 的做法一致：注册时写进定义、
-// 查询时当筛选条件、验签时用来确认回调确实属于它。
+// Config 是客户端自己的配置，和 gRPC 拨号参数分开。
+// 一个 Client 对应一个 namespace，和 client/worker、client/task/v2 一样。
 type Config struct {
-	// Namespace 这个客户端所属的 namespace。
+	// Namespace 会走 RPC 的客户端必填（调用时校验）；纯验签的接收方可以留空。
 	Namespace string
-	// APIKey 是该 namespace 的 api_key，VerifyRequest 用它校验回调签名。
+	// APIKey 是该 namespace 的 api_key，两个方向都用：出站随 RPC 发出
+	// （authorization: Bearer <key>，留空就不发），入站给 VerifyRequest 验签。
 	APIKey string
+}
+
+// validateNamespace 校验 namespace 是否配置。
+func (cfg Config) validateNamespace() error {
+	if strings.TrimSpace(cfg.Namespace) == "" {
+		return ErrNoNamespace
+	}
+
+	return nil
 }
 
 type Client struct {
@@ -54,9 +64,10 @@ type Client struct {
 	ownsConn bool
 }
 
-// New 返回客户端。opts 原样透传给 grpc.NewClient。
+// New 返回客户端，opts 原样透传给 grpc.NewClient。
 //
-// 只用来验签的接收方也用它，addr 留空即可：gRPC 是懒连接，不调接口就不会真的建连。
+// 只做验签的接收方 addr 留空就行（gRPC 是懒连接）。这里不校验 Config：
+// namespace 是否为空，由每个方法在调用前判断。
 func New(addr string, cfg Config, opts ...grpc.DialOption) (*Client, error) {
 	baseOpts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -74,10 +85,11 @@ func New(addr string, cfg Config, opts ...grpc.DialOption) (*Client, error) {
 	return c, nil
 }
 
+// NewWithConn 用调用方自己的连接（多客户端共享连接时用）。
 func NewWithConn(conn grpc.ClientConnInterface, cfg Config) *Client {
 	return &Client{
 		conn:   conn,
-		client: schedulev1.NewScheduleServiceClient(conn),
+		client: schedulev1.NewScheduleServiceClient(apikey.WrapConn(conn, cfg.APIKey)),
 		cfg:    cfg,
 	}
 }
@@ -138,6 +150,10 @@ func newIdempotencyKey() (string, error) {
 }
 
 func (c *Client) Get(ctx context.Context, id string) (*Schedule, error) {
+	if err := c.checkNamespace(); err != nil {
+		return nil, err
+	}
+
 	resp, err := c.client.Get(ctx, &schedulev1.GetRequest{Id: id})
 	if err != nil {
 		return nil, err
@@ -174,13 +190,16 @@ func (c *Client) List(ctx context.Context, opts ...ListOption) ([]*Schedule, int
 	return list, resp.GetPage().GetTotalCount(), nil
 }
 
-// checkNamespace 挡住「没配 namespace 就调接口」：注册会被服务端拒，而列表会
-// 变成跨 namespace 查全部。
+// checkNamespace 拦住「没配 namespace 就调接口」：注册会被服务端拒，列表则会变成
+// 跨 namespace 查全量。
+//
+// NewWithConn 没有 error 返回值，这条校验就是那条构造路径的兜底。
 func (c *Client) checkNamespace() error {
-	if c == nil || c.cfg.Namespace == "" {
+	if c == nil {
 		return ErrNoNamespace
 	}
-	return nil
+
+	return c.cfg.validateNamespace()
 }
 
 // ErrNoNamespace 客户端没有配置 Config.Namespace，注册与查询都无法进行。
@@ -191,6 +210,10 @@ var ErrNoNamespace = errors.New("schedule: client namespace is empty")
 // 不可恢复，要再次触发只能重新注册一条。已发出的 HTTP 无法撤回，但它的重试与死信
 // 链路到此为止。幂等：已经是 STOPPED 时直接返回当前对象。
 func (c *Client) Stop(ctx context.Context, id string) (*Schedule, error) {
+	if err := c.checkNamespace(); err != nil {
+		return nil, err
+	}
+
 	resp, err := c.client.Stop(ctx, &schedulev1.StopRequest{Id: id})
 	if err != nil {
 		return nil, err
@@ -202,6 +225,10 @@ func (c *Client) Stop(ctx context.Context, id string) (*Schedule, error) {
 //
 // 硬删：定义、失败记录、死信一并消失。已发出的 HTTP 无法撤回。
 func (c *Client) Delete(ctx context.Context, id string) error {
+	if err := c.checkNamespace(); err != nil {
+		return err
+	}
+
 	_, err := c.client.Delete(ctx, &schedulev1.DeleteRequest{Id: id})
 	return err
 }
