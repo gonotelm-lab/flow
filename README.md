@@ -181,10 +181,25 @@ FLOW_DB_HOST=127.0.0.1 FLOW_DB_PORT=5432 FLOW_DB_USER=postgres \
 FLOW_DB_PASS=postgres FLOW_DB_NAME=flowdb go test ./...
 ```
 
+### 端到端测试
+
+`client/e2e` 跑在真 server + 真库上，默认跳过（没配 `FLOW_E2E_ADDR` 就不跑），所以 `go test ./...` 不受影响。
+
+一条命令跑完（自己起临时 PostgreSQL，鉴权开 / 关两种模式各跑一遍）：
+
+```bash
+scripts/e2e.sh --docker-db
+```
+
+用已有的 PostgreSQL 就去掉 `--docker-db`（读 `FLOW_DB_*`，默认 `127.0.0.1:5432`）。
+server 日志写在 `.e2e-logs/`（已 gitignore）。CI 由 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+调用同一个脚本，数据库来自 service 容器。
+
 ```
 api/      Protobuf 定义与生成代码
 client/   Go SDK：task（v2）/ worker / schedule 客户端与回调验签
 server/   Go 服务：config / repository / service / instance / taskmender / endpoint
+scripts/  e2e 脚本（scripts/e2e.sh）
 web/      React + Vite 运维后台
 ```
 
